@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
-from app.api.dependencies.clock import get_today
+from app.api.dependencies.clock import get_user_today
 from app.db.database import get_db
 from app.errors import AppError
 from app.repositories.habit_repository import HabitRepository
@@ -19,7 +19,7 @@ def export(
     end: date | None = Query(default=None, alias="to"),
     user=Depends(require_user),
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    today: date = Depends(get_user_today),
 ):
     end = end or today
     if start and end < start:

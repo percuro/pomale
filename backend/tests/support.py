@@ -1,6 +1,6 @@
 """Test environment: in-memory SQLite, fixed clock, TestClient with a logged-in user."""
 
-from datetime import date
+from datetime import UTC, date, datetime, time
 from unittest import mock
 
 from fastapi.testclient import TestClient
@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401
-from app.api.dependencies.clock import get_today
+from app.api.dependencies.clock import get_now
 from app.db.database import Base, configure_sqlite, get_db
 from app.main import app
 from app.repositories.auth_repository import AuthRepository
@@ -32,7 +32,8 @@ TEST_ENV = {
 
 class ApiTestEnvironment:
     def __init__(self, today: date = date(2026, 11, 24)):
-        self.today = today
+        # The fixed "now"; tests either set `now` directly or `today` (noon UTC of that day)
+        self.now: datetime = datetime.combine(today, time(12, 0), tzinfo=UTC)
         self._env = mock.patch.dict("os.environ", TEST_ENV)
         self._env.start()
         self.engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
@@ -49,12 +50,26 @@ class ApiTestEnvironment:
                 db.close()
 
         app.dependency_overrides[get_db] = _db
-        app.dependency_overrides[get_today] = lambda: self.today
+        app.dependency_overrides[get_now] = lambda: self.now
 
-    def create_user(self, username: str = "alex", password: str = PASSWORD):
+    @property
+    def today(self) -> date:
+        return self.now.date()
+
+    @today.setter
+    def today(self, value: date) -> None:
+        self.now = datetime.combine(value, time(12, 0), tzinfo=UTC)
+
+    def create_user(self, username: str = "alex", password: str = PASSWORD, role: str = "user", **settings):
         db = self.SessionLocal()
         try:
-            return AuthService(AuthRepository(db)).create_user(username, password)
+            user = AuthService(AuthRepository(db)).create_user(username, password, role=role)
+            for name, value in settings.items():
+                setattr(user, name, value)
+            db.commit()
+            db.refresh(user)
+            db.expunge(user)
+            return user
         finally:
             db.close()
 

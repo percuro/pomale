@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI
 
 from app import __version__
 from app.api.dependencies.auth import require_user
+from app.api.routers.account import router as account_router
 from app.api.routers.auth import router as auth_router
 from app.api.routers.days import router as days_router
 from app.api.routers.export import router as export_router
@@ -26,6 +27,7 @@ app.include_router(shortcut_public_router, prefix="/v1", tags=["shortcut"])
 app.include_router(auth_router, prefix="/v1/auth", tags=["auth"])
 app.include_router(setup_router, prefix="/v1/setup", tags=["setup"])
 protected = [Depends(require_user)]
+app.include_router(account_router, prefix="/v1/account", tags=["account"], dependencies=protected)
 app.include_router(habits_router, prefix="/v1/habits", tags=["habits"], dependencies=protected)
 app.include_router(days_router, prefix="/v1", tags=["days"], dependencies=protected)
 app.include_router(shortcut_router, prefix="/v1", tags=["shortcut"], dependencies=protected)

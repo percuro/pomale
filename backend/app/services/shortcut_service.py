@@ -1,6 +1,6 @@
 import hashlib
 import secrets
-from datetime import date
+from datetime import datetime
 
 from fastapi import Request
 
@@ -12,6 +12,7 @@ from app.schemas.shortcut import ShortcutCheckinRead
 from app.services.auth_service import utcnow
 from app.services.checkin_service import CheckinService
 from app.services.login_rate_limiter import LoginRateLimiter
+from app.services.timezones import user_today
 
 TOKEN_PREFIX = "ht_"
 # Limit failed attempts with wrong keys per IP (same logic as the login limit)
@@ -52,12 +53,13 @@ class ShortcutService:
             raise AppError(404, "shortcut.token_not_found", "Key not found")
         self.repository.revoke(token, utcnow())
 
-    def check_in_today(self, request: Request, habit_id: int, done: bool, today: date) -> ShortcutCheckinRead:
+    def check_in_today(self, request: Request, habit_id: int, done: bool, now: datetime) -> ShortcutCheckinRead:
         ip_address = request.client.host if request.client else "unknown"
         shortcut_rate_limiter.check("shortcut", ip_address)
         raw = bearer_token(request)
         token = self.repository.get_by_hash(hash_token(raw)) if raw else None
-        if token is None or token.revoked_at is not None:
+        # A deactivated owner's keys stop working too (their data stays)
+        if token is None or token.revoked_at is not None or not token.habit.user.is_active:
             shortcut_rate_limiter.record_failure("shortcut", ip_address)
             raise _unauthorized()
         if token.habit_id != habit_id:
@@ -67,6 +69,8 @@ class ShortcutService:
         habit = token.habit
         if habit.archived_on is not None:
             raise AppError(409, "habit.archived", "The habit is archived")
+        # "Today" of the habit's owner, wherever the phone or the server is
+        today = user_today(habit.user, now)
 
         before = self.habits.get_checkin(habit.id, today)
         already = bool(before and before.done)

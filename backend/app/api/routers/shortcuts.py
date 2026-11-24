@@ -1,10 +1,10 @@
-from datetime import date
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
-from app.api.dependencies.clock import get_today
+from app.api.dependencies.clock import get_now
 from app.db.database import get_db
 from app.repositories.habit_repository import HabitRepository
 from app.repositories.shortcut_repository import ShortcutRepository
@@ -34,10 +34,10 @@ def shortcut_check_in(
     request: Request,
     data: ShortcutCheckinRequest | None = None,
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    now: datetime = Depends(get_now),
 ):
     done = data.done if data is not None else True
-    return _service(db).check_in_today(request, habit_id, done, today)
+    return _service(db).check_in_today(request, habit_id, done, now)
 
 
 @router.get("/habits/{habit_id}/shortcut-tokens", response_model=list[ShortcutTokenRead])

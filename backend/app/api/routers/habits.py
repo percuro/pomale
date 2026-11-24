@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
-from app.api.dependencies.clock import get_today
+from app.api.dependencies.clock import get_user_today
 from app.db.database import get_db
 from app.repositories.habit_repository import HabitRepository
 from app.schemas.habit import HabitCreate, HabitRead, HabitUpdate, ScheduleUpdate
@@ -22,7 +22,7 @@ def list_habits(
     include_archived: bool = False,
     user=Depends(require_user),
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    today: date = Depends(get_user_today),
 ):
     return [habit_read(h, today) for h in _service(db).list(user.id, include_archived)]
 
@@ -32,7 +32,7 @@ def create_habit(
     data: HabitCreate,
     user=Depends(require_user),
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    today: date = Depends(get_user_today),
 ):
     return habit_read(_service(db).create(user.id, data, today), today)
 
@@ -43,7 +43,7 @@ def update_habit(
     data: HabitUpdate,
     user=Depends(require_user),
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    today: date = Depends(get_user_today),
 ):
     return habit_read(_service(db).update(habit_id, user.id, data), today)
 
@@ -54,7 +54,7 @@ def set_schedule(
     data: ScheduleUpdate,
     user=Depends(require_user),
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    today: date = Depends(get_user_today),
 ):
     return habit_read(_service(db).set_schedule(habit_id, user.id, data, today), today)
 
@@ -64,7 +64,7 @@ def archive_habit(
     habit_id: int,
     user=Depends(require_user),
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    today: date = Depends(get_user_today),
 ):
     return habit_read(_service(db).archive(habit_id, user.id, today), today)
 
@@ -74,6 +74,6 @@ def unarchive_habit(
     habit_id: int,
     user=Depends(require_user),
     db: Session = Depends(get_db),
-    today: date = Depends(get_today),
+    today: date = Depends(get_user_today),
 ):
     return habit_read(_service(db).unarchive(habit_id, user.id, today), today)

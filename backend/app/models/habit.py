@@ -14,6 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
+from app.models.user import User
 
 
 class Habit(Base):
@@ -27,6 +28,7 @@ class Habit(Base):
     archived_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
+    user: Mapped[User] = relationship()
     schedules: Mapped[list["HabitSchedule"]] = relationship(
         back_populates="habit",
         cascade="all, delete-orphan",

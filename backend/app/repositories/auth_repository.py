@@ -12,8 +12,7 @@ class AuthRepository:
     def get_user_by_username(self, username: str) -> User | None:
         return self.db.query(User).filter(User.username == username.lower()).first()
 
-    def create_user(self, username: str, password_hash: str) -> User:
-        user = User(username=username.lower(), password_hash=password_hash)
+    def add_user(self, user: User) -> User:
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)

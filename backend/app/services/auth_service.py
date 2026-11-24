@@ -10,8 +10,10 @@ from fastapi import Request, Response
 
 from app.config import cookie_secure, env_positive_int
 from app.errors import AppError
+from app.models.user import ROLE_USER, User
 from app.repositories.auth_repository import AuthRepository
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import AccountSettings, LoginRequest
+from app.services.account_service import apply_settings
 
 SESSION_COOKIE_NAME = "habit_session"
 # Long sessions: the iPhone home-screen web app has its own cookie storage;
@@ -110,12 +112,17 @@ class AuthService:
             self.repository.update_session_expiry(session, refreshed_expiry)
         return session.user
 
-    def create_user(self, username: str, password: str):
+    def create_user(
+        self, username: str, password: str, role: str = ROLE_USER, settings: AccountSettings | None = None
+    ) -> User:
         username = normalize_username(username)
         if self.repository.get_user_by_username(username) is not None:
             raise AppError(409, "account.username_taken", "This username is already taken")
         self._check_password(password)
-        return self.repository.create_user(username, self.hash_password(password))
+        user = User(username=username, password_hash=self.hash_password(password), role=role)
+        if settings is not None:
+            apply_settings(user, settings)
+        return self.repository.add_user(user)
 
     def set_password(self, username: str, password: str) -> None:
         user = self.repository.get_user_by_username(username)

@@ -1,9 +1,20 @@
 export type DayState = 'not_planned' | 'open' | 'done' | 'extra_done' | 'future';
 
+export type Role = 'admin' | 'user';
+export type Locale = 'de' | 'en';
+
 export interface Me {
+  id: number;
   username: string;
-  today: string;
+  display_name: string | null;
+  role: Role;
+  /** effective time zone: "today" is computed in it */
   timezone: string;
+  /** the account's own setting; null = server default */
+  timezone_setting: string | null;
+  /** null = the browser language decides */
+  locale: Locale | null;
+  today: string;
 }
 
 export interface Schedule {

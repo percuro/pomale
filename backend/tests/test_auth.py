@@ -34,7 +34,18 @@ class AuthApiTest(unittest.TestCase):
         client = self.env.client(username=None)
         response = client.post("/v1/auth/login", json={"username": "ALEX", "password": PASSWORD})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"username": "alex", "today": "2026-11-24", "timezone": "UTC"})
+        me = response.json()
+        self.assertEqual(
+            {k: me[k] for k in ("username", "today", "timezone", "timezone_setting", "role", "locale")},
+            {
+                "username": "alex",
+                "today": "2026-11-24",
+                "timezone": "UTC",
+                "timezone_setting": None,
+                "role": "user",
+                "locale": None,
+            },
+        )
         cookie = SimpleCookie()
         cookie.load(response.headers["set-cookie"])
         morsel = cookie[SESSION_COOKIE_NAME]
