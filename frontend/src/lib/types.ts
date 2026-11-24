@@ -12,6 +12,8 @@ export interface Me {
   timezone: string;
   /** the account's own setting; null = server default */
   timezone_setting: string | null;
+  /** the server's DEFAULT_TIMEZONE, used while timezone_setting is null */
+  default_timezone: string;
   /** null = the browser language decides */
   locale: Locale | null;
   today: string;
@@ -69,4 +71,58 @@ export interface CheckinResponse {
   done: boolean;
   state: DayState;
   version: number;
+}
+
+/** GET /v1/meta: public facts for the signed-out pages */
+export interface Meta {
+  version: string;
+  registration: 'invite' | 'open';
+  setup_needed: boolean;
+}
+
+export interface SessionInfo {
+  id: number;
+  created_at: string;
+  last_seen_at: string | null;
+  /** e.g. "iPhone · Safari"; null if unknown */
+  device: string | null;
+  current: boolean;
+}
+
+/** What an admin sees about an account (no habits, no check-ins) */
+export interface AdminUser {
+  id: number;
+  username: string;
+  display_name: string | null;
+  role: Role;
+  is_active: boolean;
+  created_at: string;
+  last_seen_at: string | null;
+}
+
+export type InvitationPurpose = 'signup' | 'password_reset';
+
+export interface InvitationCreated {
+  id: number;
+  purpose: InvitationPurpose;
+  /** Shown only once */
+  url: string;
+  expires_at: string;
+}
+
+export interface Invitation {
+  id: number;
+  purpose: InvitationPurpose;
+  role: Role | null;
+  note: string | null;
+  target_username: string | null;
+  created_by_username: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface InvitationInfo {
+  purpose: InvitationPurpose;
+  username: string | null;
+  expires_at: string;
 }

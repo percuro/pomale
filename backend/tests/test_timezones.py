@@ -76,7 +76,8 @@ class PerAccountTimezoneTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"DEFAULT_TIMEZONE": "Pacific/Kiritimati"}):
             me = self.hono.patch("/v1/account", json={"timezone": None}).json()
         self.assertEqual(
-            (me["timezone"], me["timezone_setting"], me["today"]), ("Pacific/Kiritimati", None, "2026-11-25")
+            (me["timezone"], me["timezone_setting"], me["default_timezone"], me["today"]),
+            ("Pacific/Kiritimati", None, "Pacific/Kiritimati", "2026-11-25"),
         )
 
     def test_unknown_stored_timezone_falls_back_to_default(self):

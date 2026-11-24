@@ -51,6 +51,8 @@ class MeRead(BaseModel):
     # Effective time zone ("today" is computed in it) and the account's own setting (null = server default)
     timezone: str
     timezone_setting: str | None
+    # The server's DEFAULT_TIMEZONE, used while timezone_setting is null
+    default_timezone: str
     locale: LocaleLiteral | None
     today: date
 

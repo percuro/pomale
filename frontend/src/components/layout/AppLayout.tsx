@@ -1,5 +1,5 @@
 import { APP_NAME } from '../../app/brand';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
@@ -10,10 +10,12 @@ import { useToday } from '../../hooks/useToday';
 import { useI18n } from '../../i18n/context';
 import { LoginPage } from '../../pages/LoginPage';
 import { SetupPage } from '../../pages/SetupPage';
-import { useSetupStatus } from '../../hooks/useSetupStatus';
+import { useMeta } from '../../hooks/useMeta';
 import { syncEngine } from '../../lib/sync-engine';
 import { SyncBridge } from '../sync/SyncBridge';
 import { SyncStatus } from '../sync/SyncStatus';
+import { ConfirmDialog } from '../common/ConfirmDialog';
+import { TimezoneHint } from './TimezoneHint';
 
 export function AppLayout() {
   const me = useMe();
@@ -44,13 +46,13 @@ export function AppLayout() {
 }
 
 function SignedOut() {
-  const setup = useSetupStatus();
+  const meta = useMeta();
   const { t, setAccountLocale } = useI18n();
   useEffect(() => setAccountLocale(null), [setAccountLocale]);
-  if (setup.isPending) {
+  if (meta.isPending) {
     return <main className="center"><p>{t('app.loading')}</p></main>;
   }
-  return setup.data?.needed ? <SetupPage /> : <LoginPage />;
+  return meta.data?.setup_needed ? <SetupPage /> : <LoginPage />;
 }
 
 function SignedIn({ me }: { me: Me }) {
@@ -59,18 +61,19 @@ function SignedIn({ me }: { me: Me }) {
   const { t, setAccountLocale } = useI18n();
   useEffect(() => setAccountLocale(me.locale), [me.locale, setAccountLocale]);
 
+  const [confirmLogout, setConfirmLogout] = useState(0);
   const logout = useMutation({
     mutationFn: () => apiFetch<void>('/v1/auth/logout', { method: 'POST' }),
     // Forget local data only after a successful logout
     onSuccess: () => signedOut(queryClient),
+    onSettled: () => setConfirmLogout(0),
   });
 
   const onLogout = () => {
+    // Unsent changes stay on this device; ask before leaving them behind
     const waiting = syncEngine.getSnapshot().ops.length;
-    if (waiting > 0 && !window.confirm(t('logout.pending', { count: waiting }))) {
-      return;
-    }
-    logout.mutate();
+    if (waiting > 0) setConfirmLogout(waiting);
+    else logout.mutate();
   };
 
   return (
@@ -83,13 +86,28 @@ function SignedIn({ me }: { me: Me }) {
           <NavLink to="/week">{t('nav.week')}</NavLink>
           <NavLink to="/habits">{t('nav.habits')}</NavLink>
         </nav>
-        <button type="button" className="link-button" onClick={onLogout}>
-          {t('nav.logout')}
-        </button>
+        <div className="topbar-links">
+          <NavLink to="/account">{t('nav.account')}</NavLink>
+          {me.role === 'admin' && <NavLink to="/admin">{t('nav.admin')}</NavLink>}
+          <button type="button" className="link-button" onClick={onLogout}>
+            {t('nav.logout')}
+          </button>
+        </div>
       </header>
+      <ConfirmDialog
+        open={confirmLogout > 0}
+        title={t('logout.title')}
+        confirmLabel={t('logout.confirm')}
+        busy={logout.isPending}
+        onConfirm={() => logout.mutate()}
+        onCancel={() => setConfirmLogout(0)}
+      >
+        <p>{t('logout.pending', { count: confirmLogout })}</p>
+      </ConfirmDialog>
       <SyncBridge owner={me} />
       <main id="content" className="content">
         {logout.isError && <p className="error" role="alert">{t('logout.failed')}</p>}
+        <TimezoneHint me={me} />
         <SyncStatus />
         <Outlet />
       </main>

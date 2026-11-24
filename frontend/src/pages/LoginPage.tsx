@@ -1,8 +1,10 @@
 import { APP_NAME } from '../app/brand';
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import type { Me } from '../lib/types';
+import { useMeta } from '../hooks/useMeta';
 import { signedIn } from '../hooks/useMe';
 import { useErrorText, useT } from '../i18n/context';
 import { LanguageSwitcher } from '../components/layout/LanguageSwitcher';
@@ -11,6 +13,7 @@ export function LoginPage() {
   const queryClient = useQueryClient();
   const t = useT();
   const errorText = useErrorText();
+  const meta = useMeta();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const login = useMutation({
@@ -54,6 +57,11 @@ export function LoginPage() {
         <button type="submit" className="button primary" disabled={login.isPending}>
           {login.isPending ? t('login.submitting') : t('login.submit')}
         </button>
+        {meta.data?.registration === 'open' && (
+          <p className="subtle">
+            {t('login.noAccount')} <Link to="/register">{t('login.register')}</Link>
+          </p>
+        )}
         <LanguageSwitcher />
       </form>
     </main>

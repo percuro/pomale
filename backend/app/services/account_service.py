@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import Request, Response
 from sqlalchemy.orm import Session
 
+from app.config import get_default_timezone_name
 from app.errors import AppError
 from app.models.user import User
 from app.repositories.auth_repository import AuthRepository
@@ -22,6 +23,7 @@ def me_read(user: User, now: datetime) -> MeRead:
         role=user.role,
         timezone=effective_timezone_name(user),
         timezone_setting=user.timezone,
+        default_timezone=get_default_timezone_name(),
         locale=user.locale,
         today=user_today(user, now),
     )

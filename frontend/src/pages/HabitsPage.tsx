@@ -27,11 +27,8 @@ export function HabitsPage() {
 
   return (
     <>
-      <div className="page-head week-head-bar">
+      <div className="page-head">
         <h1>{t('habits.title')}</h1>
-        <a className="button" href={`${import.meta.env.VITE_API_BASE_URL ?? '/api'}/v1/export.csv`} download>
-          {t('habits.export')}
-        </a>
       </div>
       <NewHabitForm />
 
