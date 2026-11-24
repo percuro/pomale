@@ -132,9 +132,9 @@ class SyncEngine {
         this.emit({ lastError: null, ops: await allOps() });
       } catch (error) {
         if (error instanceof ApiError && error.status === 409) {
-          const detail = error.detail as { server?: ServerState } | undefined;
+          const server = error.body?.server as ServerState | undefined;
           if ((await allOps()).some((candidate) => candidate.op_id === op.op_id)) {
-            await putOp({ ...op, conflict: detail?.server ?? { done: !op.done, version: op.base_version + 1, updated_at: null } });
+            await putOp({ ...op, conflict: server ?? { done: !op.done, version: op.base_version + 1, updated_at: null } });
           }
           continue;
         }

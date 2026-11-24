@@ -2,9 +2,9 @@ import re
 from urllib.parse import urlparse
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
 
 from app.config import csrf_enabled, get_allowed_origins
+from app.errors import error_response
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 CSRF_HEADER = "X-Habit-CSRF"
@@ -21,6 +21,10 @@ def _is_shortcut_request(request: Request) -> bool:
     )
 
 
+def _rejected():
+    return error_response(403, "csrf.invalid_origin", "Request origin not allowed")
+
+
 async def enforce_csrf(request: Request, call_next):
     if not csrf_enabled() or request.method not in UNSAFE_METHODS:
         return await call_next(request)
@@ -28,7 +32,7 @@ async def enforce_csrf(request: Request, call_next):
         return await call_next(request)
 
     if request.headers.get(CSRF_HEADER) != "1":
-        return JSONResponse(status_code=403, content={"detail": "Ungültige Anfrageherkunft"})
+        return _rejected()
 
     origin = request.headers.get("Origin")
     if not origin:
@@ -38,6 +42,6 @@ async def enforce_csrf(request: Request, call_next):
             origin = f"{parsed.scheme}://{parsed.netloc}"
     trusted_origins = set(get_allowed_origins())
     if not origin or origin.rstrip("/") not in trusted_origins:
-        return JSONResponse(status_code=403, content={"detail": "Ungültige Anfrageherkunft"})
+        return _rejected()
 
     return await call_next(request)

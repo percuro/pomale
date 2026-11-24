@@ -36,12 +36,12 @@ export function createFakeServer(today = '2026-11-24'): FakeServer {
       if (server.offline) throw new TypeError('Failed to fetch');
       const url = String(input);
       const match = url.match(/\/v1\/habits\/(\d+)\/days\/(\d{4}-\d{2}-\d{2})$/);
-      if (!match || init?.method !== 'PUT') return json(404, { detail: 'Not found' });
+      if (!match || init?.method !== 'PUT') return json(404, { detail: 'Not found', code: 'http.404' });
       const habitId = Number(match[1]);
       const date = match[2];
       const body = JSON.parse(String(init.body)) as { done: boolean; base_version?: number; op_id?: string };
       server.requests.push({ habitId, date, body });
-      if (date > server.today) return json(422, { detail: 'Zukünftige Tage können nicht erfasst werden' });
+      if (date > server.today) return json(422, { detail: 'Future days cannot be checked off', code: 'checkin.future_day' });
       const key = `${habitId}:${date}`;
       const current = server.state.get(key) ?? { done: false, version: 0 };
       const read = (s: { done: boolean; version: number }) => ({
@@ -54,7 +54,9 @@ export function createFakeServer(today = '2026-11-24'): FakeServer {
       if (current.done === body.done) return json(200, read(current));
       if (body.base_version !== undefined && body.base_version !== current.version) {
         return json(409, {
-          detail: { message: 'conflict', server: { done: current.done, version: current.version, updated_at: null } },
+          detail: 'conflict',
+          code: 'checkin.conflict',
+          server: { done: current.done, version: current.version, updated_at: null },
         });
       }
       const next = { done: body.done, version: current.version + 1 };

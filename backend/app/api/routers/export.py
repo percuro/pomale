@@ -1,11 +1,12 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_today
 from app.db.database import get_db
+from app.errors import AppError
 from app.repositories.habit_repository import HabitRepository
 from app.services.export_service import export_csv
 
@@ -22,7 +23,7 @@ def export(
 ):
     end = end or today
     if start and end < start:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Ende liegt vor Beginn")
+        raise AppError(422, "range.end_before_start", "The end date is before the start date")
     content = export_csv(HabitRepository(db), user.id, start, end, today)
     return Response(
         content=content.encode("utf-8"),

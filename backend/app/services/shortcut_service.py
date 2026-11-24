@@ -2,8 +2,9 @@ import hashlib
 import secrets
 from datetime import date
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request
 
+from app.errors import AppError
 from app.models.shortcut_token import ShortcutToken
 from app.repositories.habit_repository import HabitRepository
 from app.repositories.shortcut_repository import ShortcutRepository
@@ -16,11 +17,9 @@ TOKEN_PREFIX = "ht_"
 # Limit failed attempts with wrong keys per IP (same logic as the login limit)
 shortcut_rate_limiter = LoginRateLimiter()
 
-_UNAUTHORIZED = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Schlüssel ungültig oder widerrufen",
-    headers={"WWW-Authenticate": "Bearer"},
-)
+
+def _unauthorized() -> AppError:
+    return AppError(401, "shortcut.invalid_token", "Key is invalid or revoked", headers={"WWW-Authenticate": "Bearer"})
 
 
 def hash_token(token: str) -> str:
@@ -50,7 +49,7 @@ class ShortcutService:
     def revoke(self, habit_id: int, token_id: int) -> None:
         token = self.repository.get_for_habit(token_id, habit_id)
         if token is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schlüssel nicht gefunden")
+            raise AppError(404, "shortcut.token_not_found", "Key not found")
         self.repository.revoke(token, utcnow())
 
     def check_in_today(self, request: Request, habit_id: int, done: bool, today: date) -> ShortcutCheckinRead:
@@ -60,19 +59,14 @@ class ShortcutService:
         token = self.repository.get_by_hash(hash_token(raw)) if raw else None
         if token is None or token.revoked_at is not None:
             shortcut_rate_limiter.record_failure("shortcut", ip_address)
-            raise _UNAUTHORIZED
+            raise _unauthorized()
         if token.habit_id != habit_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Schlüssel gilt für eine andere Gewohnheit"
-            )
+            raise AppError(403, "shortcut.wrong_habit", "This key belongs to another habit")
         if not done:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail="Der Kurzbefehl kann nur auf erledigt setzen",
-            )
+            raise AppError(422, "shortcut.done_only", "The shortcut can only mark a habit as done")
         habit = token.habit
         if habit.archived_on is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Gewohnheit ist archiviert")
+            raise AppError(409, "habit.archived", "The habit is archived")
 
         before = self.habits.get_checkin(habit.id, today)
         already = bool(before and before.done)

@@ -1,14 +1,24 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
+/** Error body of the API: {detail, code} plus optional extra fields (e.g. `server` on a 409). */
+export interface ApiErrorBody {
+  detail?: unknown;
+  code?: string;
+  [key: string]: unknown;
+}
+
 export class ApiError extends Error {
   readonly status: number;
-  readonly detail?: unknown;
+  /** Stable machine-readable code, e.g. "auth.invalid_credentials"; translate by this */
+  readonly code?: string;
+  readonly body?: ApiErrorBody;
 
-  constructor(message: string, status: number, detail?: unknown) {
+  constructor(message: string, status: number, code?: string, body?: ApiErrorBody) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
-    this.detail = detail;
+    this.code = code;
+    this.body = body;
   }
 }
 
@@ -30,20 +40,17 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   if (!response.ok) {
     const errorText = await response.text();
-    let errorMessage = errorText || `HTTP-Fehler ${response.status}`;
-    let errorDetail: unknown;
+    let errorMessage = errorText || `HTTP ${response.status}`;
+    let body: ApiErrorBody | undefined;
     try {
-      const parsed = JSON.parse(errorText) as { detail?: unknown };
-      errorDetail = parsed.detail;
-      if (typeof parsed.detail === 'string') {
-        errorMessage = parsed.detail;
-      } else if (Array.isArray(parsed.detail)) {
-        errorMessage = 'Eingabe ungültig';
+      body = JSON.parse(errorText) as ApiErrorBody;
+      if (typeof body.detail === 'string') {
+        errorMessage = body.detail;
       }
     } catch {
-      // Not every error response is JSON; keep the raw text in that case.
+      // Not every error response is JSON (e.g. a proxy error page); keep the raw text.
     }
-    throw new ApiError(errorMessage, response.status, errorDetail);
+    throw new ApiError(errorMessage, response.status, typeof body?.code === 'string' ? body.code : undefined, body);
   }
 
   if (response.status === 204) {

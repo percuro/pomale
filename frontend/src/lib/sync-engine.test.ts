@@ -128,7 +128,7 @@ describe('sync engine', () => {
     await syncEngine.setDay(1, '2026-11-30', true, 0);
     await syncEngine.flush();
     expect(syncEngine.getSnapshot().ops).toHaveLength(0);
-    expect(syncEngine.getSnapshot().lastError).toMatch(/Zukünftige/);
+    expect(syncEngine.getSnapshot().lastError).toMatch(/Future days/);
   });
 
   it('does not report a false conflict when undo follows while the first request is in flight', async () => {

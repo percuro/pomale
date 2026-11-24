@@ -2,6 +2,7 @@ import unittest
 from datetime import timedelta
 from http.cookies import SimpleCookie
 
+from app.errors import AppError
 from app.models.user import UserSession
 from app.services.auth_service import SESSION_COOKIE_NAME, AuthService, utcnow
 from tests.support import PASSWORD, ApiTestEnvironment
@@ -26,7 +27,7 @@ class AuthApiTest(unittest.TestCase):
         db.close()
 
     def test_short_password_rejected(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AppError):
             self.env.create_user("kurz", "zu-kurz")
 
     def test_login_sets_persistent_http_only_cookie(self):

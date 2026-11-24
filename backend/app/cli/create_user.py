@@ -2,6 +2,7 @@ import argparse
 import getpass
 
 from app.db.database import SessionLocal
+from app.errors import AppError
 from app.repositories.auth_repository import AuthRepository
 from app.services.auth_service import MIN_PASSWORD_LENGTH, AuthService
 
@@ -35,8 +36,8 @@ def main() -> None:
             else:
                 user = service.create_user(args.username, password)
                 print(f"Account {user.username} has been created.")
-        except ValueError as exc:
-            raise SystemExit(str(exc)) from exc
+        except AppError as exc:
+            raise SystemExit(exc.message) from exc
     finally:
         db.close()
 

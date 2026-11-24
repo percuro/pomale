@@ -140,9 +140,10 @@ class VersionedPutTest(unittest.TestCase):
         self.put("2026-11-23", False, 1, op_id="laptop-2")  # laptop: back to open (version 2)
         offline_phone = self.put("2026-11-23", True, 0, op_id="phone")  # iPhone knew version 0
         self.assertEqual(offline_phone.status_code, 409)
-        detail = offline_phone.json()["detail"]
-        self.assertEqual(detail["server"]["done"], False)
-        self.assertEqual(detail["server"]["version"], 2)
+        body = offline_phone.json()
+        self.assertEqual(body["code"], "checkin.conflict")
+        self.assertEqual(body["server"]["done"], False)
+        self.assertEqual(body["server"]["version"], 2)
         # after choosing "keep this device's state" with the current version
         resolved = self.put("2026-11-23", True, 2, op_id="phone-2")
         self.assertEqual((resolved.status_code, resolved.json()["version"]), (200, 3))

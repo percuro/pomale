@@ -1,12 +1,13 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_today
 from app.config import get_default_timezone_name
 from app.db.database import get_db
+from app.errors import AppError
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import LoginRequest, MeRead
 from app.services.auth_service import AuthService
@@ -32,7 +33,7 @@ def login(
     login_rate_limiter.check(username, ip_address)
     try:
         user = AuthService(AuthRepository(db)).login(login_in, response)
-    except HTTPException as exc:
+    except AppError as exc:
         if exc.status_code == status.HTTP_401_UNAUTHORIZED:
             login_rate_limiter.record_failure(username, ip_address)
         raise

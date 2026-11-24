@@ -11,10 +11,12 @@ from app.api.routers.setup import router as setup_router
 from app.api.routers.shortcuts import public_router as shortcut_public_router
 from app.api.routers.shortcuts import router as shortcut_router
 from app.config import APP_NAME
+from app.errors import install_error_handlers
 from app.middleware.csrf import enforce_csrf
 
 app = FastAPI(title=f"{APP_NAME} API", version=__version__)
 app.middleware("http")(enforce_csrf)
+install_error_handlers(app)
 
 
 # Mounted under /api by app.web: /api/v1/days → /v1/days here

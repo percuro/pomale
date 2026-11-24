@@ -2,7 +2,7 @@ from collections import defaultdict, deque
 from threading import Lock
 from time import monotonic
 
-from fastapi import HTTPException, status
+from app.errors import AppError
 
 
 class LoginRateLimiter:
@@ -19,9 +19,10 @@ class LoginRateLimiter:
             account_attempts = self._active(f"account:{username.lower()}", now)
             ip_attempts = self._active(f"ip:{ip_address}", now)
             if len(account_attempts) >= self.account_limit or len(ip_attempts) >= self.ip_limit:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Zu viele fehlgeschlagene Anmeldeversuche. Bitte später erneut versuchen.",
+                raise AppError(
+                    429,
+                    "auth.rate_limited",
+                    "Too many failed attempts. Please try again later.",
                     headers={"Retry-After": str(self.window_seconds)},
                 )
 

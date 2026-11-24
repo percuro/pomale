@@ -18,7 +18,7 @@ class ShortcutTokenRead(BaseModel):
 
 
 class ShortcutTokenCreated(ShortcutTokenRead):
-    token: str = Field(description="Nur jetzt sichtbar; gespeichert wird nur der Hash")
+    token: str = Field(description="Shown only now; only its hash is stored")
 
 
 class ShortcutCheckinRequest(BaseModel):
