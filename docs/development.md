@@ -55,6 +55,9 @@ The first run creates the account through the setup page; later runs log in (`E2
 
 ## Conventions
 
-- English for code, comments, docs and commit messages. The interface is German until internationalisation lands (v0.4).
-- "Today" always comes from the configured time zone (`app/services/day_service.py`, `frontend/src/lib/dates.ts`), never from the server clock.
+- English for code, comments, docs and commit messages.
+- Interface texts live only in `frontend/src/i18n/`: add a key to `en.ts`, then the same key to `de.ts` (the build fails otherwise). Components call `t('key', {param})`; plurals use `key_one`/`key_other` and a `count` parameter; dates use the formatters from `useI18n().format`. A test fails when German text appears in a component or a backend error code has no translation.
+- API errors are raised as `AppError(status, "area.reason", "English message")` (`backend/app/errors.py`); the frontend translates by code.
+- "Today" always comes from the account's time zone (`app/services/timezones.py`, `frontend/src/lib/dates.ts`), never from the server clock.
+- Every route that takes an ID must be listed in `backend/tests/test_isolation.py`; the test fails otherwise.
 - Every change on a day goes through the offline queue (`frontend/src/lib/sync-engine.ts`); the server never silently overwrites a newer state (409 with the server state instead).
