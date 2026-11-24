@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,5 +31,8 @@ class ShortcutCheckinRead(BaseModel):
     habit_name: str
     date: date
     done: bool
+    # Stable for automations: "done" (checked off now) or "already_done"
+    result: Literal["done", "already_done"]
+    # Human-readable, in the owner's language (else the phone's, else English)
     status: str
     message: str

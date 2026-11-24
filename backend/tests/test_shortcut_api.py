@@ -51,12 +51,27 @@ class ShortcutApiTest(unittest.TestCase):
         first = self.tap()
         second = self.tap()
         self.assertEqual(first.status_code, 200)
-        self.assertEqual(first.json()["status"], "Heute erledigt")
+        self.assertEqual((first.json()["result"], first.json()["status"]), ("done", "Done today"))
         self.assertEqual(first.json()["date"], "2026-11-24")
-        self.assertEqual(second.json()["status"], "Bereits erledigt")
-        self.assertEqual(second.json()["message"], "Lesen: Bereits erledigt")
+        self.assertEqual(second.json()["result"], "already_done")
+        self.assertEqual(second.json()["message"], "Lesen: Already done")
         day = self.client.get("/v1/days").json()["habits"][0]["days"][1]
         self.assertEqual((day["state"], day["version"]), ("done", 1))
+
+    def test_message_in_the_owners_language_else_the_phones(self):
+        german_phone = self.shortcut.put(
+            f"/v1/habits/{self.habit['id']}/days/today",
+            headers={"Authorization": f"Bearer {self.token}", "Accept-Language": "de-DE,de;q=0.9"},
+            json={"done": True},
+        )
+        self.assertEqual(german_phone.json()["message"], "Lesen: Heute erledigt")
+        self.client.patch("/v1/account", json={"locale": "en"})
+        english_owner = self.shortcut.put(
+            f"/v1/habits/{self.habit['id']}/days/today",
+            headers={"Authorization": f"Bearer {self.token}", "Accept-Language": "de"},
+            json={"done": True},
+        )
+        self.assertEqual(english_owner.json()["message"], "Lesen: Already done")
 
     def test_server_decides_today_in_tracker_timezone(self):
         self.env.today = date(2026, 11, 25)

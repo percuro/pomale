@@ -11,6 +11,7 @@ from app.repositories.shortcut_repository import ShortcutRepository
 from app.schemas.shortcut import ShortcutCheckinRead
 from app.services.auth_service import utcnow
 from app.services.checkin_service import CheckinService
+from app.services.i18n import resolve_locale, text
 from app.services.login_rate_limiter import LoginRateLimiter
 from app.services.timezones import user_today
 
@@ -76,12 +77,14 @@ class ShortcutService:
         already = bool(before and before.done)
         result = CheckinService(self.habits).set_state(habit, today, True, today, op_id=None, base_version=None)
         self.repository.touch(token, utcnow())
-        status_text = "Bereits erledigt" if already else "Heute erledigt"
+        outcome = "already_done" if already else "done"
+        status_text = text(resolve_locale(habit.user, request), f"shortcut.{outcome}")
         return ShortcutCheckinRead(
             habit_id=habit.id,
             habit_name=habit.name,
             date=result.date,
             done=result.done,
+            result=outcome,
             status=status_text,
             message=f"{habit.name}: {status_text}",
         )
