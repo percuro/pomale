@@ -59,9 +59,3 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   return response.json() as Promise<T>;
 }
-
-export function errorText(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  if (error instanceof TypeError) return 'Keine Verbindung zum Server';
-  return 'Unbekannter Fehler';
-}

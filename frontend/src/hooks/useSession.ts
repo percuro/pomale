@@ -10,6 +10,6 @@ export const SessionContext = createContext<Session | null>(null);
 
 export function useSession(): Session {
   const session = useContext(SessionContext);
-  if (!session) throw new Error('useSession außerhalb der angemeldeten App');
+  if (!session) throw new Error('useSession outside the signed-in app');
   return session;
 }

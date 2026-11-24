@@ -1,35 +1,37 @@
-import { WEEKDAY_LONG, WEEKDAY_SHORT } from '../../lib/dates';
+import { useI18n } from '../../i18n/context';
+import type { TKey } from '../../i18n/core';
 
-const PRESETS: [string, number][] = [
-  ['Täglich', 127],
-  ['Werktags', 0b0011111],
-  ['Wochenende', 0b1100000],
+const PRESETS: [TKey, number][] = [
+  ['weekdays.preset.daily', 127],
+  ['weekdays.preset.weekdays', 0b0011111],
+  ['weekdays.preset.weekend', 0b1100000],
 ];
 
 export function WeekdayPicker({
   value,
   onChange,
-  legend = 'Geplante Tage',
+  legend,
 }: {
   value: number;
   onChange: (mask: number) => void;
   legend?: string;
 }) {
+  const { t, format } = useI18n();
   return (
     <fieldset className="weekday-picker">
-      <legend>{legend}</legend>
+      <legend>{legend ?? t('weekdays.legend')}</legend>
       <div className="chips">
-        {WEEKDAY_SHORT.map((label, i) => {
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => {
           const bit = 1 << i;
           return (
-            <label key={label} className="chip">
+            <label key={i} className="chip">
               <input
                 type="checkbox"
                 checked={Boolean(value & bit)}
                 onChange={(e) => onChange(e.target.checked ? value | bit : value & ~bit)}
               />
-              <span aria-hidden="true">{label}</span>
-              <span className="visually-hidden">{WEEKDAY_LONG[i]}</span>
+              <span aria-hidden="true">{format.weekdayShort(i)}</span>
+              <span className="visually-hidden">{format.weekdayLong(i)}</span>
             </label>
           );
         })}
@@ -43,11 +45,11 @@ export function WeekdayPicker({
             aria-pressed={value === mask}
             onClick={() => onChange(mask)}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </div>
-      {value === 0 && <p className="error" role="alert">Mindestens einen Tag wählen.</p>}
+      {value === 0 && <p className="error" role="alert">{t('weekdays.pickOne')}</p>}
     </fieldset>
   );
 }

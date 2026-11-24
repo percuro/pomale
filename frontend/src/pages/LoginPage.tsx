@@ -1,12 +1,16 @@
 import { APP_NAME } from '../app/brand';
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, errorText } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import type { Me } from '../lib/types';
 import { signedIn } from '../hooks/useMe';
+import { useErrorText, useT } from '../i18n/context';
+import { LanguageSwitcher } from '../components/layout/LanguageSwitcher';
 
 export function LoginPage() {
   const queryClient = useQueryClient();
+  const t = useT();
+  const errorText = useErrorText();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const login = useMutation({
@@ -25,7 +29,7 @@ export function LoginPage() {
       <form className="card login" onSubmit={submit}>
         <h1>{APP_NAME}</h1>
         <label className="field">
-          <span>Benutzername</span>
+          <span>{t('field.username')}</span>
           <input
             name="username"
             autoComplete="username"
@@ -36,7 +40,7 @@ export function LoginPage() {
           />
         </label>
         <label className="field">
-          <span>Passwort</span>
+          <span>{t('field.password')}</span>
           <input
             name="password"
             type="password"
@@ -48,8 +52,9 @@ export function LoginPage() {
         </label>
         {login.isError && <p className="error" role="alert">{errorText(login.error)}</p>}
         <button type="submit" className="button primary" disabled={login.isPending}>
-          {login.isPending ? 'Anmelden …' : 'Anmelden'}
+          {login.isPending ? t('login.submitting') : t('login.submit')}
         </button>
+        <LanguageSwitcher />
       </form>
     </main>
   );

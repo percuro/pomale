@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, errorText } from '../../lib/api';
+import { apiFetch } from '../../lib/api';
+import { useErrorText, useI18n, useT } from '../../i18n/context';
 import type { Habit } from '../../lib/types';
 
 interface TokenRead {
@@ -17,13 +18,8 @@ interface TokenCreated extends TokenRead {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
-function formatUtc(iso: string | null): string {
-  if (!iso) return 'nie';
-  const date = new Date(iso.endsWith('Z') ? iso : `${iso}Z`);
-  return date.toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' });
-}
-
-function CopyField({ label, value }: { label: string; value: string }) {
+export function CopyField({ label, value }: { label: string; value: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <div className="copy-field">
@@ -42,7 +38,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
           }
         }}
       >
-        {copied ? 'Kopiert' : 'Kopieren'}
+        {copied ? t('common.copied') : t('common.copy')}
       </button>
     </div>
   );
@@ -50,13 +46,15 @@ function CopyField({ label, value }: { label: string; value: string }) {
 
 /** Create and revoke keys for the favourite-habit shortcut. */
 export function ShortcutPanel({ habit }: { habit: Habit }) {
+  const { t, format } = useI18n();
+  const errorText = useErrorText();
   const queryClient = useQueryClient();
   const key = ['shortcut-tokens', habit.id];
   const tokens = useQuery({
     queryKey: key,
     queryFn: () => apiFetch<TokenRead[]>(`/v1/habits/${habit.id}/shortcut-tokens`),
   });
-  const [label, setLabel] = useState('iPhone');
+  const [label, setLabel] = useState(() => t('shortcut.defaultDevice'));
   const [created, setCreated] = useState<TokenCreated | null>(null);
   const create = useMutation({
     mutationFn: () =>
@@ -84,35 +82,32 @@ export function ShortcutPanel({ habit }: { habit: Habit }) {
   };
 
   return (
-    <section className="shortcut-panel" aria-label={`Kurzbefehl für ${habit.name}`}>
-      <h3>Kurzbefehl „{habit.name} abhaken“</h3>
-      <p className="subtle">
-        Der Schlüssel darf nur diese Gewohnheit für heute auf erledigt setzen. Er wird nur jetzt einmal angezeigt –
-        nicht in Screenshots, Notizen oder Nachrichten ablegen.
-      </p>
+    <section className="shortcut-panel" aria-label={t('shortcut.panelLabel', { name: habit.name })}>
+      <h3>{t('shortcut.title', { name: habit.name })}</h3>
+      <p className="subtle">{t('shortcut.intro')}</p>
 
       {created ? (
         <div className="card created-token" role="status">
-          <p><strong>Schlüssel „{created.label}“ angelegt.</strong> In Kurzbefehle → „Inhalte von URL abrufen“ eintragen:</p>
-          <CopyField label="URL" value={url} />
-          <CopyField label="Methode" value="PUT" />
-          <CopyField label="Header Authorization" value={`Bearer ${created.token}`} />
-          <CopyField label="JSON-Feld done (Boolesch)" value="true" />
-          <p className="subtle">
-            Danach „Wörterbuchwert für message abrufen“ und „Ergebnis anzeigen“. Anleitung: deploy/IPHONE.md.
+          <p>
+            <strong>{t('shortcut.created', { label: created.label })}</strong> {t('shortcut.enterIn')}
           </p>
+          <CopyField label={t('shortcut.url')} value={url} />
+          <CopyField label={t('shortcut.method')} value="PUT" />
+          <CopyField label={t('shortcut.header')} value={`Bearer ${created.token}`} />
+          <CopyField label={t('shortcut.jsonField')} value="true" />
+          <p className="subtle">{t('shortcut.after')}</p>
           <button type="button" className="button" onClick={() => setCreated(null)}>
-            Fertig, Schlüssel ausblenden
+            {t('shortcut.hide')}
           </button>
         </div>
       ) : (
         <form className="actions" onSubmit={submit}>
           <label className="field inline">
-            <span>Gerät</span>
+            <span>{t('shortcut.device')}</span>
             <input value={label} maxLength={80} required onChange={(e) => setLabel(e.target.value)} />
           </label>
           <button type="submit" className="button primary" disabled={create.isPending}>
-            Schlüssel anlegen
+            {t('shortcut.create')}
           </button>
         </form>
       )}
@@ -124,15 +119,20 @@ export function ShortcutPanel({ habit }: { habit: Habit }) {
             <li key={token.id}>
               <span>
                 <strong>{token.label}</strong>
-                <span className="subtle"> · angelegt {formatUtc(token.created_at)} · zuletzt benutzt {formatUtc(token.last_used_at)}</span>
+                <span className="subtle">
+                  {t('shortcut.tokenInfo', {
+                    created: format.dateTime(token.created_at),
+                    used: format.dateTime(token.last_used_at),
+                  })}
+                </span>
               </span>
               <button
                 type="button"
                 className="button"
                 onClick={() => revoke.mutate(token.id)}
-                aria-label={`Schlüssel ${token.label} widerrufen`}
+                aria-label={t('shortcut.revokeLabel', { label: token.label })}
               >
-                Widerrufen
+                {t('shortcut.revoke')}
               </button>
             </li>
           ))}

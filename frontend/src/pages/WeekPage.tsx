@@ -1,14 +1,16 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { errorText } from '../lib/api';
-import { WEEKDAY_LONG, WEEKDAY_SHORT, addDays, longDate, shortDate, weekStart } from '../lib/dates';
-import { STATE_ICON, STATE_LABEL } from '../lib/states';
+import { addDays, weekStart } from '../lib/dates';
+import { STATE_ICON } from '../lib/states';
+import { useErrorText, useI18n } from '../i18n/context';
 import type { Day, HabitDays } from '../lib/types';
 import { setDay, useDays } from '../hooks/useDays';
 import { useSession } from '../hooks/useSession';
 
 export function WeekPage() {
   const { today } = useSession();
+  const { t, format } = useI18n();
+  const errorText = useErrorText();
   const currentWeek = weekStart(today);
   const [start, setStart] = useState(currentWeek);
   const end = addDays(start, 6);
@@ -52,15 +54,12 @@ export function WeekPage() {
     <>
       <div className="page-head week-head-bar">
         <div>
-          <h1>Woche</h1>
-          <p className="subtle">
-            {shortDate(start)} – {shortDate(end)}
-            {start.slice(0, 4)}
-          </p>
+          <h1>{t('week.title')}</h1>
+          <p className="subtle">{format.dateRange(start, end)}</p>
         </div>
-        <div className="week-nav" role="group" aria-label="Woche wählen">
+        <div className="week-nav" role="group" aria-label={t('week.choose')}>
           <button type="button" className="button" onClick={() => setStart(addDays(start, -7))}>
-            ‹ Vorwoche
+            {t('week.previous')}
           </button>
           <button
             type="button"
@@ -68,7 +67,7 @@ export function WeekPage() {
             disabled={start === currentWeek}
             onClick={() => setStart(currentWeek)}
           >
-            Diese Woche
+            {t('week.current')}
           </button>
           <button
             type="button"
@@ -76,19 +75,19 @@ export function WeekPage() {
             disabled={start >= currentWeek}
             onClick={() => setStart(addDays(start, 7))}
           >
-            Nächste ›
+            {t('week.next')}
           </button>
         </div>
       </div>
 
       {days.data?.offline && (
-        <p className="subtle" role="status">Gespeicherter Stand – Server gerade nicht erreichbar.</p>
+        <p className="subtle" role="status">{t('week.offline')}</p>
       )}
-      {days.isPending && <p>Lädt …</p>}
+      {days.isPending && <p>{t('app.loading')}</p>}
       {days.isError && !days.data && <p role="alert" className="error">{errorText(days.error)}</p>}
       {days.isSuccess && habits.length === 0 && (
         <p className="empty">
-          In dieser Woche gibt es keine Gewohnheiten. <Link to="/gewohnheiten">Gewohnheit anlegen</Link>
+          {t('week.empty')} <Link to="/habits">{t('today.createHabit')}</Link>
         </p>
       )}
 
@@ -96,22 +95,22 @@ export function WeekPage() {
         <div
           className="week-grid"
           role="grid"
-          aria-label={`Woche vom ${longDate(start)}`}
+          aria-label={t('week.gridLabel', { date: format.longDate(start) })}
           aria-describedby="week-help"
           ref={gridRef}
           onKeyDown={onKeyDown}
         >
           <div role="row" className="week-row week-columns">
-            <span role="columnheader" className="week-name">Gewohnheit</span>
+            <span role="columnheader" className="week-name">{t('week.habit')}</span>
             {dates.map((date, i) => (
               <span
                 role="columnheader"
                 key={date}
                 className={date === today ? 'week-day is-today' : 'week-day'}
-                aria-label={longDate(date)}
+                aria-label={format.longDate(date)}
               >
-                {WEEKDAY_SHORT[i]}
-                <small>{shortDate(date)}</small>
+                {format.weekdayShort(i)}
+                <small>{format.shortDate(date)}</small>
               </span>
             ))}
           </div>
@@ -120,8 +119,10 @@ export function WeekPage() {
               <span role="rowheader" className="week-name">
                 <span className="week-habit">{habit.name}</span>
                 <small className="quota">
-                  {habit.quota.due > 0 ? `${habit.quota.done} von ${habit.quota.due}` : 'nichts fällig'}
-                  {habit.archived && ' · archiviert'}
+                  {habit.quota.due > 0
+                    ? t('week.quota', { done: habit.quota.done, due: habit.quota.due })
+                    : t('week.nothingDue')}
+                  {habit.archived && ` · ${t('week.archived')}`}
                 </small>
               </span>
               {habit.days.map((day, c) => (
@@ -133,8 +134,18 @@ export function WeekPage() {
                     tabIndex={active[0] === r && active[1] === c ? 0 : -1}
                     aria-pressed={day.state === 'future' ? undefined : day.done}
                     aria-disabled={day.state === 'future'}
-                    aria-label={`${habit.name}, ${WEEKDAY_LONG[c]} ${shortDate(day.date)}: ${STATE_LABEL[day.state]}${day.conflict ? ', Konflikt' : day.pending ? ', wartet auf Übertragung' : ''}`}
-                    title={`${STATE_LABEL[day.state]}${day.pending ? ' (wartet auf Übertragung)' : ''}`}
+                    aria-label={
+                      t('week.cellLabel', {
+                        habit: habit.name,
+                        day: `${format.weekdayLong(c)} ${format.shortDate(day.date)}`,
+                        state: t(`state.${day.state}`),
+                      }) + (day.conflict ? t('week.cellConflict') : day.pending ? t('week.cellPending') : '')
+                    }
+                    title={
+                      day.pending
+                        ? t('week.cellPendingTitle', { state: t(`state.${day.state}`) })
+                        : t(`state.${day.state}`)
+                    }
                     onFocus={() => setActive([r, c])}
                     onClick={() => toggle(habit, day)}
                   >
@@ -147,8 +158,7 @@ export function WeekPage() {
         </div>
       )}
       <p id="week-help" className="subtle help">
-        Pfeiltasten wählen einen Tag, Leertaste oder Enter setzt ihn auf erledigt bzw. offen.
-        Quote: erledigte von fälligen Tagen; nicht geplante und zukünftige Tage zählen nicht.
+        {t('week.help')}
       </p>
     </>
   );

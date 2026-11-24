@@ -1,13 +1,6 @@
 import type { DayState } from './types';
 
-export const STATE_LABEL: Record<DayState, string> = {
-  open: 'Offen',
-  done: 'Erledigt',
-  extra_done: 'Zusätzlich erledigt',
-  not_planned: 'Nicht geplant',
-  future: 'Noch nicht',
-};
-
+/** Text: t(`state.${state}`) */
 export const STATE_ICON: Record<DayState, string> = {
   open: '○',
   done: '✓',

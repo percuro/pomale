@@ -285,3 +285,6 @@ a.button { display: inline-flex; align-items: center; text-decoration: none; }
 .token-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 .token-list li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }
 .version { margin-top: 2rem; font-size: 0.85rem; }
+
+/* Language choice on signed-out pages */
+.language-switcher { display: flex; justify-content: center; gap: 1rem; }

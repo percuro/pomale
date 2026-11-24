@@ -11,9 +11,13 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <StartPage /> },
-      { path: 'heute', element: <TodayPage /> },
-      { path: 'woche', element: <WeekPage /> },
-      { path: 'gewohnheiten', element: <HabitsPage /> },
+      { path: 'today', element: <TodayPage /> },
+      { path: 'week', element: <WeekPage /> },
+      { path: 'habits', element: <HabitsPage /> },
+      // Paths before 0.4 (bookmarks)
+      { path: 'heute', element: <Navigate to="/today" replace /> },
+      { path: 'woche', element: <Navigate to="/week" replace /> },
+      { path: 'gewohnheiten', element: <Navigate to="/habits" replace /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

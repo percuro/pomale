@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, todayIn, weekStart, weekdayIndex, weekdaysLabel } from './dates';
+import { addDays, todayIn, weekStart, weekdayIndex } from './dates';
 
 describe('dates', () => {
   it('computes today in the given time zone, not the device zone', () => {
@@ -22,11 +22,5 @@ describe('dates', () => {
     expect(weekStart('2026-11-29')).toBe('2026-11-23');
     expect(weekdayIndex('2026-11-23')).toBe(0);
     expect(weekdayIndex('2026-11-29')).toBe(6);
-  });
-
-  it('labels weekday masks', () => {
-    expect(weekdaysLabel(127)).toBe('täglich');
-    expect(weekdaysLabel(0b0011111)).toBe('werktags');
-    expect(weekdaysLabel(0b0000101)).toBe('Mo, Mi');
   });
 });

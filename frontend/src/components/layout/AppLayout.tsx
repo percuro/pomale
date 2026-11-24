@@ -7,6 +7,7 @@ import type { Me } from '../../lib/types';
 import { ME_KEY, signedOut, useMe } from '../../hooks/useMe';
 import { SessionContext } from '../../hooks/useSession';
 import { useToday } from '../../hooks/useToday';
+import { useI18n } from '../../i18n/context';
 import { LoginPage } from '../../pages/LoginPage';
 import { SetupPage } from '../../pages/SetupPage';
 import { useSetupStatus } from '../../hooks/useSetupStatus';
@@ -17,6 +18,7 @@ import { SyncStatus } from '../sync/SyncStatus';
 export function AppLayout() {
   const me = useMe();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
 
   useEffect(() => {
     const onUnauthorized = () => queryClient.setQueryData(ME_KEY, null);
@@ -25,13 +27,13 @@ export function AppLayout() {
   }, [queryClient]);
 
   if (me.isPending) {
-    return <main className="center"><p>Lädt …</p></main>;
+    return <main className="center"><p>{t('app.loading')}</p></main>;
   }
   if (me.isError) {
     return (
       <main className="center">
-        <p role="alert">Server nicht erreichbar.</p>
-        <button type="button" className="button" onClick={() => me.refetch()}>Erneut versuchen</button>
+        <p role="alert">{t('app.serverUnreachable')}</p>
+        <button type="button" className="button" onClick={() => me.refetch()}>{t('app.retry')}</button>
       </main>
     );
   }
@@ -43,8 +45,10 @@ export function AppLayout() {
 
 function SignedOut() {
   const setup = useSetupStatus();
+  const { t, setAccountLocale } = useI18n();
+  useEffect(() => setAccountLocale(null), [setAccountLocale]);
   if (setup.isPending) {
-    return <main className="center"><p>Lädt …</p></main>;
+    return <main className="center"><p>{t('app.loading')}</p></main>;
   }
   return setup.data?.needed ? <SetupPage /> : <LoginPage />;
 }
@@ -52,6 +56,9 @@ function SignedOut() {
 function SignedIn({ me }: { me: Me }) {
   const today = useToday(me.timezone, me.today);
   const queryClient = useQueryClient();
+  const { t, setAccountLocale } = useI18n();
+  useEffect(() => setAccountLocale(me.locale), [me.locale, setAccountLocale]);
+
   const logout = useMutation({
     mutationFn: () => apiFetch<void>('/v1/auth/logout', { method: 'POST' }),
     // Forget local data only after a successful logout
@@ -60,7 +67,7 @@ function SignedIn({ me }: { me: Me }) {
 
   const onLogout = () => {
     const waiting = syncEngine.getSnapshot().ops.length;
-    if (waiting > 0 && !window.confirm(`${waiting} Änderung(en) sind noch nicht übertragen. Sie bleiben auf diesem Gerät und werden gesendet, sobald du dich wieder anmeldest. Trotzdem abmelden?`)) {
+    if (waiting > 0 && !window.confirm(t('logout.pending', { count: waiting }))) {
       return;
     }
     logout.mutate();
@@ -68,21 +75,21 @@ function SignedIn({ me }: { me: Me }) {
 
   return (
     <SessionContext.Provider value={{ me, today }}>
-      <a className="skip-link" href="#inhalt">Zum Inhalt</a>
+      <a className="skip-link" href="#content">{t('app.skipToContent')}</a>
       <header className="topbar">
         <span className="brand">{APP_NAME}</span>
-        <nav className="tabs" aria-label="Ansichten">
-          <NavLink to="/heute">Heute</NavLink>
-          <NavLink to="/woche">Woche</NavLink>
-          <NavLink to="/gewohnheiten">Gewohnheiten</NavLink>
+        <nav className="tabs" aria-label={t('nav.label')}>
+          <NavLink to="/today">{t('nav.today')}</NavLink>
+          <NavLink to="/week">{t('nav.week')}</NavLink>
+          <NavLink to="/habits">{t('nav.habits')}</NavLink>
         </nav>
         <button type="button" className="link-button" onClick={onLogout}>
-          Abmelden
+          {t('nav.logout')}
         </button>
       </header>
       <SyncBridge owner={me} />
-      <main id="inhalt" className="content">
-        {logout.isError && <p className="error" role="alert">Abmelden nicht möglich: keine Verbindung.</p>}
+      <main id="content" className="content">
+        {logout.isError && <p className="error" role="alert">{t('logout.failed')}</p>}
         <SyncStatus />
         <Outlet />
       </main>
