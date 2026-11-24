@@ -5,7 +5,7 @@ test('week grid works with the keyboard and updates the quota', async ({ page, r
   const name = uniqueName('Laufen');
   const day = await today(request);
   await createHabit(request, name, { start_on: day });
-  await page.goto('/woche');
+  await page.goto('/week');
   const row = page.getByRole('row').filter({ hasText: name });
   const cell = row.locator('[role=gridcell].is-today button');
   await cell.focus();

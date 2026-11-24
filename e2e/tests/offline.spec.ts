@@ -4,7 +4,7 @@ import { createHabit, dayState, setDay, today, todayRow, uniqueName } from './he
 test('check-in while offline is queued, marked and sent when back online', async ({ page, context, request }) => {
   const name = uniqueName('Offline');
   const habit = await createHabit(request, name);
-  await page.goto('/heute');
+  await page.goto('/today');
   await expect(todayRow(page, name)).toBeVisible();
 
   await context.setOffline(true);
@@ -22,7 +22,7 @@ test('a conflicting change from another device asks instead of overwriting', asy
   const name = uniqueName('Konflikt');
   const habit = await createHabit(request, name);
   const day = await today(request);
-  await page.goto('/heute');
+  await page.goto('/today');
   await expect(todayRow(page, name)).toBeVisible();
 
   await context.setOffline(true);

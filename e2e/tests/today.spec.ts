@@ -4,7 +4,7 @@ import { createHabit, dayState, today, todayRow, uniqueName } from './helpers';
 test('check off and undo today without the row moving', async ({ page, request }) => {
   const name = uniqueName('Lesen');
   const habit = await createHabit(request, name, { cue: 'nach dem Frühstück' });
-  await page.goto('/heute');
+  await page.goto('/today');
   const row = todayRow(page, name);
   const main = row.getByRole('button', { name: new RegExp(name) }).first();
   await expect(main).toHaveAttribute('aria-pressed', 'false');

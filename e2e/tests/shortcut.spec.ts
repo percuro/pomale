@@ -4,7 +4,7 @@ import { createHabit, uniqueName } from './helpers';
 test('shortcut key checks off today and stops working after revoking', async ({ page, request, playwright, baseURL }) => {
   const name = uniqueName('Wasser');
   const habit = await createHabit(request, name);
-  await page.goto('/gewohnheiten');
+  await page.goto('/habits');
   const item = page.locator('li.habit-item', { hasText: name });
   await item.getByRole('button', { name: 'Kurzbefehl', exact: true }).click();
   await item.getByRole('button', { name: 'Schlüssel anlegen' }).click();
@@ -24,8 +24,9 @@ test('shortcut key checks off today and stops working after revoking', async ({ 
     });
   const first = await tap();
   expect(first.status()).toBe(200);
-  expect((await first.json()).message).toBe(`${name}: Heute erledigt`);
-  expect((await (await tap()).json()).status).toBe('Bereits erledigt');
+  expect(await first.json()).toMatchObject({ result: 'done', habit_name: name });
+  expect((await first.json()).message).toContain(name);
+  expect((await (await tap()).json()).result).toBe('already_done');
 
   await item.getByRole('button', { name: 'Fertig, Schlüssel ausblenden' }).click();
   await item.getByRole('button', { name: /Schlüssel .* widerrufen/ }).click();
