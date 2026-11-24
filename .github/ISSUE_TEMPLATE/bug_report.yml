@@ -1,0 +1,34 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. …\n2. …"
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown by GET /api/health and at the bottom of the habits page
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: e.g. iPhone 15, iOS 26.1, home-screen app
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: "`docker compose logs app` – remove tokens and other secrets"
+      render: text

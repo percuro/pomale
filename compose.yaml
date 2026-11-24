@@ -1,0 +1,25 @@
+# pomale – see docs/self-hosting.md
+# 1. Put PUBLIC_URL=https://habits.example.org into a .env file next to this file
+# 2. docker compose up -d
+# 3. docker compose logs app   → open PUBLIC_URL/setup and enter the setup token
+services:
+  app:
+    image: ghcr.io/percuro/pomale:0
+    # build: .   # for development: build the image from this repository instead
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # Only reachable from the host; put a TLS reverse proxy in front (docs/self-hosting.md)
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  data:

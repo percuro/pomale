@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/percuro/pomale/security/advisories/new
+    about: Please report vulnerabilities privately.
+  - name: Commercial license
+    url: https://github.com/percuro/pomale/blob/main/COMMERCIAL.md
+    about: Using it commercially or hosting it for paying customers.

@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.idea/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+.env
+.env.*
+!.env.example
+backups/
+node_modules/
+dist/
