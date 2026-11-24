@@ -28,7 +28,7 @@ def login(
     ip_address = request.client.host if request.client else "unknown"
     login_rate_limiter.check(username, ip_address)
     try:
-        user = AuthService(AuthRepository(db)).login(login_in, response)
+        user = AuthService(AuthRepository(db)).login(login_in, request, response)
     except AppError as exc:
         if exc.status_code == status.HTTP_401_UNAUTHORIZED:
             login_rate_limiter.record_failure(username, ip_address)

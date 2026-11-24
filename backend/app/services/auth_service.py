@@ -10,10 +10,10 @@ from fastapi import Request, Response
 
 from app.config import cookie_secure, env_positive_int
 from app.errors import AppError
-from app.models.user import ROLE_USER, User
+from app.models.user import ROLE_USER, User, UserSession
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import AccountSettings, LoginRequest
-from app.services.account_service import apply_settings
+from app.services.account_settings import apply_settings
 
 SESSION_COOKIE_NAME = "habit_session"
 # Long sessions: the iPhone home-screen web app has its own cookie storage;
@@ -21,6 +21,9 @@ SESSION_COOKIE_NAME = "habit_session"
 SESSION_IDLE_MINUTES = env_positive_int("SESSION_IDLE_MINUTES", 30 * 24 * 60)
 SESSION_ABSOLUTE_HOURS = env_positive_int("SESSION_ABSOLUTE_HOURS", 90 * 24)
 MIN_PASSWORD_LENGTH = 12
+# "Last active" is written at most this often instead of on every request
+LAST_SEEN_INTERVAL = timedelta(minutes=5)
+USER_AGENT_MAX_LENGTH = 255
 # New accounts only; names created before 0.4 stay valid
 USERNAME_PATTERN = re.compile(r"^[a-z0-9._-]{3,32}$")
 
@@ -54,21 +57,40 @@ def normalize_username(username: str) -> str:
     return username
 
 
+def clear_session_cookie(response: Response) -> None:
+    settings = cookie_settings()
+    response.delete_cookie(
+        SESSION_COOKIE_NAME,
+        path=settings["path"],
+        secure=settings["secure"],
+        httponly=settings["httponly"],
+        samesite=settings["samesite"],
+    )
+
+
 class AuthService:
     def __init__(self, repository: AuthRepository):
         self.repository = repository
 
-    def login(self, login_in: LoginRequest, response: Response):
+    def login(self, login_in: LoginRequest, request: Request, response: Response) -> User:
         user = self.repository.get_user_by_username(login_in.username)
         if user is None or not user.is_active or not self.verify_password(login_in.password, user.password_hash):
             raise AppError(401, "auth.invalid_credentials", "Invalid username or password")
+        self.start_session(user, request, response)
+        return user
+
+    def start_session(self, user: User, request: Request, response: Response) -> UserSession:
+        """Create a session for an already verified account and set the cookie."""
         now = utcnow()
         self.repository.delete_expired_sessions(now)
         raw_token = secrets.token_urlsafe(48)
-        self.repository.create_session(
-            user.id,
+        user_agent = request.headers.get("User-Agent", "")[:USER_AGENT_MAX_LENGTH] or None
+        session = self.repository.create_session(
+            user,
             self.hash_token(raw_token),
             now + timedelta(minutes=SESSION_IDLE_MINUTES),
+            user_agent,
+            now,
         )
         # Persistent cookie (max_age); iOS drops session cookies when the web app is closed
         response.set_cookie(
@@ -77,7 +99,7 @@ class AuthService:
             max_age=SESSION_ABSOLUTE_HOURS * 3600,
             **cookie_settings(),
         )
-        return user
+        return session
 
     def logout(self, request: Request, response: Response) -> None:
         raw_token = request.cookies.get(SESSION_COOKIE_NAME)
@@ -85,16 +107,9 @@ class AuthService:
             session = self.repository.get_session(self.hash_token(raw_token))
             if session:
                 self.repository.delete_session(session)
-        settings = cookie_settings()
-        response.delete_cookie(
-            SESSION_COOKIE_NAME,
-            path=settings["path"],
-            secure=settings["secure"],
-            httponly=settings["httponly"],
-            samesite=settings["samesite"],
-        )
+        clear_session_cookie(response)
 
-    def current_user(self, request: Request):
+    def current_session(self, request: Request) -> UserSession:
         raw_token = request.cookies.get(SESSION_COOKIE_NAME)
         if not raw_token:
             raise AppError(401, "auth.not_authenticated", "Not logged in")
@@ -108,9 +123,14 @@ class AuthService:
         if not session.user.is_active:
             raise AppError(401, "auth.account_disabled", "This account is disabled")
         refreshed_expiry = min(now + timedelta(minutes=SESSION_IDLE_MINUTES), absolute_expiry)
-        if refreshed_expiry > session.expires_at + timedelta(minutes=1):
-            self.repository.update_session_expiry(session, refreshed_expiry)
-        return session.user
+        extend = refreshed_expiry > session.expires_at + timedelta(minutes=1)
+        seen = session.last_seen_at is None or now - session.last_seen_at >= LAST_SEEN_INTERVAL
+        if extend or seen:
+            self.repository.touch_session(session, refreshed_expiry if extend else None, now if seen else None)
+        return session
+
+    def current_user(self, request: Request) -> User:
+        return self.current_session(request).user
 
     def create_user(
         self, username: str, password: str, role: str = ROLE_USER, settings: AccountSettings | None = None
@@ -118,7 +138,7 @@ class AuthService:
         username = normalize_username(username)
         if self.repository.get_user_by_username(username) is not None:
             raise AppError(409, "account.username_taken", "This username is already taken")
-        self._check_password(password)
+        self.check_password(password)
         user = User(username=username, password_hash=self.hash_password(password), role=role)
         if settings is not None:
             apply_settings(user, settings)
@@ -128,11 +148,11 @@ class AuthService:
         user = self.repository.get_user_by_username(username)
         if user is None:
             raise AppError(404, "account.not_found", "Account not found")
-        self._check_password(password)
+        self.check_password(password)
         self.repository.set_password(user, self.hash_password(password))
 
     @staticmethod
-    def _check_password(password: str) -> None:
+    def check_password(password: str) -> None:
         if len(password) < MIN_PASSWORD_LENGTH:
             raise AppError(
                 422,

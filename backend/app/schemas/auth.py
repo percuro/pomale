@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -53,3 +53,21 @@ class MeRead(BaseModel):
     timezone_setting: str | None
     locale: LocaleLiteral | None
     today: date
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=1, max_length=256)
+
+
+class PasswordConfirmation(BaseModel):
+    password: str = Field(min_length=1, max_length=256)
+
+
+class SessionRead(BaseModel):
+    id: int
+    created_at: datetime
+    last_seen_at: datetime | None
+    # e.g. "iPhone · Safari"; null when the browser is not recognised
+    device: str | None
+    current: bool

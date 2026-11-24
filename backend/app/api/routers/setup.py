@@ -9,7 +9,7 @@ from app.db.database import get_db
 from app.errors import AppError
 from app.models.user import ROLE_ADMIN
 from app.repositories.auth_repository import AuthRepository
-from app.schemas.auth import AccountSettings, LoginRequest, MeRead
+from app.schemas.auth import AccountSettings, MeRead
 from app.services import setup_service
 from app.services.account_service import me_read
 from app.services.auth_service import AuthService
@@ -55,5 +55,5 @@ def run_setup(
             raise AppError(409, "setup.done", "Setup is already complete")
         user = service.create_user(data.username, data.password, role=ROLE_ADMIN, settings=data)
     setup_service.clear_token()
-    service.login(LoginRequest(username=user.username, password=data.password), response)
+    service.start_session(user, request, response)
     return me_read(user, now)
