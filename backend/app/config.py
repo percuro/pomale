@@ -98,7 +98,23 @@ def get_default_timezone() -> ZoneInfo:
     return _zone(get_default_timezone_name())
 
 
+REGISTRATION_MODES = ("invite", "open")
+
+
+def get_registration_mode() -> str:
+    """invite (default): accounts only through an admin's invitation; open: anyone may register."""
+    value = os.getenv("REGISTRATION", "").strip().lower() or "invite"
+    if value not in REGISTRATION_MODES:
+        raise ConfigError(f"REGISTRATION must be 'invite' or 'open' (got {value!r})")
+    return value
+
+
+def get_invite_expiry_days() -> int:
+    return env_positive_int("INVITE_EXPIRY_DAYS", 7)
+
+
 def validate() -> None:
     """Fail fast at startup with a readable message instead of on the first request."""
     get_public_url()
     get_default_timezone()
+    get_registration_mode()
