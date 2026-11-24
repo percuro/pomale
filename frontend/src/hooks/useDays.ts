@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
-import { cacheGet, cacheSet } from '../lib/offline-store';
+import { cacheGet, cacheSet, daysCacheKey } from '../lib/offline-store';
 import { overlay } from '../lib/overlay';
 import { syncEngine } from '../lib/sync-engine';
 import type { DaysResponse } from '../lib/types';
@@ -10,8 +10,8 @@ import { useSync } from './useSync';
 
 export const DAYS_KEY = ['days'] as const;
 
-async function fetchDays(from: string, to: string): Promise<DaysResponse> {
-  const cacheKey = `days:${from}:${to}`;
+async function fetchDays(userId: number, from: string, to: string): Promise<DaysResponse> {
+  const cacheKey = daysCacheKey(userId, from, to);
   try {
     const data = await apiFetch<DaysResponse>(`/v1/days?from=${from}&to=${to}`);
     void cacheSet(cacheKey, data);
@@ -28,11 +28,11 @@ async function fetchDays(from: string, to: string): Promise<DaysResponse> {
 
 /** Server data with pending local changes on top. */
 export function useDays(from: string, to: string) {
-  const { today } = useSession();
+  const { me, today } = useSession();
   const { ops } = useSync();
   const query = useQuery({
-    queryKey: [...DAYS_KEY, from, to],
-    queryFn: () => fetchDays(from, to),
+    queryKey: [...DAYS_KEY, me.id, from, to],
+    queryFn: () => fetchDays(me.id, from, to),
     networkMode: 'always',
   });
   const data = useMemo(

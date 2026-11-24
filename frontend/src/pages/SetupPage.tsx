@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, errorText } from '../lib/api';
-import { cacheSet } from '../lib/offline-store';
 import type { Me } from '../lib/types';
-import { ME_KEY } from '../hooks/useMe';
+import { signedIn } from '../hooks/useMe';
 
 /** First-run setup: create the first account with the token from the server log. */
 export function SetupPage() {
@@ -20,11 +19,7 @@ export function SetupPage() {
         method: 'POST',
         body: JSON.stringify({ token: token.trim(), username, password }),
       }),
-    onSuccess: (me) => {
-      void cacheSet('me', me);
-      queryClient.setQueryData(['setup'], { needed: false });
-      queryClient.setQueryData(ME_KEY, me);
-    },
+    onSuccess: (me) => signedIn(queryClient, me),
   });
 
   const submit = (event: FormEvent) => {

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import type { QueueOwner } from '../../lib/offline-store';
 import { syncEngine } from '../../lib/sync-engine';
 import type { CheckinResponse, DaysResponse } from '../../lib/types';
 import { DAYS_KEY } from '../../hooks/useDays';
@@ -23,11 +24,13 @@ function applyResponse(data: DaysResponse | undefined, response: CheckinResponse
   };
 }
 
-/** Connects the change queue with the query cache and triggers sending. */
-export function SyncBridge() {
+/** Connects the change queue with the query cache and the signed-in account, and triggers sending. */
+export function SyncBridge({ owner }: { owner: QueueOwner }) {
   const queryClient = useQueryClient();
+  const { id, username } = owner;
 
   useEffect(() => {
+    syncEngine.setOwner({ id, username });
     let refresh: number | undefined;
     syncEngine.onApplied = (response) => {
       queryClient.setQueriesData<DaysResponse>({ queryKey: DAYS_KEY }, (data) => applyResponse(data, response));
@@ -50,7 +53,7 @@ export function SyncBridge() {
       window.removeEventListener('online', kick);
       document.removeEventListener('visibilitychange', kick);
     };
-  }, [queryClient]);
+  }, [queryClient, id, username]);
 
   return null;
 }

@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeServer, type FakeServer } from '../test/fake-server';
-import { clearAll } from './offline-store';
+import { allOps, clearAll, putOp } from './offline-store';
 import { overlay } from './overlay';
 import { syncEngine } from './sync-engine';
 import type { DaysResponse } from './types';
 
 const TODAY = '2026-11-24';
+const ALEX = { id: 1, username: 'alex' };
+const SAM = { id: 2, username: 'sam' };
 let server: FakeServer;
 
 function serverDays(habitId: number, date: string): DaysResponse {
@@ -33,6 +35,7 @@ beforeEach(async () => {
   vi.stubGlobal('fetch', server.fetch);
   await clearAll();
   syncEngine.reset();
+  syncEngine.setOwner(ALEX);
 });
 
 afterEach(() => {
@@ -128,7 +131,10 @@ describe('sync engine', () => {
     await syncEngine.setDay(1, '2026-11-30', true, 0);
     await syncEngine.flush();
     expect(syncEngine.getSnapshot().ops).toHaveLength(0);
-    expect(syncEngine.getSnapshot().lastError).toMatch(/Future days/);
+    expect(syncEngine.getSnapshot().lastError).toEqual({
+      code: 'checkin.future_day',
+      message: 'Future days cannot be checked off',
+    });
   });
 
   it('does not report a false conflict when undo follows while the first request is in flight', async () => {
@@ -137,6 +143,47 @@ describe('sync engine', () => {
     for (let i = 0; i < 10 && syncEngine.getSnapshot().ops.length; i++) await syncEngine.flush();
     expect(syncEngine.getSnapshot().ops).toHaveLength(0);
     expect(server.state.get(`2:${TODAY}`)?.done ?? false).toBe(false);
+  });
+
+  it('keeps another account\'s changes queued until it logs in again', async () => {
+    await setOffline(1, TODAY, true, 0);
+    server.offline = false;
+    syncEngine.setOwner(SAM);
+    await syncEngine.flush();
+    expect(server.requests).toHaveLength(0);
+    expect(syncEngine.getSnapshot().ops).toHaveLength(0);
+    expect(await allOps()).toHaveLength(1);
+
+    await syncEngine.setDay(7, TODAY, true, 0);
+    await syncEngine.flush();
+    expect(server.requests.map((r) => r.habitId)).toEqual([7]);
+
+    syncEngine.setOwner(ALEX);
+    await syncEngine.flush();
+    expect(server.requests.map((r) => r.habitId)).toEqual([7, 1]);
+    expect(await allOps()).toHaveLength(0);
+  });
+
+  it('shows only the signed-in account\'s pending changes', async () => {
+    await setOffline(1, TODAY, true, 0);
+    syncEngine.setOwner(SAM);
+    await syncEngine.load();
+    await setOffline(7, TODAY, true, 0);
+    expect(syncEngine.getSnapshot().ops.map((op) => [op.habit_id, op.user_id])).toEqual([[7, 2]]);
+    syncEngine.setOwner(null);
+    await syncEngine.flush();
+    expect(syncEngine.getSnapshot().ops).toHaveLength(0);
+  });
+
+  it('sends a change queued before 0.4 only as the account cached back then', async () => {
+    await putOp({ op_id: 'old', habit_id: 3, date: TODAY, done: true, base_version: 0, created_at: 1, user_id: null, username: 'alex' });
+    syncEngine.setOwner(SAM);
+    await syncEngine.flush();
+    expect(server.requests).toHaveLength(0);
+    syncEngine.setOwner(ALEX);
+    await syncEngine.flush();
+    expect(server.requests.map((r) => r.habitId)).toEqual([3]);
+    expect(await allOps()).toHaveLength(0);
   });
 
   it('sends every request with op_id and base_version', async () => {

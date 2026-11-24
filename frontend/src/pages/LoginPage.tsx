@@ -3,8 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, errorText } from '../lib/api';
 import type { Me } from '../lib/types';
-import { ME_KEY } from '../hooks/useMe';
-import { cacheSet } from '../lib/offline-store';
+import { signedIn } from '../hooks/useMe';
 
 export function LoginPage() {
   const queryClient = useQueryClient();
@@ -13,10 +12,7 @@ export function LoginPage() {
   const login = useMutation({
     mutationFn: () =>
       apiFetch<Me>('/v1/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
-    onSuccess: (me) => {
-      void cacheSet('me', me);
-      queryClient.setQueryData(ME_KEY, me);
-    },
+    onSuccess: (me) => signedIn(queryClient, me),
   });
 
   const submit = (event: FormEvent) => {

@@ -58,7 +58,7 @@ export function SyncStatus() {
           )}
         </p>
       )}
-      {lastError && <p className="error" role="alert">{lastError}</p>}
+      {lastError && <p className="error" role="alert">Nicht gespeichert: {lastError.message}</p>}
       {conflicts.map((op) => (
         <section
           key={op.op_id}
