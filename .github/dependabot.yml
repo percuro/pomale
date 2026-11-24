@@ -4,6 +4,9 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
+    groups:
+      backend:
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directories: [/frontend, /e2e]
     schedule:
@@ -11,11 +14,27 @@ updates:
     groups:
       playwright:
         patterns: ["@playwright/*"]
+      frontend:
+        update-types: [minor, patch]
+    ignore:
+      # Types follow the Node.js runtime (CI and Dockerfile); bump them together on purpose.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Runtime upgrades (Python minor, Node major) are done deliberately together with CI
+      # and wheel availability, not as automatic bumps; patch releases still come through.
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
+      - dependency-name: node
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions:
+        update-types: [minor, patch]
