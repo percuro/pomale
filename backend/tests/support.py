@@ -37,6 +37,9 @@ TEST_ENV = {
     "OIDC_AUTO_CREATE": "",
     "PASSWORD_LOGIN": "",
     "REGISTRATION": "",
+    "PUSH_ENABLED": "",
+    "PUSH_CONTACT": "",
+    "PUSH_ALLOWED_HOSTS": "",
 }
 
 

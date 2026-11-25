@@ -4,3 +4,5 @@ pydantic==2.14.4
 sqlalchemy==2.1.9
 alembic==1.20.1
 joserfc==1.8.0
+cryptography==50.0.2
+httpx==0.28.1

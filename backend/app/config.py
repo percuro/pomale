@@ -164,6 +164,37 @@ def get_oidc_redirect_uri() -> str:
     return f"{get_public_url()}/api/v1/auth/oidc/callback"
 
 
+def push_enabled() -> bool:
+    """PUSH_ENABLED=false turns reminders off: no scheduler, no push endpoints, no UI."""
+    return env_bool("PUSH_ENABLED", True)
+
+
+def get_push_contact() -> str:
+    """VAPID "sub": how push services can reach the operator. Apple requires mailto: or https://."""
+    value = os.getenv("PUSH_CONTACT", "").strip()
+    if not value:
+        return get_public_url()
+    if not (value.startswith("mailto:") or value.startswith("https://")):
+        raise ConfigError(f"PUSH_CONTACT must start with mailto: or https:// (got {value!r})")
+    return value
+
+
+# Hosts of the push services that browsers use. Push subscriptions with any other endpoint are
+# rejected, so the server never sends requests to addresses a user made up.
+DEFAULT_PUSH_HOSTS = (
+    "fcm.googleapis.com",  # Chrome, Edge on Android, Opera, Samsung Internet
+    "*.push.services.mozilla.com",  # Firefox
+    "*.notify.windows.com",  # Edge on Windows
+    "*.push.apple.com",  # Safari, iPhone and iPad home-screen apps
+)
+
+
+def get_push_allowed_hosts() -> tuple[str, ...]:
+    """The defaults plus PUSH_ALLOWED_HOSTS (comma-separated; "*.example.org" matches subdomains)."""
+    extra = os.getenv("PUSH_ALLOWED_HOSTS", "")
+    return DEFAULT_PUSH_HOSTS + tuple(host.strip().lower() for host in extra.split(",") if host.strip())
+
+
 def _is_local(host: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".localhost")
 
@@ -173,6 +204,8 @@ def validate() -> None:
     get_public_url()
     get_default_timezone()
     get_registration_mode()
+    if push_enabled():
+        get_push_contact()
     oidc = get_oidc_settings()
     if not password_login_enabled() and oidc is None:
         raise ConfigError("PASSWORD_LOGIN=off needs OIDC: set OIDC_ISSUER and OIDC_CLIENT_ID")
