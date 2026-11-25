@@ -84,6 +84,7 @@ function SignedIn({ me }: { me: Me }) {
         <nav className="tabs" aria-label={t('nav.label')}>
           <NavLink to="/today">{t('nav.today')}</NavLink>
           <NavLink to="/week">{t('nav.week')}</NavLink>
+          <NavLink to="/history">{t('nav.history')}</NavLink>
           <NavLink to="/habits">{t('nav.habits')}</NavLink>
         </nav>
         <div className="topbar-links">
