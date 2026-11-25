@@ -113,6 +113,10 @@ def get_invite_expiry_days() -> int:
     return env_positive_int("INVITE_EXPIRY_DAYS", 7)
 
 
+def get_audit_retention_days() -> int:
+    return env_positive_int("AUDIT_RETENTION_DAYS", 180)
+
+
 def validate() -> None:
     """Fail fast at startup with a readable message instead of on the first request."""
     get_public_url()

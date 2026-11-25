@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_admin
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.admin import AdminUserRead, AdminUserUpdate
+from app.schemas.admin import AdminUserRead, AdminUserUpdate, AuditEventRead, AuditPage
 from app.schemas.invitation import InvitationCreate, InvitationCreated, InvitationRead
+from app.services import audit_service
 from app.services.admin_service import AdminService
 from app.services.invitation_service import InvitationService
 
@@ -47,5 +48,35 @@ def list_invitations(db: Session = Depends(get_db)):
 
 
 @router.delete("/invitations/{invitation_id}", status_code=status.HTTP_204_NO_CONTENT)
-def revoke_invitation(invitation_id: int, db: Session = Depends(get_db)):
-    InvitationService(db).revoke(invitation_id)
+def revoke_invitation(invitation_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    InvitationService(db).revoke(admin, invitation_id)
+
+
+@router.get("/audit", response_model=AuditPage)
+def list_audit_events(
+    before_id: int | None = Query(default=None, ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    user_id: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+):
+    """Newest first. user_id: only entries where the account acted or was acted on."""
+    events = audit_service.list_events(db, before_id, limit + 1, user_id)
+    more = len(events) > limit
+    events = events[:limit]
+    return AuditPage(
+        events=[
+            AuditEventRead(
+                id=event.id,
+                created_at=event.created_at,
+                event=event.event,
+                actor_user_id=event.actor_user_id,
+                actor_username=event.actor_username,
+                target_user_id=event.target_user_id,
+                target_username=event.target_username,
+                ip_prefix=event.ip_prefix,
+                details=audit_service.details_of(event),
+            )
+            for event in events
+        ],
+        next_before_id=events[-1].id if more else None,
+    )

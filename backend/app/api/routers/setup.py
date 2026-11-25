@@ -10,13 +10,13 @@ from app.errors import AppError
 from app.models.user import ROLE_ADMIN
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import AccountSettings, MeRead
-from app.services import setup_service
+from app.services import audit_service, setup_service
 from app.services.account_service import me_read
 from app.services.auth_service import AuthService
 from app.services.login_rate_limiter import LoginRateLimiter
 
 router = APIRouter()
-setup_rate_limiter = LoginRateLimiter()
+setup_rate_limiter = LoginRateLimiter(name="setup")
 
 
 class SetupStatus(BaseModel):
@@ -47,7 +47,7 @@ def run_setup(
     if not setup_service.needs_setup(db):
         raise AppError(409, "setup.done", "Setup is already complete")
     if not setup_service.token_matches(data.token.strip()):
-        setup_rate_limiter.record_failure("setup", ip_address)
+        audit_service.record_failure(db, setup_rate_limiter, "setup", request)
         raise AppError(403, "setup.invalid_token", "Wrong setup token")
     service = AuthService(AuthRepository(db))
     with setup_service.setup_lock():
@@ -55,5 +55,6 @@ def run_setup(
             raise AppError(409, "setup.done", "Setup is already complete")
         user = service.create_user(data.username, data.password, role=ROLE_ADMIN, settings=data)
     setup_service.clear_token()
+    audit_service.record(db, "account.created", actor=user, target=user, via="setup", role=user.role)
     service.start_session(user, request, response)
     return me_read(user, now)

@@ -8,6 +8,7 @@ from app.errors import AppError
 from app.models.user import User
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import AccountUpdate, MeRead, SessionRead
+from app.services import audit_service
 from app.services.account_settings import apply_settings
 from app.services.auth_service import AuthService, clear_session_cookie
 from app.services.devices import describe_user_agent
@@ -49,7 +50,7 @@ class AccountService:
         ip_address = client_ip(request)
         login_rate_limiter.check(user.username, ip_address)
         if not AuthService.verify_password(password, user.password_hash):
-            login_rate_limiter.record_failure(user.username, ip_address)
+            audit_service.record_failure(self.db, login_rate_limiter, user.username, request, target=user)
             # 403, not 401: the session is fine, only the confirmation failed
             raise AppError(403, "account.wrong_password", "The password is wrong")
         login_rate_limiter.record_success(user.username)
@@ -58,6 +59,7 @@ class AccountService:
         self.verify_password(user, current, request)
         AuthService.check_password(new)
         user.password_hash = AuthService.hash_password(new)
+        audit_service.record(self.db, "account.password_changed", actor=user, target=user, commit=False)
         self.db.commit()
         # Every other device has to log in again with the new password
         self.repository.delete_sessions(user.id, keep_session_id=session_id)
@@ -78,10 +80,14 @@ class AccountService:
         session = self.repository.get_session_for_user(session_id, user.id)
         if session is None:
             raise AppError(404, "session.not_found", "Session not found")
+        audit_service.record(self.db, "account.sessions_revoked", actor=user, target=user, commit=False, count=1)
         self.repository.delete_session(session)
 
     def revoke_other_sessions(self, user: User, current_session_id: int) -> int:
-        return self.repository.delete_sessions(user.id, keep_session_id=current_session_id)
+        count = self.repository.delete_sessions(user.id, keep_session_id=current_session_id)
+        if count:
+            audit_service.record(self.db, "account.sessions_revoked", actor=user, target=user, count=count)
+        return count
 
     def ensure_not_last_admin(self, user: User) -> None:
         if user.is_admin and user.is_active and self.repository.count_active_admins(exclude_user_id=user.id) == 0:
@@ -90,5 +96,6 @@ class AccountService:
     def delete(self, user: User, password: str, request: Request, response: Response) -> None:
         self.verify_password(user, password, request)
         self.ensure_not_last_admin(user)
+        audit_service.record(self.db, "account.deleted", actor=user, target=user, commit=False, by="self")
         self.repository.delete_user(user)
         clear_session_cookie(response)

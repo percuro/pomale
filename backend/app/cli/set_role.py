@@ -9,6 +9,7 @@ from app.db.database import SessionLocal
 from app.errors import AppError
 from app.models.user import ROLES
 from app.repositories.auth_repository import AuthRepository
+from app.services import audit_service
 from app.services.account_service import AccountService
 
 
@@ -28,6 +29,10 @@ def main() -> None:
                 AccountService(db).ensure_not_last_admin(user)
             except AppError as exc:
                 raise SystemExit(exc.message) from exc
+        if user.role != args.role:
+            audit_service.record(
+                db, "admin.role_changed", target=user, commit=False, before=user.role, after=args.role, via="cli"
+            )
         user.role = args.role
         db.commit()
         print(f"Account {user.username} is now {user.role}.")

@@ -5,8 +5,10 @@ from contextlib import redirect_stdout
 from unittest import mock
 
 from app.cli import create_user, set_role
+from app.models.audit_event import AuditEvent
 from app.models.habit import Habit
 from app.models.user import User
+from app.services.audit_service import details_of
 from app.services.shortcut_service import shortcut_rate_limiter
 from tests.support import PASSWORD, ApiTestEnvironment
 
@@ -155,6 +157,29 @@ class CliTest(unittest.TestCase):
         self.assertIn("last active admin", str(context.exception))
         with self.assertRaises(SystemExit):
             self.run_cli(set_role, "nobody", "admin")
+
+    def test_cli_actions_are_audited(self):
+        self.run_cli(create_user, "alex")
+        self.run_cli(create_user, "sam")
+        self.run_cli(set_role, "sam", "admin")
+        self.run_cli(create_user, "sam", "--reset-password")
+        db = self.env.SessionLocal()
+        try:
+            rows = [
+                (event.event, event.actor_username, event.target_username, details_of(event))
+                for event in db.query(AuditEvent).order_by(AuditEvent.id)
+            ]
+        finally:
+            db.close()
+        self.assertEqual(
+            rows,
+            [
+                ("account.created", None, "alex", {"via": "cli", "role": "admin"}),
+                ("account.created", None, "sam", {"via": "cli", "role": "user"}),
+                ("admin.role_changed", None, "sam", {"before": "user", "after": "admin", "via": "cli"}),
+                ("account.password_changed", None, "sam", {"via": "cli"}),
+            ],
+        )
 
     def test_invalid_new_username(self):
         with self.assertRaises(SystemExit) as context:

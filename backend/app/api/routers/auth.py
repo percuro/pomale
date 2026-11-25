@@ -11,14 +11,14 @@ from app.errors import AppError
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import LoginRequest, MeRead
 from app.schemas.invitation import RegisterRequest
-from app.services import setup_service
+from app.services import audit_service, setup_service
 from app.services.account_service import me_read
 from app.services.auth_service import AuthService
 from app.services.login_rate_limiter import LoginRateLimiter, login_rate_limiter
 
 router = APIRouter()
 # Every registration attempt counts (not only failures): at most 5 per IP address and hour
-register_rate_limiter = LoginRateLimiter(window_seconds=60 * 60)
+register_rate_limiter = LoginRateLimiter(window_seconds=60 * 60, name="register")
 
 
 @router.post("/login", response_model=MeRead)
@@ -32,13 +32,21 @@ def login(
     username = login_in.username.lower()
     ip_address = request.client.host if request.client else "unknown"
     login_rate_limiter.check(username, ip_address)
+    repository = AuthRepository(db)
     try:
-        user = AuthService(AuthRepository(db)).login(login_in, request, response)
+        user = AuthService(repository).login(login_in, request, response)
     except AppError as exc:
         if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-            login_rate_limiter.record_failure(username, ip_address)
+            # Only names of existing accounts are logged, never whatever was typed
+            target = repository.get_user_by_username(username)
+            audit_service.record(
+                db, "auth.login_failed", target=target, request=request, commit=False, method="password"
+            )
+            audit_service.record_failure(db, login_rate_limiter, username, request, target=target)
+            db.commit()
         raise
     login_rate_limiter.record_success(username)
+    audit_service.record(db, "auth.login", actor=user, method="password")
     return me_read(user, now)
 
 
@@ -68,8 +76,9 @@ def register(
         raise AppError(409, "setup.required", "The instance has not been set up yet")
     ip_address = request.client.host if request.client else "unknown"
     register_rate_limiter.check(ip_address, ip_address)
-    register_rate_limiter.record_failure(ip_address, ip_address)
+    audit_service.record_failure(db, register_rate_limiter, ip_address, request)
     service = AuthService(AuthRepository(db))
     user = service.create_user(data.username, data.password, settings=data)
+    audit_service.record(db, "account.created", actor=user, target=user, via="register")
     service.start_session(user, request, response)
     return me_read(user, now)
