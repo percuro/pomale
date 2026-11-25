@@ -7,7 +7,7 @@ from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_user_today
 from app.db.database import get_db
 from app.repositories.habit_repository import HabitRepository
-from app.schemas.habit import CheckinRead, CheckinUpdate, DaysRead, NoteRead, NoteUpdate
+from app.schemas.habit import CheckinRead, CheckinUpdate, DaysRead, HistoryRead, NoteRead, NoteUpdate
 from app.services.checkin_service import CheckinService
 from app.services.day_service import week_start
 from app.services.habit_service import HabitService
@@ -27,6 +27,18 @@ def list_days(
     start = start or week_start(today)
     end = end or start + timedelta(days=6)
     return CheckinService(HabitRepository(db)).days(user.id, start, end, today, effective_timezone_name(user))
+
+
+@router.get("/history", response_model=HistoryRead)
+def history(
+    start: date | None = Query(default=None, alias="from"),
+    end: date | None = Query(default=None, alias="to"),
+    habit_id: int | None = None,
+    user=Depends(require_user),
+    db: Session = Depends(get_db),
+    today: date = Depends(get_user_today),
+):
+    return CheckinService(HabitRepository(db)).history(user.id, start, end, today, habit_id)
 
 
 @router.put("/habits/{habit_id}/days/{day}", response_model=CheckinRead)

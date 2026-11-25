@@ -290,3 +290,38 @@ class NoteRead(BaseModel):
     habit_id: int
     date: date
     note: str | None
+
+
+class HistoryWeekRead(BaseModel):
+    week_start: date
+    done: int
+    due: int
+
+
+class HistoryDayRead(BaseModel):
+    date: date
+    state: DayStateLiteral
+    value: int | None
+    note: str | None
+
+
+class HistoryHabitRead(BaseModel):
+    id: int
+    name: str
+    archived: bool
+    goal_type: GoalTypeLiteral
+    target: int | None
+    unit: str | None
+    color: str | None
+    group_id: int | None
+    quota: QuotaRead
+    weeks: list[HistoryWeekRead]
+    # only when asking for one habit
+    days: list[HistoryDayRead] | None
+
+
+class HistoryRead(BaseModel):
+    today: date
+    start: date
+    end: date
+    habits: list[HistoryHabitRead]

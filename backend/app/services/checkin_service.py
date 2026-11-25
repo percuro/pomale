@@ -9,6 +9,10 @@ from app.schemas.habit import (
     DaysRead,
     GroupRead,
     HabitDaysRead,
+    HistoryDayRead,
+    HistoryHabitRead,
+    HistoryRead,
+    HistoryWeekRead,
     NoteRead,
     QuotaRead,
     WeekRead,
@@ -17,6 +21,8 @@ from app.services.day_service import Entry, Evaluation, evaluate_range, plan_for
 from app.services.habit_service import shown_plan
 
 MAX_RANGE_DAYS = 62
+MAX_HISTORY_DAYS = 366
+HISTORY_WEEKS = 12
 
 
 class CheckinService:
@@ -176,6 +182,74 @@ class CheckinService:
             )
         groups = [GroupRead.model_validate(g) for g in self.repository.list_groups(user_id)]
         return DaysRead(today=today, timezone=timezone, start=start, end=end, groups=groups, habits=result)
+
+    def history(
+        self, user_id: int, start: date | None, end: date | None, today: date, habit_id: int | None
+    ) -> HistoryRead:
+        """Quota and weekly values per habit over up to a year; the days only for one habit.
+
+        Default range: the last 12 weeks up to today. One query per table, however long the range.
+        """
+        end = end or today
+        start = start or week_start(end) - timedelta(weeks=HISTORY_WEEKS - 1)
+        if end < start:
+            raise AppError(422, "range.end_before_start", "The end date is before the start date")
+        if (end - start) >= timedelta(days=MAX_HISTORY_DAYS):
+            raise AppError(422, "range.too_long", f"At most {MAX_HISTORY_DAYS} days at once", max_days=MAX_HISTORY_DAYS)
+        if habit_id is not None:
+            habit = self.repository.get_for_user(habit_id, user_id)
+            if habit is None:
+                raise AppError(404, "habit.not_found", "Habit not found")
+            habits = [habit]
+        else:
+            habits = [
+                h
+                for h in self.repository.list_active_between(user_id, start)
+                if h.schedules and h.schedules[0].valid_from <= end
+            ]
+        first, last = _whole_weeks(start, end)
+        checkins = self.repository.checkins_between([h.id for h in habits], first, last)
+        pauses = self.repository.pauses_overlapping(user_id, first, last)
+        by_habit: dict[int, dict[date, Checkin]] = {}
+        for checkin in checkins:
+            by_habit.setdefault(checkin.habit_id, {})[checkin.local_date] = checkin
+
+        result = []
+        for habit in habits:
+            entries = by_habit.get(habit.id, {})
+            evaluation = evaluate_range(
+                habit.schedules, _entries(entries.values()), _pauses_for(habit, pauses), start, end, today
+            )
+            plan = shown_plan(habit, today)
+            days = None
+            if habit_id is not None:
+                days = [
+                    HistoryDayRead(
+                        date=info.date,
+                        state=info.state,
+                        value=info.value,
+                        note=entries[info.date].note if info.date in entries else None,
+                    )
+                    for info in evaluation.days
+                ]
+            result.append(
+                HistoryHabitRead(
+                    id=habit.id,
+                    name=habit.name,
+                    archived=habit.archived_on is not None,
+                    goal_type=plan.goal_type,
+                    target=plan.target,
+                    unit=habit.unit,
+                    color=habit.color,
+                    group_id=habit.group_id,
+                    quota=QuotaRead(done=evaluation.quota.done, due=evaluation.quota.due),
+                    weeks=[
+                        HistoryWeekRead(week_start=monday, done=q.done, due=q.due) for monday, q in evaluation.weeks
+                    ],
+                    days=days,
+                )
+            )
+        return HistoryRead(today=today, start=start, end=end, habits=result)
 
 
 def _whole_weeks(start: date, end: date) -> tuple[date, date]:

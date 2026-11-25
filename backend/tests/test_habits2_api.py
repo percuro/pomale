@@ -219,5 +219,66 @@ class Habits2ApiTest(unittest.TestCase):
         )
 
 
+class HistoryApiTest(unittest.TestCase):
+    def setUp(self):
+        self.env = ApiTestEnvironment(today=date(2026, 11, 25))  # Wednesday
+        self.env.create_user()
+        self.env.create_user("other")
+        self.client = self.env.client()
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_default_is_twelve_weeks_with_weekly_values(self):
+        habit = self.client.post(
+            "/v1/habits", json={"name": "Run", "goal_type": "weekly_count", "target": 2, "start_on": "2026-11-09"}
+        ).json()
+        for day in ("2026-11-10", "2026-11-11", "2026-11-12", "2026-11-17", "2026-11-24"):
+            self.client.put(f"/v1/habits/{habit['id']}/days/{day}", json={"done": True})
+        history = self.client.get("/v1/history").json()
+        self.assertEqual((history["start"], history["end"]), ("2026-09-07", "2026-11-25"))
+        run = history["habits"][0]
+        self.assertIsNone(run["days"])
+        self.assertEqual(len(run["weeks"]), 12)
+        self.assertEqual(
+            [(w["week_start"], w["done"], w["due"]) for w in run["weeks"][-3:]],
+            [("2026-11-09", 2, 2), ("2026-11-16", 1, 2), ("2026-11-23", 1, 1)],
+        )
+        self.assertEqual(run["quota"], {"done": 4, "due": 5})
+
+    def test_one_habit_with_days_and_notes(self):
+        habit = self.client.post("/v1/habits", json={"name": "Read", "start_on": "2026-11-01"}).json()
+        self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-02", json={"done": True})
+        self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-02/note", json={"note": "good book"})
+        history = self.client.get(
+            "/v1/history", params={"from": "2026-11-01", "to": "2026-11-30", "habit_id": habit["id"]}
+        ).json()
+        days = history["habits"][0]["days"]
+        self.assertEqual(len(days), 30)
+        self.assertEqual((days[1]["state"], days[1]["note"]), ("done", "good book"))
+        self.assertEqual(days[-1]["state"], "future")
+        self.assertEqual(history["habits"][0]["quota"], {"done": 1, "due": 24})
+
+    def test_limits_and_foreign_habits(self):
+        self.assertEqual(
+            self.client.get("/v1/history", params={"from": "2025-11-23", "to": "2026-11-24"}).status_code, 422
+        )
+        self.assertEqual(
+            self.client.get("/v1/history", params={"from": "2025-11-24", "to": "2026-11-24"}).status_code, 200
+        )
+        self.assertEqual(
+            self.client.get("/v1/history", params={"from": "2026-11-25", "to": "2026-11-24"}).status_code, 422
+        )
+        other = self.env.client("other")
+        foreign = other.post("/v1/habits", json={"name": "Secret"}).json()
+        response = self.client.get("/v1/history", params={"habit_id": foreign["id"]})
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn("Secret", self.client.get("/v1/history").text)
+
+    def test_habits_starting_after_the_range_are_left_out(self):
+        self.client.post("/v1/habits", json={"name": "Later", "start_on": "2026-12-01"})
+        self.assertEqual(self.client.get("/v1/history").json()["habits"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
