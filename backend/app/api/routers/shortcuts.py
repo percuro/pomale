@@ -58,11 +58,11 @@ def create_token(
     db: Session = Depends(get_db),
 ):
     HabitService(HabitRepository(db)).get(habit_id, user.id)
-    token, raw = _service(db).create(habit_id, data.label)
+    token, raw = _service(db).create(user, habit_id, data.label)
     return ShortcutTokenCreated(**ShortcutTokenRead.model_validate(token).model_dump(), token=raw)
 
 
 @router.delete("/habits/{habit_id}/shortcut-tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
 def revoke_token(habit_id: int, token_id: int, user=Depends(require_user), db: Session = Depends(get_db)):
     HabitService(HabitRepository(db)).get(habit_id, user.id)
-    _service(db).revoke(habit_id, token_id)
+    _service(db).revoke(user, habit_id, token_id)

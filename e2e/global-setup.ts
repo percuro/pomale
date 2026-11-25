@@ -26,7 +26,7 @@ export default async function globalSetup(config: FullConfig) {
   } else {
     await page.getByLabel('Benutzername').fill(username);
     await page.getByLabel('Passwort').fill(password);
-    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
   }
   await expect(page.getByRole('navigation', { name: 'Ansichten' })).toBeVisible();
   await page.context().storageState({ path: '.auth/state.json' });

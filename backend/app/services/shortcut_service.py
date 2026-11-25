@@ -6,9 +6,11 @@ from fastapi import Request
 
 from app.errors import AppError
 from app.models.shortcut_token import ShortcutToken
+from app.models.user import User
 from app.repositories.habit_repository import HabitRepository
 from app.repositories.shortcut_repository import ShortcutRepository
 from app.schemas.shortcut import ShortcutCheckinRead
+from app.services import audit_service
 from app.services.auth_service import utcnow
 from app.services.checkin_service import CheckinService
 from app.services.i18n import resolve_locale, text
@@ -17,7 +19,7 @@ from app.services.timezones import user_today
 
 TOKEN_PREFIX = "ht_"
 # Limit failed attempts with wrong keys per IP (same logic as the login limit)
-shortcut_rate_limiter = LoginRateLimiter()
+shortcut_rate_limiter = LoginRateLimiter(name="shortcut")
 
 
 def _unauthorized() -> AppError:
@@ -41,17 +43,22 @@ class ShortcutService:
         self.repository = repository
         self.habits = habits
 
-    def create(self, habit_id: int, label: str) -> tuple[ShortcutToken, str]:
+    def create(self, user: User, habit_id: int, label: str) -> tuple[ShortcutToken, str]:
         raw = TOKEN_PREFIX + secrets.token_urlsafe(32)
-        token = self.repository.add(
-            ShortcutToken(habit_id=habit_id, label=label.strip() or "iPhone", token_hash=hash_token(raw))
+        label = label.strip() or "iPhone"
+        audit_service.record(
+            self.repository.db, "shortcut.key_created", actor=user, commit=False, habit_id=habit_id, label=label
         )
+        token = self.repository.add(ShortcutToken(habit_id=habit_id, label=label, token_hash=hash_token(raw)))
         return token, raw
 
-    def revoke(self, habit_id: int, token_id: int) -> None:
+    def revoke(self, user: User, habit_id: int, token_id: int) -> None:
         token = self.repository.get_for_habit(token_id, habit_id)
         if token is None:
             raise AppError(404, "shortcut.token_not_found", "Key not found")
+        audit_service.record(
+            self.repository.db, "shortcut.key_revoked", actor=user, commit=False, habit_id=habit_id, label=token.label
+        )
         self.repository.revoke(token, utcnow())
 
     def check_in_today(self, request: Request, habit_id: int, done: bool, now: datetime) -> ShortcutCheckinRead:
@@ -61,7 +68,7 @@ class ShortcutService:
         token = self.repository.get_by_hash(hash_token(raw)) if raw else None
         # A deactivated owner's keys stop working too (their data stays)
         if token is None or token.revoked_at is not None or not token.habit.user.is_active:
-            shortcut_rate_limiter.record_failure("shortcut", ip_address)
+            audit_service.record_failure(self.repository.db, shortcut_rate_limiter, "shortcut", request)
             raise _unauthorized()
         if token.habit_id != habit_id:
             raise AppError(403, "shortcut.wrong_habit", "This key belongs to another habit")

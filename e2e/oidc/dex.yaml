@@ -1,0 +1,37 @@
+# Dex as the OIDC provider for the end-to-end tests (CI and local runs).
+# Not an example for production: in-memory storage, plain HTTP, test passwords.
+# All static users have the password "password" (the bcrypt hash from Dex's own examples).
+issuer: http://localhost:5556/dex
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+oauth2:
+  skipApprovalScreen: true
+
+enablePasswordDB: true
+
+staticClients:
+  - id: pomale
+    name: pomale
+    secret: pomale-e2e-secret
+    redirectURIs:
+      - http://localhost:8000/api/v1/auth/oidc/callback
+      - http://localhost:8001/api/v1/auth/oidc/callback
+
+staticPasswords:
+  - email: anna@example.org
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: anna
+    userID: 2a5b3f0e-0001-4d1e-9a3a-000000000001
+  - email: ben@example.org
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: ben
+    userID: 2a5b3f0e-0002-4d1e-9a3a-000000000002
+  - email: carla@example.org
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: carla
+    userID: 2a5b3f0e-0003-4d1e-9a3a-000000000003

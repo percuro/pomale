@@ -20,6 +20,7 @@ from app.models.invitation import PURPOSE_PASSWORD_RESET, PURPOSE_SIGNUP, Invita
 from app.models.user import User, UserSession
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.invitation import InvitationAccept, InvitationCreated, InvitationInfo, InvitationRead
+from app.services import audit_service
 from app.services.account_settings import apply_settings
 from app.services.auth_service import AuthService, normalize_username, utcnow
 from app.services.login_rate_limiter import LoginRateLimiter
@@ -28,7 +29,7 @@ RESET_EXPIRY = timedelta(hours=24)
 # Used and expired links are kept a while for reference, then removed
 KEEP_FINISHED = timedelta(days=30)
 # Wrong tokens per IP address, like the login limit
-invitation_rate_limiter = LoginRateLimiter()
+invitation_rate_limiter = LoginRateLimiter(name="invitation")
 
 
 def invalid() -> AppError:
@@ -44,6 +45,7 @@ class InvitationService:
 
     def create_signup(self, admin: User, role: str, note: str | None) -> InvitationCreated:
         now = utcnow()
+        audit_service.record(self.db, "invite.created", actor=admin, commit=False, purpose=PURPOSE_SIGNUP, role=role)
         return self._create(
             Invitation(
                 purpose=PURPOSE_SIGNUP,
@@ -66,6 +68,9 @@ class InvitationService:
                 Invitation.target_user_id == target.id,
                 Invitation.used_at.is_(None),
             )
+        )
+        audit_service.record(
+            self.db, "invite.created", actor=admin, target=target, commit=False, purpose=PURPOSE_PASSWORD_RESET
         )
         return self._create(
             Invitation(
@@ -118,13 +123,18 @@ class InvitationService:
             for invitation in invitations
         ]
 
-    def revoke(self, invitation_id: int) -> None:
-        deleted = self.db.execute(
-            delete(Invitation).where(Invitation.id == invitation_id, Invitation.used_at.is_(None))
-        ).rowcount
-        self.db.commit()
-        if not deleted:
+    def revoke(self, admin: User, invitation_id: int) -> None:
+        invitation = self.db.scalars(
+            select(Invitation).where(Invitation.id == invitation_id, Invitation.used_at.is_(None))
+        ).first()
+        if invitation is None:
             raise AppError(404, "invite.not_found", "Invitation not found")
+        target = self.db.get(User, invitation.target_user_id) if invitation.target_user_id else None
+        audit_service.record(
+            self.db, "invite.revoked", actor=admin, target=target, commit=False, purpose=invitation.purpose
+        )
+        self.db.delete(invitation)
+        self.db.commit()
 
     # --- Public -------------------------------------------------------------
 
@@ -142,8 +152,19 @@ class InvitationService:
         if invitation.purpose == PURPOSE_SIGNUP:
             username = normalize_username(data.username or "")
         AuthService.check_password(data.password)
+        self.claim(invitation)
+        if invitation.purpose == PURPOSE_SIGNUP:
+            user = self._signup(invitation, username, data)
+            audit_service.record(self.db, "account.created", actor=user, target=user, via="invite", role=user.role)
+        else:
+            user = self._reset(invitation, data.password)
+        audit_service.record(self.db, "invite.used", actor=user, target=user, purpose=invitation.purpose)
+        self.auth.start_session(user, request, response)
+        return user
+
+    def claim(self, invitation: Invitation) -> None:
+        """Mark the link as used (not yet committed); of two simultaneous requests only one succeeds."""
         now = utcnow()
-        # Claim the link first: of two simultaneous requests only one changes the row
         claimed = self.db.execute(
             update(Invitation)
             .where(Invitation.id == invitation.id, Invitation.used_at.is_(None), Invitation.expires_at > now)
@@ -152,12 +173,9 @@ class InvitationService:
         if claimed != 1:
             self.db.rollback()
             raise invalid()
-        if invitation.purpose == PURPOSE_SIGNUP:
-            user = self._signup(invitation, username, data)
-        else:
-            user = self._reset(invitation, data.password)
-        self.auth.start_session(user, request, response)
-        return user
+
+    def find_valid(self, token: str, request: Request) -> Invitation:
+        return self._find_valid(token, request)
 
     def _signup(self, invitation: Invitation, username: str, data: InvitationAccept) -> User:
         if self.auth.repository.get_user_by_username(username) is not None:
@@ -196,6 +214,6 @@ class InvitationService:
             select(Invitation).where(Invitation.token_hash == AuthService.hash_token(token.strip()))
         ).first()
         if invitation is None or invitation.used_at is not None or invitation.expires_at <= utcnow():
-            invitation_rate_limiter.record_failure(ip_address, ip_address)
+            audit_service.record_failure(self.db, invitation_rate_limiter, ip_address, request)
             raise invalid()
         return invitation

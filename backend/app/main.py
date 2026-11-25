@@ -11,6 +11,7 @@ from app.api.routers.habits import router as habits_router
 from app.api.routers.health import router as health_router
 from app.api.routers.invitations import router as invitations_router
 from app.api.routers.meta import router as meta_router
+from app.api.routers.oidc import router as oidc_router
 from app.api.routers.setup import router as setup_router
 from app.api.routers.shortcuts import public_router as shortcut_public_router
 from app.api.routers.shortcuts import router as shortcut_router
@@ -28,6 +29,7 @@ app.include_router(health_router)
 # Shortcut route first: /v1/habits/{id}/days/today must not be parsed as a date
 app.include_router(shortcut_public_router, prefix="/v1", tags=["shortcut"])
 app.include_router(auth_router, prefix="/v1/auth", tags=["auth"])
+app.include_router(oidc_router, prefix="/v1/auth/oidc", tags=["oidc"])
 app.include_router(setup_router, prefix="/v1/setup", tags=["setup"])
 app.include_router(meta_router, prefix="/v1", tags=["meta"])
 app.include_router(invitations_router, prefix="/v1/invitations", tags=["invitations"])

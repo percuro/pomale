@@ -78,6 +78,8 @@ a { color: var(--accent); }
 .subtle { color: var(--muted); margin: 0.25rem 0 0; }
 .help { margin-top: 1rem; font-size: 0.9rem; max-width: 40rem; }
 .error { color: var(--error); font-weight: 600; }
+.warn { color: var(--error); }
+.reauth { display: grid; gap: 0.5rem; }
 .empty { padding: 1rem 0; }
 
 /* Layout */
@@ -297,6 +299,7 @@ a.button { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .topbar-links a.active { color: var(--text); text-decoration: none; }
 .login-form { display: grid; gap: 1rem; }
+.divider { margin: 0; text-align: center; }
 .login-form h1 { margin: 0; }
 .field select {
   min-height: var(--tap); padding: 0 0.75rem; font: inherit;

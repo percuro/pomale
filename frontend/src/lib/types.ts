@@ -17,6 +17,17 @@ export interface Me {
   /** null = the browser language decides */
   locale: Locale | null;
   today: string;
+  /** false: the account signs in through OIDC only */
+  has_password: boolean;
+  /** null = not linked to the OIDC provider */
+  oidc: OidcLink | null;
+}
+
+/** What the provider told us at the last sign-in; for display only */
+export interface OidcLink {
+  email: string | null;
+  preferred_username: string | null;
+  linked_at: string;
 }
 
 export interface Schedule {
@@ -78,6 +89,10 @@ export interface Meta {
   version: string;
   registration: 'invite' | 'open';
   setup_needed: boolean;
+  /** false: sign-in, registration and setup through OIDC only */
+  password_login: boolean;
+  /** null = OIDC not configured; label = name for the button (null = default text) */
+  oidc: { label: string | null } | null;
 }
 
 export interface SessionInfo {
@@ -98,6 +113,28 @@ export interface AdminUser {
   is_active: boolean;
   created_at: string;
   last_seen_at: string | null;
+  has_password: boolean;
+  oidc_linked: boolean;
+}
+
+export interface AuditEvent {
+  id: number;
+  created_at: string;
+  /** e.g. "auth.login"; translated as audit.<event> */
+  event: string;
+  actor_user_id: number | null;
+  actor_username: string | null;
+  target_user_id: number | null;
+  target_username: string | null;
+  /** shortened, only for failed logins and rate-limit blocks */
+  ip_prefix: string | null;
+  details: Record<string, string | number | boolean | null>;
+}
+
+export interface AuditPage {
+  events: AuditEvent[];
+  /** pass as before_id for older entries; null = no more */
+  next_before_id: number | null;
 }
 
 export type InvitationPurpose = 'signup' | 'password_reset';

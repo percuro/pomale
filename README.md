@@ -14,6 +14,8 @@ Habits grow at their own pace. pomale is a small, self-hosted habit tracker for 
 - **Works offline:** installable web app (iPhone home screen, Android, desktop). Changes made offline are queued, marked, and sent when the app is back online. A conflicting change from another device is shown to you, never silently overwritten.
 - **iOS shortcut widget:** a revocable key for exactly one habit lets an iOS Shortcut check it off from the home screen.
 - **For a family, a flat share or a club:** admins invite people with a one-time link; everyone has their own habits, time zone and language, and nobody sees anyone else's data.
+- **Single sign-on (optional):** log in through your own OpenID Connect provider such as Authelia, Authentik or Pocket ID, with or without pomale passwords.
+- **Audit log** for admins: logins, roles, invitations and keys.
 - **English and German**, following the browser or the account's choice.
 - **CSV export**, plain SQL backups, health endpoint.
 - **Small footprint:** one container, one SQLite file, no external services.
@@ -33,6 +35,7 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 
 - [Self-hosting](docs/self-hosting.md): install, reverse proxy (Caddy, Traefik, Nginx Proxy Manager), users and invitations, updates, backup and restore
 - [Configuration](docs/configuration.md): all environment variables
+- [Single sign-on](docs/oidc.md): OpenID Connect with Authelia, Authentik, Pocket ID and others
 - [iPhone](docs/iphone.md): home-screen app, offline use, shortcut widget
 - [Development](docs/development.md): running and testing from source
 - [Design notes](docs/design.md): why it works the way it does
@@ -40,7 +43,6 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 ## Roadmap
 
 - ~~**0.4** multiple accounts with invitations, per-account time zone, English and German interface~~ ✓
-- **0.5** login via OpenID Connect (Authelia, Authentik, Pocket ID, …)
 - **0.6** weekly targets ("3× a week"), quantities, pauses, history view
 - **0.7** reminders via Web Push
 - **0.8** personal API tokens, JSON export/import, built-in scheduled backups

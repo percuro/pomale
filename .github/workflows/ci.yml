@@ -69,17 +69,36 @@ jobs:
           tags: app:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Start instance
+      - name: Start OIDC provider (Dex)
+        # Host network: browser and backend both reach the issuer as http://localhost:5556/dex
         run: |
-          docker run -d --name app -p 8000:8000 -e PUBLIC_URL=http://localhost:8000 app:ci
+          docker run -d --name dex --network host \
+            -v "$PWD/e2e/oidc/dex.yaml:/etc/dex/config.yaml:ro" \
+            ghcr.io/dexidp/dex:v2.46.1 dex serve /etc/dex/config.yaml
           for i in $(seq 1 60); do
-            curl -fsS http://localhost:8000/api/health && break
+            curl -fsS http://localhost:5556/dex/.well-known/openid-configuration > /dev/null && break
             sleep 1
           done
-          token=$(docker logs app 2>&1 | grep -E '^    [A-Za-z0-9_-]{20,}$' | tail -1 | tr -d ' ')
-          test -n "$token"
-          echo "::add-mask::$token"
-          echo "E2E_SETUP_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Start instances
+        # 8000: passwords and OIDC. 8001: OIDC only, accounts created at the first sign-in.
+        run: |
+          oidc="-e OIDC_ISSUER=http://localhost:5556/dex -e OIDC_CLIENT_ID=pomale -e OIDC_CLIENT_SECRET=pomale-e2e-secret -e OIDC_LABEL=Dex"
+          docker run -d --name app --network host -e PUBLIC_URL=http://localhost:8000 $oidc app:ci
+          docker run -d --name app2 --network host -e PUBLIC_URL=http://localhost:8001 $oidc \
+            -e PASSWORD_LOGIN=off -e OIDC_AUTO_CREATE=on app:ci \
+            sh -c "alembic upgrade head && exec uvicorn app.web:application --host 0.0.0.0 --port 8001"
+          for port in 8000 8001; do
+            for i in $(seq 1 60); do
+              curl -fsS "http://localhost:$port/api/health" && break
+              sleep 1
+            done
+          done
+          for pair in app:E2E_SETUP_TOKEN app2:E2E_SETUP_TOKEN_2; do
+            token=$(docker logs "${pair%%:*}" 2>&1 | grep -E '^    [A-Za-z0-9_-]{20,}$' | tail -1 | tr -d ' ')
+            test -n "$token"
+            echo "::add-mask::$token"
+            echo "${pair#*:}=$token" >> "$GITHUB_ENV"
+          done
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
@@ -94,10 +113,17 @@ jobs:
         working-directory: e2e
         env:
           E2E_BASE_URL: http://localhost:8000
+          E2E_BASE_URL_2: http://localhost:8001
+          E2E_OIDC: "1"
         run: npx playwright test
       - name: Server log
         if: failure()
-        run: docker logs app
+        run: |
+          docker logs app
+          echo "--- OIDC-only instance"
+          docker logs app2
+          echo "--- Dex"
+          docker logs dex
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

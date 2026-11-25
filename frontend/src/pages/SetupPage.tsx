@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { browserTimeZone } from '../lib/browser';
@@ -7,6 +7,8 @@ import { signedIn } from '../hooks/useMe';
 import { useErrorText, useI18n } from '../i18n/context';
 import { LanguageSwitcher } from '../components/layout/LanguageSwitcher';
 import { NewPasswordFields } from '../components/account/NewPasswordFields';
+import { OidcButton } from '../components/account/OidcButton';
+import { useMeta } from '../hooks/useMeta';
 
 /** First-run setup: create the first account with the token from the server log. */
 export function SetupPage() {
@@ -18,6 +20,10 @@ export function SetupPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const mismatch = confirm.length > 0 && password !== confirm;
+  const meta = useMeta();
+  const passwordLogin = meta.data?.password_login ?? true;
+  const oidc = meta.data?.oidc != null;
+  const form = useRef<HTMLFormElement>(null);
 
   const setup = useMutation({
     mutationFn: () =>
@@ -34,9 +40,18 @@ export function SetupPage() {
     setup.mutate();
   };
 
+  // With the provider: token and username have to be filled in, no password
+  const oidcBody = () => {
+    for (const name of ['setup-token', 'username']) {
+      const field = form.current?.elements.namedItem(name) as HTMLInputElement | null;
+      if (field && !field.reportValidity()) return null;
+    }
+    return { token: token.trim(), username, timezone: browserTimeZone(), locale };
+  };
+
   return (
     <main className="center">
-      <form className="card login" onSubmit={submit}>
+      <form className="card login" onSubmit={submit} ref={form}>
         <h1>{t('setup.title')}</h1>
         <p className="subtle">{t('setup.intro', { command: 'docker compose logs app' })}</p>
         <label className="field">
@@ -63,11 +78,21 @@ export function SetupPage() {
             onChange={(e) => setUsername(e.target.value)}
           />
         </label>
-        <NewPasswordFields password={password} confirm={confirm} onPassword={setPassword} onConfirm={setConfirm} />
-        {setup.isError && <p className="error" role="alert">{errorText(setup.error)}</p>}
-        <button type="submit" className="button primary" disabled={setup.isPending || mismatch}>
-          {setup.isPending ? t('setup.submitting') : t('setup.submit')}
-        </button>
+        {passwordLogin && (
+          <>
+            <NewPasswordFields password={password} confirm={confirm} onPassword={setPassword} onConfirm={setConfirm} />
+            {setup.isError && <p className="error" role="alert">{errorText(setup.error)}</p>}
+            <button type="submit" className="button primary" disabled={setup.isPending || mismatch}>
+              {setup.isPending ? t('setup.submitting') : t('setup.submit')}
+            </button>
+          </>
+        )}
+        {oidc && (
+          <>
+            {passwordLogin && <p className="subtle divider">{t('login.or')}</p>}
+            <OidcButton action="continue" path="/v1/setup/oidc" body={oidcBody} primary={!passwordLogin} />
+          </>
+        )}
         <LanguageSwitcher />
       </form>
     </main>

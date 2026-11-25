@@ -43,6 +43,14 @@ class AccountUpdate(AccountSettings):
     """PATCH: only the fields sent are changed."""
 
 
+class OidcLinkRead(BaseModel):
+    """What the provider told us when the account last signed in; for display only."""
+
+    email: str | None
+    preferred_username: str | None
+    linked_at: datetime
+
+
 class MeRead(BaseModel):
     id: int
     username: str
@@ -55,15 +63,20 @@ class MeRead(BaseModel):
     default_timezone: str
     locale: LocaleLiteral | None
     today: date
+    # False: the account signs in through OIDC only
+    has_password: bool
+    oidc: OidcLinkRead | None
 
 
 class PasswordChange(BaseModel):
-    current_password: str = Field(min_length=1, max_length=256)
+    # Not needed by accounts without a password; they confirm with a fresh OIDC login instead
+    current_password: str | None = Field(default=None, min_length=1, max_length=256)
     new_password: str = Field(min_length=1, max_length=256)
 
 
 class PasswordConfirmation(BaseModel):
-    password: str = Field(min_length=1, max_length=256)
+    # Not needed by accounts without a password (see PasswordChange)
+    password: str | None = Field(default=None, min_length=1, max_length=256)
 
 
 class SessionRead(BaseModel):

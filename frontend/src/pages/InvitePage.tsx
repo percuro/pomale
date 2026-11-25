@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { APP_NAME } from '../app/brand';
 import { LanguageSwitcher } from '../components/layout/LanguageSwitcher';
 import { NewPasswordFields } from '../components/account/NewPasswordFields';
+import { OidcButton } from '../components/account/OidcButton';
+import { useMeta } from '../hooks/useMeta';
 import { signedIn } from '../hooks/useMe';
 import { useErrorText, useI18n } from '../i18n/context';
 import { apiFetch } from '../lib/api';
@@ -58,6 +60,10 @@ function AcceptForm({ token, info }: { token: string; info: InvitationInfo }) {
   const errorText = useErrorText();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const meta = useMeta();
+  const passwordLogin = meta.data?.password_login ?? true;
+  const oidc = meta.data?.oidc != null;
+  const form = useRef<HTMLFormElement>(null);
   const signup = info.purpose === 'signup';
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -94,11 +100,21 @@ function AcceptForm({ token, info }: { token: string; info: InvitationInfo }) {
     accept.mutate();
   };
 
+  // With the provider: only the username (signup) has to be valid; no password
+  const oidcBody = () => {
+    if (!signup) return { token };
+    const field = form.current?.elements.namedItem('username') as HTMLInputElement | null;
+    if (field && !field.reportValidity()) return null;
+    return { token, username, display_name: displayName.trim() || null, timezone: browserTimeZone(), locale };
+  };
+
   return (
-    <form className="login-form" onSubmit={submit}>
-      <h1>{signup ? t('invite.signupTitle') : t('invite.resetTitle')}</h1>
+    <form className="login-form" onSubmit={submit} ref={form}>
+      <h1>{signup ? t('invite.signupTitle') : t('invite.recoverTitle')}</h1>
       <p className="subtle">
-        {signup ? t('invite.signupIntro', { app: APP_NAME }) : t('invite.resetIntro', { username: info.username ?? '' })}
+        {signup
+          ? t(passwordLogin ? 'invite.signupIntro' : 'invite.signupIntroOidc', { app: APP_NAME })
+          : t('invite.recoverIntro', { username: info.username ?? '' })}
       </p>
       {signup ? (
         <>
@@ -127,12 +143,27 @@ function AcceptForm({ token, info }: { token: string; info: InvitationInfo }) {
       ) : (
         <input type="text" name="username" autoComplete="username" value={info.username ?? ''} readOnly hidden />
       )}
-      <NewPasswordFields password={password} confirm={confirm} onPassword={setPassword} onConfirm={setConfirm} />
+      {passwordLogin && (
+        <>
+          <NewPasswordFields password={password} confirm={confirm} onPassword={setPassword} onConfirm={setConfirm} />
+          {accept.isError && <p className="error" role="alert">{errorText(accept.error)}</p>}
+          <button type="submit" className="button primary" disabled={accept.isPending || mismatch}>
+            {signup ? t('invite.signupSubmit') : t('invite.resetSubmit')}
+          </button>
+        </>
+      )}
+      {oidc && (
+        <>
+          {passwordLogin && <p className="subtle divider">{t('login.or')}</p>}
+          <OidcButton
+            action={signup ? 'continue' : 'link'}
+            path="/v1/invitations/oidc"
+            body={oidcBody}
+            primary={!passwordLogin}
+          />
+        </>
+      )}
       <p className="subtle">{t('invite.expires', { date: format.dateTime(info.expires_at) })}</p>
-      {accept.isError && <p className="error" role="alert">{errorText(accept.error)}</p>}
-      <button type="submit" className="button primary" disabled={accept.isPending || mismatch}>
-        {signup ? t('invite.signupSubmit') : t('invite.resetSubmit')}
-      </button>
     </form>
   );
 }

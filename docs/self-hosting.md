@@ -118,12 +118,15 @@ Every account has its own habits, time zone and language. Nobody, not even an ad
 
 - **Roles.** `admin` accounts may manage accounts; `user` accounts only their own data. The account created in the first-run setup is an admin; after an upgrade from 0.3 every existing account is an admin.
 - **Inviting.** Admin page → "Invite someone": choose the role and an optional note, create the link and send it yourself (copy it, or on a phone use the share sheet). The link works once and is valid for `INVITE_EXPIRY_DAYS` days (default 7). Open links are listed and can be revoked. The instance sends no e-mail.
-- **Forgotten passwords.** Admin page → the account → "Password-reset link". The person opens it and sets a new password; the link is valid for 24 hours, only the newest one works, and all devices of that account are logged out. Admins never see or set a password.
+- **Forgotten passwords.** Admin page → the account → "Recovery link". The person opens it and sets a new password (or links a provider account, with single sign-on); the link is valid for 24 hours, only the newest one works, and all devices of that account are logged out. Admins never see or set a password.
+- **Single sign-on.** With an OpenID Connect provider (Authelia, Authentik, Pocket ID, …) people can sign in there instead of with a pomale password: through an invitation, by linking their account on the account page, or automatically. See [Single sign-on](oidc.md).
 - **Deactivating** logs the account out everywhere at once and stops its shortcut keys; its data stays until you reactivate or delete it. **Deleting** removes the account with all its data. People can also delete their own account on the account page.
 - **The last active admin** cannot be demoted, deactivated or deleted.
 - **Open registration:** with `REGISTRATION=open` a "Register" link appears on the login page; new accounts get the role user. For a private instance, invitations are the better choice.
 
-What admins see about other accounts: username, display name, role, active or deactivated, when it was created and when it was last active. Sessions store a coarse device name (e.g. "iPhone · Safari") for the owner's device list; no IP addresses are stored.
+What admins see about other accounts: username, display name, role, active or deactivated, how it signs in (password, provider), when it was created and when it was last active. Sessions store a coarse device name (e.g. "iPhone · Safari") for the owner's device list; no IP addresses are stored with them.
+
+**Audit log.** Admin page → "Log" lists security-relevant events: logins and failed logins, rate-limit blocks, created and deleted accounts, password changes, role changes, (de)activation, invitations and recovery links, provider links and shortcut keys, also when done on the command line. It stores usernames (kept after an account is deleted) and, only for failed logins and rate-limit blocks, the shortened IP address (IPv4 /24, IPv6 /48). Entries are deleted after `AUDIT_RETENTION_DAYS` (default 180).
 
 ### Command line
 

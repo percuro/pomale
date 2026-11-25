@@ -35,6 +35,9 @@ describe('translations', () => {
     for (const file of files(BACKEND, /\.py$/)) {
       const source = readFileSync(file, 'utf8');
       for (const match of source.matchAll(/(?:AppError|error_response)\(\s*\d+,\s*"([a-z_.]+)"/g)) codes.add(match[1]);
+      // OIDC callback errors travel in the URL fragment (/login#error=<code>)
+      for (const match of source.matchAll(/(?:OidcFlowError|OidcError)\(\s*"([a-z_.]+)"/g)) codes.add(match[1]);
+      for (const match of source.matchAll(/"(oidc\.[a-z_]+)"/g)) codes.add(match[1]);
     }
     expect(codes.size).toBeGreaterThan(25);
     const missing = [...codes].filter((code) => !hasMessage(`error.${code}`));

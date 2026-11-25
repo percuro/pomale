@@ -5,6 +5,8 @@ import { defineConfig, devices } from '@playwright/test';
  * E2E_BASE_URL  e.g. http://localhost:8000 (must equal the instance's PUBLIC_URL)
  * E2E_SETUP_TOKEN  setup token from the server log, for a fresh instance
  * E2E_USERNAME / E2E_PASSWORD  account to create (fresh) or log in with
+ * E2E_OIDC=1  Dex runs with e2e/oidc/dex.yaml and the instance has OIDC_LABEL=Dex (else OIDC tests are skipped)
+ * E2E_BASE_URL_2 / E2E_SETUP_TOKEN_2  second instance with PASSWORD_LOGIN=off and OIDC_AUTO_CREATE=on
  */
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:8000';
 

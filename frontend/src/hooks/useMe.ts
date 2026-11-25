@@ -43,6 +43,8 @@ export async function signedIn(queryClient: QueryClient, me: Me): Promise<void> 
 export async function signedOut(queryClient: QueryClient): Promise<void> {
   await clearAccountCache();
   syncEngine.setOwner(null);
-  queryClient.clear();
+  // Keep the "me" query itself: the layout observes it. clear() would remove it, and the
+  // page would stay on the signed-in view with "not logged in" errors.
   queryClient.setQueryData(ME_KEY, null);
+  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME_KEY[0] });
 }

@@ -53,6 +53,22 @@ E2E_BASE_URL=http://localhost:8000 npx playwright test
 
 The first run creates the account through the setup page; later runs log in (`E2E_USERNAME`/`E2E_PASSWORD`, defaults in `e2e/global-setup.ts`).
 
+The single-sign-on tests need Dex and a second instance without passwords (as in CI; `--network host` lets browser and backend reach Dex at the same `http://localhost:5556/dex`):
+
+```bash
+docker run -d --name dex --network host -v "$PWD/e2e/oidc/dex.yaml:/etc/dex/config.yaml:ro" \
+  ghcr.io/dexidp/dex:v2.46.1 dex serve /etc/dex/config.yaml
+oidc="-e OIDC_ISSUER=http://localhost:5556/dex -e OIDC_CLIENT_ID=pomale -e OIDC_CLIENT_SECRET=pomale-e2e-secret -e OIDC_LABEL=Dex"
+docker run -d --name app-e2e --network host -e PUBLIC_URL=http://localhost:8000 $oidc app:dev
+docker run -d --name app-e2e-2 --network host -e PUBLIC_URL=http://localhost:8001 $oidc \
+  -e PASSWORD_LOGIN=off -e OIDC_AUTO_CREATE=on app:dev \
+  sh -c "alembic upgrade head && exec uvicorn app.web:application --host 0.0.0.0 --port 8001"
+export E2E_SETUP_TOKEN_2=$(docker logs app-e2e-2 2>&1 | grep -E '^    [A-Za-z0-9_-]{20,}$' | tail -1 | tr -d ' ')
+E2E_OIDC=1 E2E_BASE_URL=http://localhost:8000 E2E_BASE_URL_2=http://localhost:8001 npx playwright test
+```
+
+Without `E2E_OIDC=1` those tests are skipped. The backend unit tests use an in-process fake provider (`backend/tests/oidc_fake.py`).
+
 ## Conventions
 
 - English for code, comments, docs and commit messages.

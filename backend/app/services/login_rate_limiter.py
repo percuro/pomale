@@ -6,8 +6,11 @@ from app.errors import AppError
 
 
 class LoginRateLimiter:
-    def __init__(self, window_seconds: int = 15 * 60):
+    """In memory, per process: counts reset on restart and are not shared between instances."""
+
+    def __init__(self, window_seconds: int = 15 * 60, name: str = "login"):
         self.window_seconds = window_seconds
+        self.name = name
         self.account_limit = 5
         self.ip_limit = 20
         self._attempts: dict[str, deque[float]] = defaultdict(deque)
@@ -26,11 +29,15 @@ class LoginRateLimiter:
                     headers={"Retry-After": str(self.window_seconds)},
                 )
 
-    def record_failure(self, username: str, ip_address: str) -> None:
+    def record_failure(self, username: str, ip_address: str) -> bool:
+        """Count a failure; True exactly when this one reached a limit (to log a block once, not per request)."""
         now = monotonic()
         with self._lock:
-            self._active(f"account:{username.lower()}", now).append(now)
-            self._active(f"ip:{ip_address}", now).append(now)
+            account_attempts = self._active(f"account:{username.lower()}", now)
+            ip_attempts = self._active(f"ip:{ip_address}", now)
+            account_attempts.append(now)
+            ip_attempts.append(now)
+            return len(account_attempts) == self.account_limit or len(ip_attempts) == self.ip_limit
 
     def record_success(self, username: str) -> None:
         with self._lock:

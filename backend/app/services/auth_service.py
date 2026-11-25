@@ -8,9 +8,9 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import Request, Response
 
-from app.config import cookie_secure, env_positive_int
+from app.config import cookie_secure, env_positive_int, password_login_enabled
 from app.errors import AppError
-from app.models.user import ROLE_USER, User, UserSession
+from app.models.user import AUTH_PASSWORD, ROLE_USER, User, UserSession
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import AccountSettings, LoginRequest
 from app.services.account_settings import apply_settings
@@ -57,6 +57,13 @@ def normalize_username(username: str) -> str:
     return username
 
 
+def require_password_login() -> None:
+    if not password_login_enabled():
+        raise AppError(
+            403, "auth.password_login_disabled", "Passwords are turned off on this instance; use single sign-on"
+        )
+
+
 def clear_session_cookie(response: Response) -> None:
     settings = cookie_settings()
     response.delete_cookie(
@@ -79,7 +86,9 @@ class AuthService:
         self.start_session(user, request, response)
         return user
 
-    def start_session(self, user: User, request: Request, response: Response) -> UserSession:
+    def start_session(
+        self, user: User, request: Request, response: Response, auth_method: str = AUTH_PASSWORD
+    ) -> UserSession:
         """Create a session for an already verified account and set the cookie."""
         now = utcnow()
         self.repository.delete_expired_sessions(now)
@@ -91,6 +100,7 @@ class AuthService:
             now + timedelta(minutes=SESSION_IDLE_MINUTES),
             user_agent,
             now,
+            auth_method,
         )
         # Persistent cookie (max_age); iOS drops session cookies when the web app is closed
         response.set_cookie(
@@ -173,7 +183,10 @@ class AuthService:
         )
 
     @staticmethod
-    def verify_password(password: str, encoded: str) -> bool:
+    def verify_password(password: str, encoded: str | None) -> bool:
+        if not encoded:
+            # Account without a password (OIDC only)
+            return False
         try:
             algorithm, n, r, p, salt_text, digest_text = encoded.split("$")
             if algorithm != "scrypt":

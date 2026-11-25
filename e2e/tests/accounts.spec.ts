@@ -59,7 +59,7 @@ test('a password-reset link sets a new password and logs out the old sessions', 
   const fresh = await freshContext(browser, baseURL!);
   const freshPage = await fresh.newPage();
   await freshPage.goto(url);
-  await expect(freshPage.getByRole('heading', { name: 'Neues Passwort setzen' })).toBeVisible();
+  await expect(freshPage.getByRole('heading', { name: 'Zugang wiederherstellen' })).toBeVisible();
   await expect(freshPage.getByText(account.username)).toBeVisible();
   await freshPage.getByLabel('Passwort (mindestens 12 Zeichen)').fill('neues-passwort-456');
   await freshPage.getByLabel('Passwort wiederholen').fill('neues-passwort-456');
@@ -67,7 +67,7 @@ test('a password-reset link sets a new password and logs out the old sessions', 
   await expect(freshPage.getByRole('navigation', { name: 'Ansichten' })).toBeVisible();
 
   await account.page.reload();
-  await expect(account.page.getByRole('button', { name: 'Anmelden' })).toBeVisible();
+  await expect(account.page.getByRole('button', { name: 'Anmelden', exact: true })).toBeVisible();
   await Promise.all([account.context.close(), fresh.close()]);
 });
 
@@ -78,7 +78,7 @@ test('a session on another device can be logged out from the account page', asyn
   await laptopPage.goto('/');
   await laptopPage.getByLabel('Benutzername').fill(phone.username);
   await laptopPage.getByLabel('Passwort').fill(phone.password);
-  await laptopPage.getByRole('button', { name: 'Anmelden' }).click();
+  await laptopPage.getByRole('button', { name: 'Anmelden', exact: true }).click();
   await expect(laptopPage.getByRole('navigation', { name: 'Ansichten' })).toBeVisible();
 
   await phone.page.goto('/account');
@@ -88,7 +88,7 @@ test('a session on another device can be logged out from the account page', asyn
   await expect(other).toHaveCount(0);
 
   await laptopPage.reload();
-  await expect(laptopPage.getByRole('button', { name: 'Anmelden' })).toBeVisible();
+  await expect(laptopPage.getByRole('button', { name: 'Anmelden', exact: true })).toBeVisible();
   await phone.page.reload();
   await expect(phone.page.getByRole('heading', { level: 1, name: 'Konto' })).toBeVisible();
   await Promise.all([phone.context.close(), laptop.close()]);
@@ -144,5 +144,16 @@ test('changing the time zone moves "today", and the device time zone is offered'
     await page.goto('/today');
     await expect(page.locator('.page-head')).toContainText(longDate(zone));
   }
+  await account.context.close();
+});
+
+test('logging out in the header returns to the login page', async ({ request, browser, baseURL }) => {
+  const account = await newAccount(browser, request, baseURL!);
+  const page = account.page;
+  await page.goto('/account');
+  await expect(page.getByRole('heading', { level: 1, name: 'Konto' })).toBeVisible();
+  await page.getByRole('button', { name: 'Abmelden', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Anmelden', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Ansichten' })).toHaveCount(0);
   await account.context.close();
 });
