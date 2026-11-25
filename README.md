@@ -4,7 +4,7 @@
 
 Habits grow at their own pace. pomale is a small, self-hosted habit tracker for your phone and your laptop. Check off a habit in a second on the iPhone, review and correct the week on a big screen. No points, no streaks that reset to zero, no notes you have to write.
 
-> Status: 0.6 – weekly and quantity goals, pauses, groups, notes and a history view. Reminders are next on the [roadmap](#roadmap).
+> Status: 0.7 – reminders via Web Push. API tokens, JSON import/export and built-in backups are next on the [roadmap](#roadmap).
 
 ## Features
 
@@ -14,6 +14,7 @@ Habits grow at their own pace. pomale is a small, self-hosted habit tracker for 
 - **Pauses** for holidays or illness, also entered afterwards: paused days are not due.
 - **History:** quota per period, a 12-week trend and a month calendar – no streaks to lose.
 - **Groups, colours and drag-to-sort** (with a keyboard alternative), and an optional note per habit and day.
+- **Reminders:** up to three times per habit, sent only if the habit is still open – on iPhone (home-screen app, iOS 16.4+), Android and desktop browsers, with a "Done" button where the system shows one. End-to-end encrypted, no extra service.
 - **Works offline:** installable web app (iPhone home screen, Android, desktop). Changes made offline are queued, marked, and sent when the app is back online. A conflicting change from another device is shown to you, never silently overwritten.
 - **iOS shortcut widget:** a revocable key for exactly one habit lets an iOS Shortcut check it off from the home screen.
 - **For a family, a flat share or a club:** admins invite people with a one-time link; everyone has their own habits, time zone and language, and nobody sees anyone else's data.
@@ -21,7 +22,7 @@ Habits grow at their own pace. pomale is a small, self-hosted habit tracker for 
 - **Audit log** for admins: logins, roles, invitations and keys.
 - **English and German**, following the browser or the account's choice.
 - **CSV export**, plain SQL backups, health endpoint.
-- **Small footprint:** one container, one SQLite file, no external services.
+- **Small footprint:** one container, one SQLite file, no external services (reminders use the browsers' own push services).
 
 ## Quick start
 
@@ -39,7 +40,8 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - [Self-hosting](docs/self-hosting.md): install, reverse proxy (Caddy, Traefik, Nginx Proxy Manager), users and invitations, updates, backup and restore
 - [Configuration](docs/configuration.md): all environment variables
 - [Single sign-on](docs/oidc.md): OpenID Connect with Authelia, Authentik, Pocket ID and others
-- [iPhone](docs/iphone.md): home-screen app, offline use, shortcut widget
+- [Reminders](docs/reminders.md): Web Push on iPhone, Android and desktop, privacy, troubleshooting
+- [iPhone](docs/iphone.md): home-screen app, offline use, reminders, shortcut widget
 - [Development](docs/development.md): running and testing from source
 - [Design notes](docs/design.md): why it works the way it does
 
@@ -48,7 +50,7 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - ~~**0.4** multiple accounts with invitations, per-account time zone, English and German interface~~ ✓
 - ~~**0.5** single sign-on (OpenID Connect), audit log~~ ✓
 - ~~**0.6** weekly targets ("3× a week"), quantities, pauses, history view~~ ✓
-- **0.7** reminders via Web Push
+- ~~**0.7** reminders via Web Push~~ ✓
 - **0.8** personal API tokens, JSON export/import, built-in scheduled backups
 - **0.9** beta hardening (accessibility, performance, upgrade tests)
 - **1.0** stable API and configuration

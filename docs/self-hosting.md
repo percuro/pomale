@@ -112,6 +112,8 @@ docker compose up -d
 
 Test a restore now and then; a backup you never restored is a hope, not a backup.
 
+The dump also contains the key pair pomale uses for reminders (Web Push). Restoring it keeps every device's reminders working; starting with an empty database or another instance's backup means devices have to turn reminders on again.
+
 ## Users and invitations
 
 Every account has its own habits, time zone and language. Nobody, not even an admin, sees another account's habits or check-ins.
@@ -141,6 +143,10 @@ docker compose exec app python -m app.cli.set_role <name> admin                #
 
 `GET /api/health` returns `{"status": "ok", "version": "…"}` when the app and its database work, otherwise HTTP 503. The image also defines a Docker health check.
 
+## Reminders
+
+Reminders (Web Push) are on by default and need two things: HTTPS (browsers allow push only on secure pages; `http://localhost` works for testing) and outgoing HTTPS from the container to the push services of Google, Apple, Mozilla and Microsoft. See [Reminders](reminders.md) and the `PUSH_*` variables in the [configuration](configuration.md).
+
 ## iPhone
 
-See [iphone.md](iphone.md) for the home-screen web app, offline use and the shortcut widget.
+See [iphone.md](iphone.md) for the home-screen web app, offline use, reminders and the shortcut widget.

@@ -20,6 +20,8 @@ from app.db.database import SessionLocal
 from app.main import app as api
 from app.middleware.security_headers import add_security_headers
 from app.services import setup_service
+from app.services.scheduler import ReminderScheduler
+from app.services.webpush.keys import ensure_vapid_keys
 
 if not logging.getLogger().handlers:
     logging.basicConfig(
@@ -27,6 +29,8 @@ if not logging.getLogger().handlers:
         format="%(levelname)s:     %(name)s %(message)s",
     )
 logger = logging.getLogger("app")
+# httpx logs every request with its URL; push endpoints are secrets of the subscribed devices
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 
@@ -71,7 +75,29 @@ async def lifespan(_app: FastAPI):
         logger.error("Configuration error: %s", exc)
         raise
     announce_setup_token()
-    yield
+    scheduler = start_reminders()
+    try:
+        yield
+    finally:
+        if scheduler is not None:
+            await scheduler.stop()
+
+
+def start_reminders() -> ReminderScheduler | None:
+    if not config.push_enabled():
+        logger.info("Reminders are turned off (PUSH_ENABLED=false)")
+        return None
+    db = SessionLocal()
+    try:
+        ensure_vapid_keys(db)
+    except OperationalError:
+        logger.warning("Database not migrated yet; reminders stay off until the next start")
+        return None
+    finally:
+        db.close()
+    scheduler = ReminderScheduler(SessionLocal)
+    scheduler.start()
+    return scheduler
 
 
 def announce_setup_token() -> None:

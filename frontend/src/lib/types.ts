@@ -57,7 +57,26 @@ export interface Habit {
   unit: string | null;
   color: HabitColor | null;
   group_id: number | null;
+  /** Local reminder times "HH:MM" in the account's time zone, sorted */
+  reminders: string[];
   schedules: Schedule[];
+}
+
+export interface PushConfig {
+  enabled: boolean;
+  /** applicationServerKey (base64url); null when the server has reminders turned off */
+  public_key: string | null;
+}
+
+/** A device (browser) that receives reminders */
+export interface PushDevice {
+  id: number;
+  device: string | null;
+  created_at: string;
+  last_success_at: string | null;
+  last_error: string | null;
+  /** Registered from this login session */
+  current: boolean;
 }
 
 export interface Group {

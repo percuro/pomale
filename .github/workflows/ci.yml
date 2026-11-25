@@ -83,7 +83,7 @@ jobs:
         # 8000: passwords and OIDC. 8001: OIDC only, accounts created at the first sign-in.
         run: |
           oidc="-e OIDC_ISSUER=http://localhost:5556/dex -e OIDC_CLIENT_ID=pomale -e OIDC_CLIENT_SECRET=pomale-e2e-secret -e OIDC_LABEL=Dex"
-          docker run -d --name app --network host -e PUBLIC_URL=http://localhost:8000 $oidc app:ci
+          docker run -d --name app --network host -e PUBLIC_URL=http://localhost:8000 -e PUSH_ALLOWED_HOSTS=push.invalid $oidc app:ci
           docker run -d --name app2 --network host -e PUBLIC_URL=http://localhost:8001 $oidc \
             -e PASSWORD_LOGIN=off -e OIDC_AUTO_CREATE=on app:ci \
             sh -c "alembic upgrade head && exec uvicorn app.web:application --host 0.0.0.0 --port 8001"

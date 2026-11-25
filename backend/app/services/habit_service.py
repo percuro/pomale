@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from app.errors import AppError
-from app.models.habit import Habit, HabitGroup, HabitSchedule
+from app.models.habit import Habit, HabitGroup, HabitReminder, HabitSchedule
 from app.repositories.habit_repository import HabitRepository
 from app.schemas.habit import (
     HabitCreate,
@@ -46,6 +46,7 @@ def habit_read(habit: Habit, today: date) -> HabitRead:
         unit=habit.unit,
         color=habit.color,
         group_id=habit.group_id,
+        reminders=[reminder.time.strftime("%H:%M") for reminder in habit.reminders],
         schedules=[ScheduleRead.model_validate(s) for s in habit.schedules],
     )
 
@@ -81,6 +82,7 @@ class HabitService:
             color=data.color,
             group_id=data.group_id,
             sort_order=self.repository.next_sort_order(user_id),
+            reminders=[HabitReminder(time=value) for value in data.reminders],
         )
         self.repository.upsert_schedule(habit, data.start_on or today, data.weekdays, data.goal_type, data.target)
         return self.repository.add(habit)
@@ -101,6 +103,10 @@ class HabitService:
         if "group_id" in fields:
             self.group(data.group_id, user_id)
             habit.group_id = data.group_id
+        if "reminders" in fields and data.reminders is not None:
+            # Unchanged times keep last_sent_on, so editing a habit does not fire them again today
+            kept = {reminder.time: reminder for reminder in habit.reminders}
+            habit.reminders = [kept.get(value) or HabitReminder(time=value) for value in data.reminders]
         self.repository.commit(habit)
         return habit
 

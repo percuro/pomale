@@ -3,7 +3,16 @@ from datetime import datetime
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from app.models.push import PushSubscription
 from app.models.user import ROLE_ADMIN, User, UserSession
+
+
+def _forget_devices(db: Session, sessions) -> None:
+    """Remove the push subscriptions of sessions that are logged out (not of expired ones).
+
+    A logged-out device must stop showing habit names on its lock screen.
+    """
+    db.execute(delete(PushSubscription).where(PushSubscription.session_id.in_(sessions)))
 
 
 class AuthRepository:
@@ -22,6 +31,7 @@ class AuthRepository:
     def set_password(self, user: User, password_hash: str) -> None:
         user.password_hash = password_hash
         # Changing the password logs out all devices
+        _forget_devices(self.db, select(UserSession.id).where(UserSession.user_id == user.id))
         self.db.query(UserSession).filter(UserSession.user_id == user.id).delete()
         self.db.commit()
 
@@ -76,8 +86,11 @@ class AuthRepository:
 
     def delete_sessions(self, user_id: int, keep_session_id: int | None = None) -> int:
         query = delete(UserSession).where(UserSession.user_id == user_id)
+        ids = select(UserSession.id).where(UserSession.user_id == user_id)
         if keep_session_id is not None:
             query = query.where(UserSession.id != keep_session_id)
+            ids = ids.where(UserSession.id != keep_session_id)
+        _forget_devices(self.db, ids)
         count = self.db.execute(query).rowcount
         self.db.commit()
         return count
@@ -94,7 +107,10 @@ class AuthRepository:
         self.db.commit()
         self.db.expunge_all()
 
-    def delete_session(self, session: UserSession) -> None:
+    def delete_session(self, session: UserSession, *, forget_devices: bool = True) -> None:
+        """forget_devices=False for an expired session: its device keeps getting reminders."""
+        if forget_devices:
+            _forget_devices(self.db, [session.id])
         self.db.delete(session)
         self.db.commit()
 

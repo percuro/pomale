@@ -1,9 +1,9 @@
-from datetime import date
+from datetime import date, time
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.habit import HABIT_COLORS, QUANTITY_TARGET_MAX, WEEKLY_TARGET_MAX
+from app.models.habit import HABIT_COLORS, QUANTITY_TARGET_MAX, REMINDERS_MAX, WEEKLY_TARGET_MAX
 
 GoalTypeLiteral = Literal["days", "weekly_count", "quantity"]
 
@@ -44,7 +44,26 @@ class _NameMixin(BaseModel):
         return value
 
 
-class HabitCreate(_NameMixin):
+def check_reminders(value: list[time] | None) -> list[time] | None:
+    """Whole minutes, no time zone (the account's applies), no duplicates; returned sorted."""
+    if value is None:
+        return value
+    for item in value:
+        if item.second or item.microsecond or item.tzinfo is not None:
+            raise ValueError("Reminder times are local times in whole minutes, e.g. 07:30")
+    if len(set(value)) != len(value):
+        raise ValueError("Reminder times must not repeat")
+    return sorted(value)
+
+
+class _RemindersMixin(BaseModel):
+    @field_validator("reminders", check_fields=False)
+    @classmethod
+    def valid_reminders(cls, value: list[time] | None) -> list[time] | None:
+        return check_reminders(value)
+
+
+class HabitCreate(_NameMixin, _RemindersMixin):
     name: str = Field(max_length=120)
     cue: str | None = Field(default=None, max_length=200)
     weekdays: int = Field(default=127, ge=1, le=127)
@@ -54,6 +73,7 @@ class HabitCreate(_NameMixin):
     unit: str | None = Field(default=None, max_length=20)
     color: str | None = None
     group_id: int | None = None
+    reminders: list[time] = Field(default_factory=list, max_length=REMINDERS_MAX)
 
     @model_validator(mode="after")
     def goal_fits(self) -> Self:
@@ -64,13 +84,15 @@ class HabitCreate(_NameMixin):
         return self
 
 
-class HabitUpdate(_NameMixin):
+class HabitUpdate(_NameMixin, _RemindersMixin):
     name: str | None = Field(default=None, max_length=120)
     cue: str | None = Field(default=None, max_length=200)
     sort_order: int | None = None
     unit: str | None = Field(default=None, max_length=20)
     color: str | None = None
     group_id: int | None = None
+    # Replaces all reminder times; [] removes them
+    reminders: list[time] | None = Field(default=None, max_length=REMINDERS_MAX)
 
 
 class ScheduleUpdate(BaseModel):
@@ -112,6 +134,8 @@ class HabitRead(BaseModel):
     unit: str | None
     color: str | None
     group_id: int | None
+    # Local times "HH:MM" in the account's time zone, sorted
+    reminders: list[str]
     schedules: list[ScheduleRead]
 
 

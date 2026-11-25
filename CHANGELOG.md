@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
+## 0.7.0 – reminders
+
+### Features
+
+- **Reminders via Web Push:** up to three times per habit, in the account's time zone. A notification comes only if the habit is still open then: done, paused, not planned and reached weekly goals stay quiet; quantity goals show "3 of 8 glasses". Habits due in the same minute come as one notification.
+- **Done button** in the notification for a single habit on Android and desktop: checks it off without opening the app, through the same rules as the offline queue (queued when offline). iPhone and iPad open the app on a tap.
+- Works on iPhone and iPad with iOS/iPadOS 16.4 or later in the home-screen app, and in current browsers on Android and desktop. See [docs/reminders.md](docs/reminders.md).
+- **Account page → Reminders:** turn reminders on or off per device, send a test, see and remove all devices. Logging out or ending a session removes that device; an expired login keeps it.
+- Messages are end-to-end encrypted (RFC 8291); push services never see habit names. Implemented in pomale itself on `cryptography`, `joserfc` and `httpx`, checked against the RFC's test vector.
+- A missed reminder (server restart) is caught up for 15 minutes, never twice; clock changes are handled.
+- API: `reminders` on habits (`["07:30", "20:00"]`), `/v1/push/config`, `/v1/push/subscriptions` (list, register, remove, test).
+
+### Upgrade notes
+
+- Migration 0006 runs automatically and adds three tables. On the first start pomale creates its Web Push key pair and stores it in the database (log line "VAPID key created"); backups include it.
+- **New environment variables:** `PUSH_ENABLED` (default `true`), `PUSH_CONTACT` (default `PUBLIC_URL`; must be `mailto:` or `https://`), `PUSH_ALLOWED_HOSTS`. Nothing has to be set.
+- The server now makes **outgoing HTTPS connections** to the push services of Google, Apple, Mozilla and Microsoft, and only to those (extendable with `PUSH_ALLOWED_HOSTS`). A firewall that blocks them stops reminders, nothing else.
+- Reminders run inside the app process: still exactly one instance with one worker.
+- The service worker is now written by hand (`src/sw.ts`, vite-plugin-pwa `injectManifest`) instead of generated; it caches the same files and updates itself on the next visit.
+- `HabitRead` has the new field `reminders`; `HabitCreate` and `PATCH /v1/habits/{id}` accept it (`PATCH` replaces the list).
+- New backend dependencies, now direct: `cryptography`, `httpx` (httpx moved from the dev requirements). New frontend dev dependencies: `workbox-core`, `workbox-precaching`, `workbox-routing`.
+
 ## 0.6.0 – goals, pauses, groups, history
 
 ### Features

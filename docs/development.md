@@ -45,11 +45,13 @@ Against the built image (like CI):
 
 ```bash
 docker build -t app:dev .
-docker run -d --name app-e2e -p 8000:8000 -e PUBLIC_URL=http://localhost:8000 app:dev
+docker run -d --name app-e2e -p 8000:8000 -e PUBLIC_URL=http://localhost:8000 -e PUSH_ALLOWED_HOSTS=push.invalid app:dev
 export E2E_SETUP_TOKEN=$(docker logs app-e2e 2>&1 | grep -E '^    [A-Za-z0-9_-]{20,}$' | tail -1 | tr -d ' ')
 cd e2e && npm ci && npx playwright install chromium webkit
 E2E_BASE_URL=http://localhost:8000 npx playwright test
 ```
+
+`PUSH_ALLOWED_HOSTS=push.invalid` lets the reminder tests register stubbed push subscriptions (real delivery is covered by the backend tests with a mocked push service).
 
 The first run creates the account through the setup page; later runs log in (`E2E_USERNAME`/`E2E_PASSWORD`, defaults in `e2e/global-setup.ts`).
 
@@ -59,7 +61,7 @@ The single-sign-on tests need Dex and a second instance without passwords (as in
 docker run -d --name dex --network host -v "$PWD/e2e/oidc/dex.yaml:/etc/dex/config.yaml:ro" \
   ghcr.io/dexidp/dex:v2.46.1 dex serve /etc/dex/config.yaml
 oidc="-e OIDC_ISSUER=http://localhost:5556/dex -e OIDC_CLIENT_ID=pomale -e OIDC_CLIENT_SECRET=pomale-e2e-secret -e OIDC_LABEL=Dex"
-docker run -d --name app-e2e --network host -e PUBLIC_URL=http://localhost:8000 $oidc app:dev
+docker run -d --name app-e2e --network host -e PUBLIC_URL=http://localhost:8000 -e PUSH_ALLOWED_HOSTS=push.invalid $oidc app:dev
 docker run -d --name app-e2e-2 --network host -e PUBLIC_URL=http://localhost:8001 $oidc \
   -e PASSWORD_LOGIN=off -e OIDC_AUTO_CREATE=on app:dev \
   sh -c "alembic upgrade head && exec uvicorn app.web:application --host 0.0.0.0 --port 8001"
