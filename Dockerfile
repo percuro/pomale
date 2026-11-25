@@ -9,7 +9,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # --- Runtime: FastAPI serves the API (/api) and the built frontend ----------
-FROM python:3.13.14-slim
+FROM python:3.13.17-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
