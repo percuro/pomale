@@ -6,9 +6,10 @@ through untested. Foreign IDs must give 404 (not 403), so IDs cannot be probed.
 """
 
 import unittest
+from datetime import date
 
 from app.main import app
-from app.models.habit import Checkin, Habit
+from app.models.habit import Checkin, Habit, HabitGroup, HabitPause
 from app.models.shortcut_token import ShortcutToken
 from app.models.user import UserSession
 from app.services.shortcut_service import shortcut_rate_limiter
@@ -21,6 +22,11 @@ ROUTES = {
     ("POST", "/v1/habits/{habit_id}/archive"): (404, None),
     ("POST", "/v1/habits/{habit_id}/unarchive"): (404, None),
     ("PUT", "/v1/habits/{habit_id}/days/{day}"): (404, {"done": False}),
+    ("PUT", "/v1/habits/{habit_id}/days/{day}/note"): (404, {"note": "read it"}),
+    ("PATCH", "/v1/groups/{group_id}"): (404, {"name": "taken over"}),
+    ("DELETE", "/v1/groups/{group_id}"): (404, None),
+    ("PATCH", "/v1/pauses/{pause_id}"): (404, {"reason": "taken over"}),
+    ("DELETE", "/v1/pauses/{pause_id}"): (404, None),
     ("GET", "/v1/habits/{habit_id}/shortcut-tokens"): (404, None),
     ("POST", "/v1/habits/{habit_id}/shortcut-tokens"): (404, {"label": "mine now"}),
     ("DELETE", "/v1/habits/{habit_id}/shortcut-tokens/{token_id}"): (404, None),
@@ -56,6 +62,12 @@ class IsolationTest(unittest.TestCase):
         bert_token = self.bert.post(f"/v1/habits/{self.bert_habit['id']}/shortcut-tokens", json={"label": "B"}).json()
         self.bert_token_id = bert_token["id"]
         self.bert_session_id = self.bert.get("/v1/account/sessions").json()[0]["id"]
+        self.bert_group = self.bert.post("/v1/groups", json={"name": "Bert's group"}).json()
+        self.bert.patch(f"/v1/habits/{self.bert_habit['id']}", json={"group_id": self.bert_group["id"]})
+        self.bert_pause = self.bert.post(
+            "/v1/pauses", json={"habit_id": self.bert_habit["id"], "start_on": "2026-11-01", "end_on": "2026-11-02"}
+        ).json()
+        self.bert.put(f"/v1/habits/{self.bert_habit['id']}/days/2026-11-23/note", json={"note": "Bert's note"})
 
         self.anna_habit = self.anna.post("/v1/habits", json={"name": "Anna's own"}).json()
         self.anna_token = self.anna.post(
@@ -73,6 +85,8 @@ class IsolationTest(unittest.TestCase):
             session_id=self.bert_session_id,
             user_id=self.bert_user.id,
             invitation_id=1,
+            group_id=self.bert_group["id"],
+            pause_id=self.bert_pause["id"],
         )
 
     def test_every_route_with_an_id_is_covered(self):
@@ -111,6 +125,29 @@ class IsolationTest(unittest.TestCase):
         self.assertIn("Anna's own", export.text)
         self.assertNotIn("Bert", export.text)
 
+    def test_foreign_ids_in_bodies_are_not_found(self):
+        anna_id, bert_id = self.anna_habit["id"], self.bert_habit["id"]
+        group_id = self.bert_group["id"]
+        attempts = [
+            ("POST", "/v1/habits", {"name": "x", "group_id": group_id}),
+            ("PATCH", f"/v1/habits/{anna_id}", {"group_id": group_id}),
+            ("PUT", "/v1/habits/order", {"habits": [{"id": bert_id}]}),
+            ("PUT", "/v1/habits/order", {"habits": [{"id": anna_id, "group_id": group_id}]}),
+            ("PUT", "/v1/groups/order", {"ids": [group_id]}),
+            ("POST", "/v1/pauses", {"habit_id": bert_id, "start_on": "2026-11-01", "end_on": "2026-11-02"}),
+        ]
+        for method, path, body in attempts:
+            with self.subTest(method=method, path=path, body=body):
+                response = self.anna.request(method, path, json=body)
+                self.assertEqual(response.status_code, 404, response.text)
+                self.assertNotIn("Bert", response.text)
+        self.assertBertUntouched()
+
+    def test_groups_and_pauses_lists_contain_only_own_data(self):
+        self.assertEqual(self.anna.get("/v1/groups").json(), [])
+        self.assertEqual(self.anna.get("/v1/pauses").json(), [])
+        self.assertEqual(self.anna.get("/v1/days").json()["groups"], [])
+
     def test_session_list_shows_only_own_sessions(self):
         ids = {s["id"] for s in self.anna.get("/v1/account/sessions").json()}
         self.assertNotIn(self.bert_session_id, ids)
@@ -128,6 +165,13 @@ class IsolationTest(unittest.TestCase):
             tokens = db.query(ShortcutToken).filter_by(habit_id=habit.id).all()
             self.assertEqual([(t.label, t.revoked_at) for t in tokens], [("B", None)])
             self.assertIsNotNone(db.get(UserSession, self.bert_session_id))
+            group = db.get(HabitGroup, self.bert_group["id"])
+            self.assertEqual((group.name, group.sort_order, habit.group_id), ("Bert's group", 1, group.id))
+            self.assertEqual(habit.sort_order, 1)
+            pause = db.get(HabitPause, self.bert_pause["id"])
+            self.assertEqual((pause.habit_id, pause.reason), (habit.id, None))
+            checkin = db.get(Checkin, (habit.id, date(2026, 11, 23)))
+            self.assertEqual(checkin.note, "Bert's note")
         finally:
             db.close()
         self.assertEqual(self.bert.get("/v1/auth/me").status_code, 200)

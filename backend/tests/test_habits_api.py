@@ -29,7 +29,12 @@ class HabitsApiTest(unittest.TestCase):
         habit = self.create(cue="  nach dem Frühstück ", weekdays=MON_FRI)
         self.assertEqual(habit["cue"], "nach dem Frühstück")
         self.assertEqual(habit["weekdays"], MON_FRI)
-        self.assertEqual(habit["schedules"], [{"valid_from": "2026-11-24", "weekdays": MON_FRI}])
+        self.assertEqual(
+            habit["schedules"],
+            [{"valid_from": "2026-11-24", "weekdays": MON_FRI, "goal_type": "days", "target": None}],
+        )
+        goal = (habit["goal_type"], habit["target"], habit["color"], habit["group_id"])
+        self.assertEqual(goal, ("days", None, None, None))
         self.assertEqual([h["id"] for h in self.client.get("/v1/habits").json()], [habit["id"]])
 
     def test_empty_name_rejected(self):

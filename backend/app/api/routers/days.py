@@ -7,7 +7,7 @@ from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_user_today
 from app.db.database import get_db
 from app.repositories.habit_repository import HabitRepository
-from app.schemas.habit import CheckinRead, CheckinUpdate, DaysRead
+from app.schemas.habit import CheckinRead, CheckinUpdate, DaysRead, NoteRead, NoteUpdate
 from app.services.checkin_service import CheckinService
 from app.services.day_service import week_start
 from app.services.habit_service import HabitService
@@ -40,4 +40,20 @@ def set_day(
 ):
     repository = HabitRepository(db)
     habit = HabitService(repository).get(habit_id, user.id)
-    return CheckinService(repository).set_state(habit, day, data.done, today, data.op_id, data.base_version)
+    return CheckinService(repository).set_state(
+        habit, day, today, done=data.done, value=data.value, op_id=data.op_id, base_version=data.base_version
+    )
+
+
+@router.put("/habits/{habit_id}/days/{day}/note", response_model=NoteRead)
+def set_note(
+    habit_id: int,
+    day: date,
+    data: NoteUpdate,
+    user=Depends(require_user),
+    db: Session = Depends(get_db),
+    today: date = Depends(get_user_today),
+):
+    repository = HabitRepository(db)
+    habit = HabitService(repository).get(habit_id, user.id)
+    return CheckinService(repository).set_note(habit, day, data.note, today)

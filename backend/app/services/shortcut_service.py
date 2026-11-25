@@ -82,7 +82,7 @@ class ShortcutService:
 
         before = self.habits.get_checkin(habit.id, today)
         already = bool(before and before.done)
-        result = CheckinService(self.habits).set_state(habit, today, True, today, op_id=None, base_version=None)
+        result = CheckinService(self.habits).set_state(habit, today, today, done=True)
         self.repository.touch(token, utcnow())
         outcome = "already_done" if already else "done"
         status_text = text(resolve_locale(habit.user, request), f"shortcut.{outcome}")

@@ -4,7 +4,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.habit import Checkin, Habit, HabitPause, HabitSchedule
+from app.models.habit import Checkin, Habit, HabitGroup, HabitPause, HabitSchedule
 
 
 class HabitRepository:
@@ -48,13 +48,19 @@ class HabitRepository:
         self.db.refresh(habit)
         return habit
 
-    def upsert_schedule(self, habit: Habit, valid_from: date, weekdays: int) -> None:
+    def upsert_schedule(
+        self, habit: Habit, valid_from: date, weekdays: int, goal_type: str = "days", target: int | None = None
+    ) -> None:
         for schedule in habit.schedules:
             if schedule.valid_from == valid_from:
                 schedule.weekdays = weekdays
+                schedule.goal_type = goal_type
+                schedule.target = target
                 break
         else:
-            habit.schedules.append(HabitSchedule(valid_from=valid_from, weekdays=weekdays))
+            habit.schedules.append(
+                HabitSchedule(valid_from=valid_from, weekdays=weekdays, goal_type=goal_type, target=target)
+            )
 
     def delete_schedules_after(self, habit: Habit, day: date) -> None:
         for schedule in [s for s in habit.schedules if s.valid_from > day]:
@@ -100,3 +106,52 @@ class HabitRepository:
             self.db.rollback()
             return False
         return True
+
+    # Groups
+
+    def list_groups(self, user_id: int) -> list[HabitGroup]:
+        return list(
+            self.db.scalars(
+                select(HabitGroup).where(HabitGroup.user_id == user_id).order_by(HabitGroup.sort_order, HabitGroup.id)
+            )
+        )
+
+    def get_group(self, group_id: int, user_id: int) -> HabitGroup | None:
+        return self.db.scalars(
+            select(HabitGroup).where(HabitGroup.id == group_id, HabitGroup.user_id == user_id)
+        ).first()
+
+    def group_name_taken(self, user_id: int, name: str, except_id: int | None = None) -> bool:
+        query = select(HabitGroup.id).where(HabitGroup.user_id == user_id, func.lower(HabitGroup.name) == name.lower())
+        if except_id is not None:
+            query = query.where(HabitGroup.id != except_id)
+        return self.db.scalar(query) is not None
+
+    def next_group_sort_order(self, user_id: int) -> int:
+        current = self.db.scalar(select(func.max(HabitGroup.sort_order)).where(HabitGroup.user_id == user_id))
+        return (current or 0) + 1
+
+    def add_object(self, obj) -> None:
+        self.db.add(obj)
+        self.db.commit()
+        self.db.refresh(obj)
+
+    def delete_object(self, obj) -> None:
+        self.db.delete(obj)
+        self.db.commit()
+
+    # Pauses
+
+    def list_pauses(self, user_id: int) -> list[HabitPause]:
+        return list(
+            self.db.scalars(
+                select(HabitPause)
+                .where(HabitPause.user_id == user_id)
+                .order_by(HabitPause.start_on.desc(), HabitPause.id.desc())
+            )
+        )
+
+    def get_pause(self, pause_id: int, user_id: int) -> HabitPause | None:
+        return self.db.scalars(
+            select(HabitPause).where(HabitPause.id == pause_id, HabitPause.user_id == user_id)
+        ).first()

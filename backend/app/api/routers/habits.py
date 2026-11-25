@@ -7,7 +7,7 @@ from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_user_today
 from app.db.database import get_db
 from app.repositories.habit_repository import HabitRepository
-from app.schemas.habit import HabitCreate, HabitRead, HabitUpdate, ScheduleUpdate
+from app.schemas.habit import HabitCreate, HabitOrder, HabitRead, HabitUpdate, ScheduleUpdate
 from app.services.habit_service import HabitService, habit_read
 
 router = APIRouter()
@@ -35,6 +35,16 @@ def create_habit(
     today: date = Depends(get_user_today),
 ):
     return habit_read(_service(db).create(user.id, data, today), today)
+
+
+@router.put("/order", response_model=list[HabitRead])
+def reorder_habits(
+    data: HabitOrder,
+    user=Depends(require_user),
+    db: Session = Depends(get_db),
+    today: date = Depends(get_user_today),
+):
+    return [habit_read(h, today) for h in _service(db).reorder(user.id, data)]
 
 
 @router.patch("/{habit_id}", response_model=HabitRead)
