@@ -16,6 +16,12 @@
   --focus: #1b5fd1;
   --radius: 0.75rem;
   --tap: 2.75rem; /* 44 CSS-Pixel bei 16px Grundschrift */
+  /* Habit colours: stripes next to the name, at least 3:1 against the surface */
+  --habit-slate: #5b6472; --habit-red: #c0392b; --habit-orange: #c2610c;
+  --habit-amber: #a87400; --habit-green: #2e7d4f; --habit-teal: #0f7c80;
+  --habit-blue: #2f62c9; --habit-purple: #7b4bb7; --habit-pink: #b83b7e;
+  --partial-bg: #fbf1d9;
+  --partial-text: #6b4a00;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 100%;
@@ -40,6 +46,11 @@
     --open-bg: #1b211e;
     --error: #ff8f84;
     --focus: #8cb6ff;
+    --habit-slate: #9aa6b2; --habit-red: #ff8a7a; --habit-orange: #ffa45c;
+    --habit-amber: #f2c14e; --habit-green: #6fd39b; --habit-teal: #5fd0d4;
+    --habit-blue: #8fb3ff; --habit-purple: #c3a2f2; --habit-pink: #f59ac6;
+    --partial-bg: #3a3018;
+    --partial-text: #f4d58a;
   }
 }
 
@@ -183,6 +194,21 @@ a { color: var(--accent); }
 .today-row.state-open .state-icon { color: var(--muted); }
 .undo { flex: none; }
 .undo[hidden] { display: block; visibility: hidden; }
+.today-row.state-partial .today-main { background: var(--partial-bg); color: var(--partial-text); border-color: transparent; }
+.today-row.state-paused .today-main,
+.today-row.state-not_planned .today-main { color: var(--muted); }
+.today-amount { font-size: 0.95rem; font-weight: 600; }
+/* Colour stripe; the name always says which habit it is */
+.today-row[style] .today-main { border-left: 0.4rem solid var(--habit-color); }
+.stepper { flex: none; display: flex; align-items: center; gap: 0.25rem; }
+.stepper .button { font-size: 1.3rem; font-weight: 700; padding: 0; }
+.stepper-value { min-width: 2.2rem; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stepper-input { width: 6rem; text-align: center; }
+.note-button { flex: none; padding: 0; color: var(--muted); }
+.note-button.has-note { color: var(--accent); border-color: var(--accent); }
+.note-input { min-height: 6rem; padding: 0.6rem 0.75rem; resize: vertical; }
+.today-group + .today-group { margin-top: 1.25rem; }
+.group-title { font-size: 1rem; color: var(--muted); margin: 0 0 0.5rem; }
 
 .unplanned, .archived { margin-top: 1.5rem; }
 .unplanned summary, .archived summary {
@@ -225,6 +251,17 @@ a { color: var(--accent); }
 .cell.state-not_planned { background: transparent; border-style: dashed; }
 .cell.state-future { background: transparent; border-color: transparent; cursor: default; }
 .is-today .cell { box-shadow: inset 0 -3px 0 var(--accent); }
+.cell.state-partial { background: var(--partial-bg); color: var(--partial-text); border-color: transparent; }
+.cell.state-paused { background: transparent; border-style: dotted; }
+.cell { position: relative; font-variant-numeric: tabular-nums; }
+/* A small corner mark for days with a note (also named in the cell's label) */
+.cell.has-note::after {
+  content: ""; position: absolute; top: 0.2rem; right: 0.2rem;
+  width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor;
+}
+.week-row[style] .week-name { border-left: 0.35rem solid var(--habit-color); padding-left: 0.5rem; }
+[role="rowgroup"] { display: grid; gap: 0.35rem; }
+.week-group { margin-top: 0.75rem; font-weight: 700; color: var(--muted); }
 
 @media (max-width: 40rem) {
   .week-row { grid-template-columns: repeat(7, minmax(0, 1fr)); }

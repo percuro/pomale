@@ -1,4 +1,11 @@
-export type DayState = 'not_planned' | 'open' | 'done' | 'extra_done' | 'future';
+export type DayState = 'not_planned' | 'open' | 'done' | 'extra_done' | 'future' | 'paused' | 'partial';
+
+/** days: on chosen weekdays; weekly_count: n times a week, any day; quantity: an amount per day */
+export type GoalType = 'days' | 'weekly_count' | 'quantity';
+
+/** Keys of the fixed palette; the colours themselves live in index.css (--habit-<key>) */
+export const HABIT_COLORS = ['slate', 'red', 'orange', 'amber', 'green', 'teal', 'blue', 'purple', 'pink'] as const;
+export type HabitColor = (typeof HABIT_COLORS)[number];
 
 export type Role = 'admin' | 'user';
 export type Locale = 'de' | 'en';
@@ -33,6 +40,8 @@ export interface OidcLink {
 export interface Schedule {
   valid_from: string;
   weekdays: number;
+  goal_type: GoalType;
+  target: number | null;
 }
 
 export interface Habit {
@@ -41,20 +50,58 @@ export interface Habit {
   cue: string | null;
   sort_order: number;
   archived_on: string | null;
+  /** the plan in effect today (or the last one) */
   weekdays: number;
+  goal_type: GoalType;
+  target: number | null;
+  unit: string | null;
+  color: HabitColor | null;
+  group_id: number | null;
   schedules: Schedule[];
 }
 
+export interface Group {
+  id: number;
+  name: string;
+  sort_order: number;
+}
+
+export interface Pause {
+  id: number;
+  /** null = all habits */
+  habit_id: number | null;
+  start_on: string;
+  end_on: string;
+  reason: string | null;
+}
+
+/**
+ * One day of one habit. goal_type, target, planned, paused, done and value are the raw
+ * input of the evaluation (lib/evaluate.ts), so offline changes can be re-evaluated.
+ */
 export interface Day {
   date: string;
   state: DayState;
   planned: boolean;
+  /** days and weekly goals: checked off; quantity goals: target reached */
   done: boolean;
   version: number;
+  goal_type: GoalType;
+  /** quantity: per day; weekly goal: this week's target (reduced for pauses) */
+  target: number | null;
+  paused: boolean;
+  /** quantity goals only */
+  value: number | null;
+  note: string | null;
   /** changed locally, waiting for the server to confirm */
   pending?: boolean;
   /** the server has a different state meanwhile */
   conflict?: boolean;
+}
+
+export interface Quota {
+  done: number;
+  due: number;
 }
 
 export interface HabitDays {
@@ -62,8 +109,16 @@ export interface HabitDays {
   name: string;
   cue: string | null;
   archived: boolean;
+  /** the plan in effect today */
+  goal_type: GoalType;
+  target: number | null;
+  unit: string | null;
+  color: HabitColor | null;
+  group_id: number | null;
   days: Day[];
-  quota: { done: number; due: number };
+  quota: Quota;
+  /** weekly goals: progress in the week that contains today */
+  week: { done: number; target: number } | null;
 }
 
 export interface DaysResponse {
@@ -71,6 +126,7 @@ export interface DaysResponse {
   timezone: string;
   start: string;
   end: string;
+  groups: Group[];
   habits: HabitDays[];
   /** from local storage, server not reachable */
   offline?: boolean;
@@ -82,6 +138,42 @@ export interface CheckinResponse {
   done: boolean;
   state: DayState;
   version: number;
+  value: number | null;
+}
+
+export interface HistoryWeek {
+  week_start: string;
+  done: number;
+  due: number;
+}
+
+export interface HistoryDay {
+  date: string;
+  state: DayState;
+  value: number | null;
+  note: string | null;
+}
+
+export interface HistoryHabit {
+  id: number;
+  name: string;
+  archived: boolean;
+  goal_type: GoalType;
+  target: number | null;
+  unit: string | null;
+  color: HabitColor | null;
+  group_id: number | null;
+  quota: Quota;
+  weeks: HistoryWeek[];
+  /** only when asking for one habit */
+  days: HistoryDay[] | null;
+}
+
+export interface HistoryResponse {
+  today: string;
+  start: string;
+  end: string;
+  habits: HistoryHabit[];
 }
 
 /** GET /v1/meta: public facts for the signed-out pages */

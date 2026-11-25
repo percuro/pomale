@@ -12,6 +12,8 @@ export interface ServerState {
   done: boolean;
   version: number;
   updated_at: string | null;
+  /** quantity goals */
+  value?: number | null;
 }
 
 export interface QueuedOp {
@@ -19,6 +21,8 @@ export interface QueuedOp {
   habit_id: number;
   date: string;
   done: boolean;
+  /** Quantity goals: the amount to set (sent instead of `done`); missing in changes queued before 0.6 */
+  value?: number;
   /** Last known server version of the entry (0 = no entry yet) */
   base_version: number;
   created_at: number;
@@ -49,7 +53,7 @@ interface HabitDB extends DBSchema {
 }
 
 const DB_NAME = 'habit-tracker';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<HabitDB> | null> | null = null;
 const memoryQueue = new Map<string, QueuedOp>();
@@ -70,7 +74,10 @@ function db(): Promise<IDBPDatabase<HabitDB> | null> {
           for (const op of await queue.getAll()) {
             await queue.put({ ...op, user_id: null, username: cachedMe?.username ?? null });
           }
-          // Day lists were cached without an account; drop them (they are reloaded)
+        }
+        if (oldVersion >= 1 && oldVersion < 3) {
+          // Day lists were cached without an account (0.3) or without the fields of 0.6
+          // (goal type, target, value); drop them, they are reloaded
           const cache = transaction.objectStore('cache');
           for (const key of await cache.getAllKeys()) {
             if (String(key).startsWith('days:')) await cache.delete(key);

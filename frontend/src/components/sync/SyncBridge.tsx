@@ -17,7 +17,7 @@ function applyResponse(data: DaysResponse | undefined, response: CheckinResponse
             days: habit.days.map((day) =>
               day.date !== response.date
                 ? day
-                : { ...day, done: response.done, state: response.state, version: response.version },
+                : { ...day, done: response.done, state: response.state, version: response.version, value: response.value },
             ),
           },
     ),

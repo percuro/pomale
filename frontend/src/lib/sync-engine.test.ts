@@ -17,14 +17,34 @@ function serverDays(habitId: number, date: string): DaysResponse {
     timezone: 'UTC',
     start: date,
     end: date,
+    groups: [],
     habits: [
       {
         id: habitId,
         name: 'Lesen',
         cue: null,
         archived: false,
+        goal_type: 'days',
+        target: null,
+        unit: null,
+        color: null,
+        group_id: null,
+        week: null,
         quota: { done: 0, due: 0 },
-        days: [{ date, planned: true, done: s.done, state: s.done ? 'done' : 'open', version: s.version }],
+        days: [
+          {
+            date,
+            planned: true,
+            done: s.done,
+            state: s.done ? 'done' : 'open',
+            version: s.version,
+            goal_type: 'days',
+            target: null,
+            paused: false,
+            value: null,
+            note: null,
+          },
+        ],
       },
     ],
   };
@@ -192,4 +212,37 @@ describe('sync engine', () => {
     expect(server.requests[0].body).toMatchObject({ done: true, base_version: 0 });
     expect(typeof server.requests[0].body.op_id).toBe('string');
   });
+
+  it('sends amounts as absolute values and merges quick taps into one change', async () => {
+    server.quantity.add(5);
+    server.offline = true;
+    for (const value of [1, 2, 3]) await syncEngine.setDay(5, TODAY, { value }, 0);
+    expect(syncEngine.getSnapshot().ops).toHaveLength(1);
+    expect(syncEngine.getSnapshot().ops[0]).toMatchObject({ value: 3, done: true, base_version: 0 });
+    server.offline = false;
+    await syncEngine.flush();
+    expect(server.requests.map((r) => r.body)).toEqual([expect.objectContaining({ value: 3, base_version: 0 })]);
+    expect(server.requests[0].body).not.toHaveProperty('done');
+    expect(server.state.get(`5:${TODAY}`)).toMatchObject({ value: 3, version: 1 });
+  });
+
+  it('reports a conflict for an amount changed on another device', async () => {
+    server.quantity.add(5);
+    server.state.set(`5:${TODAY}`, { done: true, version: 1, value: 4 });
+    await syncEngine.setDay(5, TODAY, { value: 2 }, 0);
+    await syncEngine.flush();
+    const [op] = syncEngine.getSnapshot().ops;
+    expect(op.conflict).toMatchObject({ version: 1, value: 4 });
+    await syncEngine.resolve(op.op_id, 'device');
+    await syncEngine.flush();
+    expect(server.state.get(`5:${TODAY}`)).toMatchObject({ value: 2, version: 2 });
+  });
+
+  it('still sends a change queued before 0.6 without a value as done', async () => {
+    await putOp({ op_id: 'v05', habit_id: 4, date: TODAY, done: true, base_version: 0, created_at: 1, user_id: 1 });
+    await syncEngine.flush();
+    expect(server.requests[0].body).toMatchObject({ done: true });
+    expect(server.requests[0].body).not.toHaveProperty('value');
+  });
 });
+
