@@ -14,6 +14,7 @@ from app.api.routers.invitations import router as invitations_router
 from app.api.routers.meta import router as meta_router
 from app.api.routers.oidc import router as oidc_router
 from app.api.routers.pauses import router as pauses_router
+from app.api.routers.push import router as push_router
 from app.api.routers.setup import router as setup_router
 from app.api.routers.shortcuts import public_router as shortcut_public_router
 from app.api.routers.shortcuts import router as shortcut_router
@@ -40,6 +41,7 @@ app.include_router(account_router, prefix="/v1/account", tags=["account"], depen
 app.include_router(habits_router, prefix="/v1/habits", tags=["habits"], dependencies=protected)
 app.include_router(groups_router, prefix="/v1/groups", tags=["groups"], dependencies=protected)
 app.include_router(pauses_router, prefix="/v1/pauses", tags=["pauses"], dependencies=protected)
+app.include_router(push_router, prefix="/v1/push", tags=["push"], dependencies=protected)
 app.include_router(days_router, prefix="/v1", tags=["days"], dependencies=protected)
 app.include_router(shortcut_router, prefix="/v1", tags=["shortcut"], dependencies=protected)
 app.include_router(export_router, prefix="/v1", tags=["export"], dependencies=protected)

@@ -10,10 +10,11 @@ from datetime import date
 
 from app.main import app
 from app.models.habit import Checkin, Habit, HabitGroup, HabitPause
+from app.models.push import PushSubscription
 from app.models.shortcut_token import ShortcutToken
 from app.models.user import UserSession
 from app.services.shortcut_service import shortcut_rate_limiter
-from tests.support import ApiTestEnvironment
+from tests.support import ApiTestEnvironment, push_subscription
 
 # (method, path) -> (expected status for account A using B's IDs, request body)
 ROUTES = {
@@ -31,6 +32,8 @@ ROUTES = {
     ("POST", "/v1/habits/{habit_id}/shortcut-tokens"): (404, {"label": "mine now"}),
     ("DELETE", "/v1/habits/{habit_id}/shortcut-tokens/{token_id}"): (404, None),
     ("DELETE", "/v1/account/sessions/{session_id}"): (404, None),
+    ("DELETE", "/v1/push/subscriptions/{subscription_id}"): (404, None),
+    ("POST", "/v1/push/subscriptions/{subscription_id}/test"): (404, None),
     # Shortcut: authenticated by key only; A's key on B's habit is refused the same way as on any other id
     ("PUT", "/v1/habits/{habit_id}/days/today"): (403, {"done": True}),
     # Admin routes act on other accounts by design: a normal account gets 403
@@ -68,6 +71,8 @@ class IsolationTest(unittest.TestCase):
             "/v1/pauses", json={"habit_id": self.bert_habit["id"], "start_on": "2026-11-01", "end_on": "2026-11-02"}
         ).json()
         self.bert.put(f"/v1/habits/{self.bert_habit['id']}/days/2026-11-23/note", json={"note": "Bert's note"})
+        self.bert.patch(f"/v1/habits/{self.bert_habit['id']}", json={"reminders": ["07:30"]})
+        self.bert_device = self.bert.post("/v1/push/subscriptions", json=push_subscription("bert")).json()
 
         self.anna_habit = self.anna.post("/v1/habits", json={"name": "Anna's own"}).json()
         self.anna_token = self.anna.post(
@@ -87,6 +92,7 @@ class IsolationTest(unittest.TestCase):
             invitation_id=1,
             group_id=self.bert_group["id"],
             pause_id=self.bert_pause["id"],
+            subscription_id=self.bert_device["id"],
         )
 
     def test_every_route_with_an_id_is_covered(self):
@@ -143,6 +149,13 @@ class IsolationTest(unittest.TestCase):
                 self.assertNotIn("Bert", response.text)
         self.assertBertUntouched()
 
+    def test_devices_contain_only_own_and_old_endpoint_cannot_remove_foreign(self):
+        self.assertEqual(self.anna.get("/v1/push/subscriptions").json(), [])
+        body = push_subscription("anna", old_endpoint="https://fcm.googleapis.com/fcm/send/bert")
+        self.assertEqual(self.anna.post("/v1/push/subscriptions", json=body).status_code, 201)
+        self.assertEqual(len(self.anna.get("/v1/push/subscriptions").json()), 1)
+        self.assertBertUntouched()
+
     def test_groups_and_pauses_lists_contain_only_own_data(self):
         self.assertEqual(self.anna.get("/v1/groups").json(), [])
         self.assertEqual(self.anna.get("/v1/pauses").json(), [])
@@ -172,6 +185,11 @@ class IsolationTest(unittest.TestCase):
             self.assertEqual((pause.habit_id, pause.reason), (habit.id, None))
             checkin = db.get(Checkin, (habit.id, date(2026, 11, 23)))
             self.assertEqual(checkin.note, "Bert's note")
+            self.assertEqual([r.time.strftime("%H:%M") for r in habit.reminders], ["07:30"])
+            device = db.get(PushSubscription, self.bert_device["id"])
+            self.assertEqual(
+                (device.user_id, device.endpoint), (self.bert_user.id, "https://fcm.googleapis.com/fcm/send/bert")
+            )
         finally:
             db.close()
         self.assertEqual(self.bert.get("/v1/auth/me").status_code, 200)

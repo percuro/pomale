@@ -128,7 +128,7 @@ class AuthService:
         absolute_expiry = session.created_at + timedelta(hours=SESSION_ABSOLUTE_HOURS) if session is not None else None
         if session is None or session.expires_at <= now or (absolute_expiry is not None and absolute_expiry <= now):
             if session is not None:
-                self.repository.delete_session(session)
+                self.repository.delete_session(session, forget_devices=False)
             raise AppError(401, "auth.session_expired", "Session expired")
         if not session.user.is_active:
             raise AppError(401, "auth.account_disabled", "This account is disabled")

@@ -17,6 +17,7 @@ from app.models.user import User, UserSession
 from app.repositories.auth_repository import AuthRepository
 from app.services.auth_service import SESSION_COOKIE_NAME, AuthService, utcnow
 from app.services.login_rate_limiter import login_rate_limiter
+from app.services.push_service import test_rate_limiter
 
 PASSWORD = "sicheres-passwort-123"
 TEST_ORIGIN = "http://localhost:5173"
@@ -54,6 +55,7 @@ class ApiTestEnvironment:
         Base.metadata.create_all(self.engine)
         self.SessionLocal = sessionmaker(bind=self.engine, autoflush=False)
         login_rate_limiter.reset()
+        test_rate_limiter.reset()
 
         def _db():
             db = self.SessionLocal()
@@ -130,3 +132,18 @@ class ApiTestEnvironment:
         app.dependency_overrides.clear()
         self.engine.dispose()
         self._env.stop()
+
+
+def push_subscription(name: str = "a", **extra) -> dict:
+    """A request body like PushSubscription.toJSON() in a browser, with valid keys."""
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    from app.services.webpush.crypto import public_bytes
+    from app.services.webpush.encoding import b64url_encode
+
+    key = ec.generate_private_key(ec.SECP256R1())
+    return {
+        "endpoint": f"https://fcm.googleapis.com/fcm/send/{name}",
+        "keys": {"p256dh": b64url_encode(public_bytes(key)), "auth": b64url_encode(b"0123456789abcdef")},
+        **extra,
+    }

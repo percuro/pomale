@@ -14,7 +14,7 @@ class HabitRepository:
     def list_for_user(self, user_id: int, include_archived: bool = False) -> list[Habit]:
         query = (
             select(Habit)
-            .options(selectinload(Habit.schedules))
+            .options(selectinload(Habit.schedules), selectinload(Habit.reminders))
             .where(Habit.user_id == user_id)
             .order_by(Habit.sort_order, Habit.id)
         )
@@ -26,7 +26,7 @@ class HabitRepository:
         """Active habits plus those archived on or after `start`."""
         query = (
             select(Habit)
-            .options(selectinload(Habit.schedules))
+            .options(selectinload(Habit.schedules), selectinload(Habit.reminders))
             .where(Habit.user_id == user_id)
             .where(or_(Habit.archived_on.is_(None), Habit.archived_on >= start))
             .order_by(Habit.sort_order, Habit.id)
@@ -35,7 +35,9 @@ class HabitRepository:
 
     def get_for_user(self, habit_id: int, user_id: int) -> Habit | None:
         return self.db.scalars(
-            select(Habit).options(selectinload(Habit.schedules)).where(Habit.id == habit_id, Habit.user_id == user_id)
+            select(Habit)
+            .options(selectinload(Habit.schedules), selectinload(Habit.reminders))
+            .where(Habit.id == habit_id, Habit.user_id == user_id)
         ).first()
 
     def next_sort_order(self, user_id: int) -> int:
