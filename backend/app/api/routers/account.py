@@ -32,7 +32,7 @@ def delete_account(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    AccountService(db).delete(user, data.password, request, response)
+    AccountService(db).delete(user, data.password, request, response, request.state.session_id)
 
 
 @router.post("/password", status_code=status.HTTP_204_NO_CONTENT)

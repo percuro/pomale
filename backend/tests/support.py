@@ -1,6 +1,7 @@
 """Test environment: in-memory SQLite, fixed clock, TestClient with a logged-in user."""
 
-from datetime import UTC, date, datetime, time
+import secrets
+from datetime import UTC, date, datetime, time, timedelta
 from unittest import mock
 
 from fastapi.testclient import TestClient
@@ -12,8 +13,9 @@ import app.models  # noqa: F401
 from app.api.dependencies.clock import get_now
 from app.db.database import Base, configure_sqlite, get_db
 from app.main import app
+from app.models.user import User, UserSession
 from app.repositories.auth_repository import AuthRepository
-from app.services.auth_service import AuthService
+from app.services.auth_service import SESSION_COOKIE_NAME, AuthService, utcnow
 from app.services.login_rate_limiter import login_rate_limiter
 
 PASSWORD = "sicheres-passwort-123"
@@ -78,6 +80,39 @@ class ApiTestEnvironment:
         if username:
             response = client.post("/v1/auth/login", json={"username": username, "password": password})
             assert response.status_code == 200, response.text
+        return client
+
+    def create_passwordless_user(self, username: str, role: str = "user"):
+        """An account that signs in through OIDC only."""
+        user = self.create_user(username, role=role)
+        db = self.SessionLocal()
+        try:
+            db.query(User).filter(User.id == user.id).update({"password_hash": None})
+            db.commit()
+        finally:
+            db.close()
+        return user
+
+    def session_client(self, user, auth_method: str = "oidc", authenticated_at: datetime | None = None) -> TestClient:
+        """A client with a session as if opened by the given method (e.g. an OIDC login)."""
+        raw = secrets.token_urlsafe(32)
+        now = utcnow()
+        db = self.SessionLocal()
+        try:
+            db.add(
+                UserSession(
+                    user_id=user.id,
+                    token_hash=AuthService.hash_token(raw),
+                    expires_at=now + timedelta(days=1),
+                    auth_method=auth_method,
+                    authenticated_at=authenticated_at or now,
+                )
+            )
+            db.commit()
+        finally:
+            db.close()
+        client = TestClient(app, headers={"X-Habit-CSRF": "1", "Origin": TEST_ORIGIN})
+        client.cookies.set(SESSION_COOKIE_NAME, raw)
         return client
 
     def close(self):

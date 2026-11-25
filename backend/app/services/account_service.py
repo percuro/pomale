@@ -1,19 +1,22 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import Request, Response
 from sqlalchemy.orm import Session
 
 from app.config import get_default_timezone_name
 from app.errors import AppError
-from app.models.user import User
+from app.models.user import AUTH_OIDC, User
 from app.repositories.auth_repository import AuthRepository
-from app.schemas.auth import AccountUpdate, MeRead, SessionRead
+from app.schemas.auth import AccountUpdate, MeRead, OidcLinkRead, SessionRead
 from app.services import audit_service
 from app.services.account_settings import apply_settings
-from app.services.auth_service import AuthService, clear_session_cookie
+from app.services.auth_service import AuthService, clear_session_cookie, utcnow
 from app.services.devices import describe_user_agent
 from app.services.login_rate_limiter import login_rate_limiter
 from app.services.timezones import effective_timezone_name, user_today
+
+# Without a password, a sensitive change needs a provider sign-in this recent
+REAUTH_WINDOW = timedelta(minutes=10)
 
 
 def me_read(user: User, now: datetime) -> MeRead:
@@ -27,6 +30,16 @@ def me_read(user: User, now: datetime) -> MeRead:
         default_timezone=get_default_timezone_name(),
         locale=user.locale,
         today=user_today(user, now),
+        has_password=user.has_password,
+        oidc=(
+            OidcLinkRead(
+                email=user.oidc_identity.email,
+                preferred_username=user.oidc_identity.preferred_username,
+                linked_at=user.oidc_identity.created_at,
+            )
+            if user.oidc_identity is not None
+            else None
+        ),
     )
 
 
@@ -45,6 +58,26 @@ class AccountService:
         self.db.refresh(user)
         return user
 
+    def confirm(self, user: User, password: str | None, request: Request, session_id: int) -> None:
+        """Make sure it is really the account holder before a sensitive change.
+
+        With a password: re-check it. Without one (OIDC only): the session must have signed in
+        at the provider within the last few minutes, otherwise 403 auth.reauth_required and the
+        web app sends the person through the provider again.
+        """
+        if user.has_password:
+            self.verify_password(user, password or "", request)
+            return
+        session = self.repository.get_session_for_user(session_id, user.id)
+        authenticated_at = (session.authenticated_at or session.created_at) if session is not None else None
+        if (
+            session is None
+            or session.auth_method != AUTH_OIDC
+            or authenticated_at is None
+            or authenticated_at < utcnow() - REAUTH_WINDOW
+        ):
+            raise AppError(403, "auth.reauth_required", "Sign in again at the provider to confirm")
+
     def verify_password(self, user: User, password: str, request: Request) -> None:
         """Re-check the password before a sensitive change; limited like the login."""
         ip_address = client_ip(request)
@@ -55,11 +88,14 @@ class AccountService:
             raise AppError(403, "account.wrong_password", "The password is wrong")
         login_rate_limiter.record_success(user.username)
 
-    def change_password(self, user: User, current: str, new: str, request: Request, session_id: int) -> None:
-        self.verify_password(user, current, request)
+    def change_password(self, user: User, current: str | None, new: str, request: Request, session_id: int) -> None:
+        """Change the password, or set a first one for an account that signs in through OIDC."""
+        had_password = user.has_password
+        self.confirm(user, current, request, session_id)
         AuthService.check_password(new)
         user.password_hash = AuthService.hash_password(new)
-        audit_service.record(self.db, "account.password_changed", actor=user, target=user, commit=False)
+        event = "account.password_changed" if had_password else "account.password_set"
+        audit_service.record(self.db, event, actor=user, target=user, commit=False)
         self.db.commit()
         # Every other device has to log in again with the new password
         self.repository.delete_sessions(user.id, keep_session_id=session_id)
@@ -93,8 +129,8 @@ class AccountService:
         if user.is_admin and user.is_active and self.repository.count_active_admins(exclude_user_id=user.id) == 0:
             raise AppError(409, "account.last_admin", "The last active admin account cannot be removed or demoted")
 
-    def delete(self, user: User, password: str, request: Request, response: Response) -> None:
-        self.verify_password(user, password, request)
+    def delete(self, user: User, password: str | None, request: Request, response: Response, session_id: int) -> None:
+        self.confirm(user, password, request, session_id)
         self.ensure_not_last_admin(user)
         audit_service.record(self.db, "account.deleted", actor=user, target=user, commit=False, by="self")
         self.repository.delete_user(user)

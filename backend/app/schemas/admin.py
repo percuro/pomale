@@ -18,6 +18,8 @@ class AdminUserRead(BaseModel):
     is_active: bool
     created_at: datetime
     last_seen_at: datetime | None
+    has_password: bool
+    oidc_linked: bool
 
 
 class AdminUserUpdate(BaseModel):

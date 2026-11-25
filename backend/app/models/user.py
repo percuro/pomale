@@ -43,6 +43,10 @@ class User(Base):
     def has_password(self) -> bool:
         return self.password_hash is not None
 
+    @property
+    def oidc_linked(self) -> bool:
+        return self.oidc_identity is not None
+
 
 class UserSession(Base):
     __tablename__ = "user_sessions"

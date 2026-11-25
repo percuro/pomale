@@ -12,7 +12,17 @@ from app.services.audit_service import details_of
 from app.services.shortcut_service import shortcut_rate_limiter
 from tests.support import PASSWORD, ApiTestEnvironment
 
-ADMIN_USER_FIELDS = {"id", "username", "display_name", "role", "is_active", "created_at", "last_seen_at"}
+ADMIN_USER_FIELDS = {
+    "id",
+    "username",
+    "display_name",
+    "role",
+    "is_active",
+    "created_at",
+    "last_seen_at",
+    "has_password",
+    "oidc_linked",
+}
 
 
 class AdminApiTest(unittest.TestCase):
