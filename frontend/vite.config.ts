@@ -49,17 +49,17 @@ export default defineConfig({
   plugins: [
     react(),
     brand(),
-    // Service worker caches the app shell only; API responses never come from the SW cache.
-    // Day lists and the change queue live in IndexedDB (src/lib/offline-store.ts).
+    // Own service worker (src/sw.ts): caches the app shell and shows reminders. API responses
+    // never come from the SW cache; day lists and the change queue live in IndexedDB.
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: 'script',
       manifest: false,
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
-        cleanupOutdatedCaches: true,
       },
     }),
   ],

@@ -56,6 +56,8 @@ class OpenHabit:
     habit: Habit
     day: DayInfo
     week: WeekProgress | None
+    # Version of today's entry (0 = none): the done button sends it, like the offline queue
+    version: int = 0
 
 
 def _detail(locale: str, item: OpenHabit) -> str:
@@ -68,7 +70,7 @@ def _detail(locale: str, item: OpenHabit) -> str:
     return habit.cue or text(locale, "reminder.open")
 
 
-def build_payload(locale: str, items: list[OpenHabit], today: date) -> dict:
+def build_payload(locale: str, items: list[OpenHabit], today: date, user_id: int) -> dict:
     """One notification for everything due in this minute; a "done" button only for a single
     habit that is not a quantity goal (there "done" would jump to the target)."""
     ids = "-".join(str(item.habit.id) for item in items)
@@ -77,7 +79,13 @@ def build_payload(locale: str, items: list[OpenHabit], today: date) -> dict:
         item = items[0]
         payload |= {"title": item.habit.name, "body": _detail(locale, item)}
         if item.day.goal_type != "quantity":
-            payload["habit"] = {"id": item.habit.id, "date": today.isoformat()}
+            payload["habit"] = {
+                "id": item.habit.id,
+                "date": today.isoformat(),
+                "version": item.version,
+                "user": user_id,
+            }
+            payload["done_label"] = text(locale, "reminder.done_action")
         return payload
     names = [item.habit.name for item in items]
     payload |= {"title": text(locale, "reminder.several").format(count=len(items)), "body": ", ".join(names)}
@@ -131,9 +139,11 @@ class ReminderService:
             for habit in habits:
                 evaluation = checkins.evaluate(habit, today, today, today)
                 if evaluation.days[0].state in OPEN_STATES:
-                    items.append(OpenHabit(habit, evaluation.days[0], evaluation.week))
+                    entry = checkins.repository.get_checkin(habit.id, today)
+                    version = entry.version if entry else 0
+                    items.append(OpenHabit(habit, evaluation.days[0], evaluation.week, version))
             if items:
-                jobs.append((user.id, build_payload(resolve_locale(user, None), items, today)))
+                jobs.append((user.id, build_payload(resolve_locale(user, None), items, today, user.id)))
         return jobs
 
     def _send(self, db: Session, user_id: int, payload: dict, now: datetime) -> int:

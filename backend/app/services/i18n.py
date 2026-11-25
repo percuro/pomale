@@ -39,6 +39,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.quantity_unit": "{value} of {target} {unit}",
         "reminder.weekly": "{done} of {target} this week",
         "reminder.several": "{count} habits open",
+        "reminder.done_action": "Done",
     },
     "de": {
         "csv.date": "datum",
@@ -68,6 +69,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.quantity_unit": "{value} von {target} {unit}",
         "reminder.weekly": "{done} von {target} diese Woche",
         "reminder.several": "{count} Gewohnheiten offen",
+        "reminder.done_action": "Erledigt",
     },
 }
 

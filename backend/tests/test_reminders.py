@@ -114,7 +114,8 @@ class ServiceTest(unittest.TestCase):
         payload = self.payloads()[0]
         self.assertEqual(payload["title"], "Lesen")
         self.assertEqual(payload["body"], "nach dem Frühstück")
-        self.assertEqual(payload["habit"], {"id": habit["id"], "date": "2026-11-24"})
+        self.assertEqual(payload["habit"], {"id": habit["id"], "date": "2026-11-24", "version": 0, "user": 1})
+        self.assertEqual(payload["done_label"], "Erledigt")
         self.assertEqual(payload["url"], "/today")
         self.assertEqual(self.requests[0].headers["Topic"], "reminders")
         self.assertEqual(self.run_at(7, 31), 0)
@@ -234,6 +235,14 @@ class ServiceTest(unittest.TestCase):
         self.device(self.client, "phone")
         self.assertEqual(self.run_at(7, 31), 1)
 
+    def test_done_button_carries_the_entry_version(self):
+        self.device(self.client, "phone")
+        habit = self.habit("Lesen", ["07:30"])
+        self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-24", json={"done": True})
+        self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-24", json={"done": False})
+        self.assertEqual(self.run_at(7, 30), 1)
+        self.assertEqual(self.payloads()[0]["habit"]["version"], 2)
+
     def test_editing_does_not_fire_again(self):
         self.device(self.client, "phone")
         habit = self.habit("Lesen", ["07:30"])
@@ -253,7 +262,7 @@ class PayloadTest(unittest.TestCase):
 
         day = DayInfo(date=date(2026, 11, 24), planned=True, done=False, state="open")
         items = [OpenHabit(FakeHabit(i), day, None) for i in range(60)]
-        payload = build_payload("de", items, date(2026, 11, 24))
+        payload = build_payload("de", items, date(2026, 11, 24), 1)
         self.assertLessEqual(len(json.dumps(payload, ensure_ascii=False).encode()), 3000)
         self.assertTrue(payload["body"].endswith(" …"))
         self.assertEqual(payload["title"], "60 Gewohnheiten offen")
