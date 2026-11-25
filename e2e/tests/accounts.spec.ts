@@ -30,7 +30,7 @@ test('admin invites, the new account accepts in its own browser and sees only it
   const annaHabit = uniqueName('Annas Gewohnheit');
   await annaPage.goto('/habits');
   await annaPage.getByLabel('Name').fill(annaHabit);
-  await annaPage.getByRole('button', { name: 'Anlegen' }).click();
+  await annaPage.getByRole('button', { name: 'Anlegen', exact: true }).click();
   await expect(annaPage.locator('li.habit-item', { hasText: annaHabit })).toBeVisible();
   await expect(annaPage.getByText(adminHabit)).toHaveCount(0);
 

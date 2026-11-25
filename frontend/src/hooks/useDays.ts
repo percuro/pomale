@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { cacheGet, cacheSet, daysCacheKey } from '../lib/offline-store';
 import { overlay } from '../lib/overlay';
-import { syncEngine } from '../lib/sync-engine';
+import { syncEngine, type DayChange } from '../lib/sync-engine';
 import type { DaysResponse } from '../lib/types';
 import { useSession } from './useSession';
 import { useSync } from './useSync';
@@ -43,6 +43,6 @@ export function useDays(from: string, to: string) {
 }
 
 /** Set a state (never toggle); always goes through the change queue. */
-export function setDay(habitId: number, date: string, done: boolean, knownVersion: number) {
-  void syncEngine.setDay(habitId, date, done, knownVersion);
+export function setDay(habitId: number, date: string, change: boolean | DayChange, knownVersion: number) {
+  void syncEngine.setDay(habitId, date, change, knownVersion);
 }

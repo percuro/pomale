@@ -73,6 +73,50 @@ class ShortcutApiTest(unittest.TestCase):
         )
         self.assertEqual(english_owner.json()["message"], "Lesen: Already done")
 
+    def test_quantity_goal_adds_one_or_the_amount(self):
+        water = self.client.post(
+            "/v1/habits", json={"name": "Wasser", "goal_type": "quantity", "target": 8, "unit": "Gläser"}
+        ).json()
+        token = self.client.post(f"/v1/habits/{water['id']}/shortcut-tokens", json={"label": "iPhone"}).json()["token"]
+        first = self.tap(water["id"], token)
+        self.assertEqual(first.status_code, 200, first.text)
+        body = first.json()
+        self.assertEqual((body["result"], body["value"], body["target"], body["done"]), ("counted", 1, 8, False))
+        self.assertEqual(body["message"], "Wasser: 1 of 8 Gläser")
+        self.assertEqual(self.tap(water["id"], token, json={"amount": 7}).json()["value"], 8)
+        reached = self.tap(water["id"], token).json()
+        self.assertEqual((reached["value"], reached["done"]), (9, True))
+        self.assertEqual(self.tap(water["id"], token, json={"amount": 0}).status_code, 422)
+        self.assertEqual(self.tap(water["id"], token, json={"amount": 1001}).status_code, 422)
+        day = self.client.get("/v1/days").json()["habits"][2]["days"][1]
+        self.assertEqual((day["value"], day["state"], day["version"]), (9, "done", 3))
+
+    def test_quantity_counts_on_top_of_a_value_set_in_the_app(self):
+        water = self.client.post("/v1/habits", json={"name": "Water", "goal_type": "quantity", "target": 8}).json()
+        token = self.client.post(f"/v1/habits/{water['id']}/shortcut-tokens", json={"label": "iPhone"}).json()["token"]
+        self.client.put(f"/v1/habits/{water['id']}/days/2026-11-24", json={"value": 4})
+        self.client.put(f"/v1/habits/{water['id']}/days/2026-11-24/note", json={"note": "kept"})
+        self.assertEqual(self.tap(water["id"], token).json()["value"], 5)
+        day = self.client.get("/v1/days").json()["habits"][2]["days"][1]
+        self.assertEqual((day["value"], day["note"]), (5, "kept"))
+
+    def test_concurrent_adds_are_not_lost(self):
+        from app.repositories.habit_repository import HabitRepository
+
+        water = self.client.post("/v1/habits", json={"name": "Water", "goal_type": "quantity", "target": 8}).json()
+        first, second = self.env.SessionLocal(), self.env.SessionLocal()
+        try:
+            # Both sessions see "no entry yet"; the second insert loses and must add instead
+            self.assertIsNone(HabitRepository(first).get_checkin(water["id"], date(2026, 11, 24)))
+            self.assertIsNone(HabitRepository(second).get_checkin(water["id"], date(2026, 11, 24)))
+            HabitRepository(first).add_to_value(water["id"], date(2026, 11, 24), 1, 8, 9999)
+            HabitRepository(second).add_to_value(water["id"], date(2026, 11, 24), 1, 8, 9999)
+        finally:
+            first.close()
+            second.close()
+        day = self.client.get("/v1/days").json()["habits"][2]["days"][1]
+        self.assertEqual((day["value"], day["version"]), (2, 2))
+
     def test_server_decides_today_in_tracker_timezone(self):
         self.env.today = date(2026, 11, 25)
         self.assertEqual(self.tap().json()["date"], "2026-11-25")

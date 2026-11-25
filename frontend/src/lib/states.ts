@@ -7,9 +7,6 @@ export const STATE_ICON: Record<DayState, string> = {
   extra_done: '+',
   not_planned: '–',
   future: '·',
+  paused: '⏸',
+  partial: '◐',
 };
-
-export function stateAfter(planned: boolean, done: boolean): DayState {
-  if (done) return planned ? 'done' : 'extra_done';
-  return planned ? 'open' : 'not_planned';
-}

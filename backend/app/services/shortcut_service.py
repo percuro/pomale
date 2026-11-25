@@ -5,6 +5,7 @@ from datetime import datetime
 from fastapi import Request
 
 from app.errors import AppError
+from app.models.habit import QUANTITY_TARGET_MAX
 from app.models.shortcut_token import ShortcutToken
 from app.models.user import User
 from app.repositories.habit_repository import HabitRepository
@@ -13,6 +14,7 @@ from app.schemas.shortcut import ShortcutCheckinRead
 from app.services import audit_service
 from app.services.auth_service import utcnow
 from app.services.checkin_service import CheckinService
+from app.services.day_service import plan_for
 from app.services.i18n import resolve_locale, text
 from app.services.login_rate_limiter import LoginRateLimiter
 from app.services.timezones import user_today
@@ -61,7 +63,9 @@ class ShortcutService:
         )
         self.repository.revoke(token, utcnow())
 
-    def check_in_today(self, request: Request, habit_id: int, done: bool, now: datetime) -> ShortcutCheckinRead:
+    def check_in_today(
+        self, request: Request, habit_id: int, done: bool, now: datetime, amount: int | None = None
+    ) -> ShortcutCheckinRead:
         ip_address = request.client.host if request.client else "unknown"
         shortcut_rate_limiter.check("shortcut", ip_address)
         raw = bearer_token(request)
@@ -80,12 +84,35 @@ class ShortcutService:
         # "Today" of the habit's owner, wherever the phone or the server is
         today = user_today(habit.user, now)
 
+        locale = resolve_locale(habit.user, request)
+        checkins = CheckinService(self.habits)
+        plan = plan_for(habit.schedules, today)
+        if plan.goal_type == "quantity":
+            target = plan.target or 1
+            self.habits.add_to_value(habit.id, today, amount or 1, target, QUANTITY_TARGET_MAX)
+            self.repository.touch(token, utcnow())
+            result = checkins.read_day(habit, today, today)
+            status_text = text(locale, "shortcut.counted").format(value=result.value, target=target)
+            if habit.unit:
+                status_text = f"{status_text} {habit.unit}"
+            return ShortcutCheckinRead(
+                habit_id=habit.id,
+                habit_name=habit.name,
+                date=result.date,
+                done=result.done,
+                result="counted",
+                status=status_text,
+                message=f"{habit.name}: {status_text}",
+                value=result.value,
+                target=target,
+            )
+
         before = self.habits.get_checkin(habit.id, today)
         already = bool(before and before.done)
-        result = CheckinService(self.habits).set_state(habit, today, True, today, op_id=None, base_version=None)
+        result = checkins.set_state(habit, today, today, done=True)
         self.repository.touch(token, utcnow())
         outcome = "already_done" if already else "done"
-        status_text = text(resolve_locale(habit.user, request), f"shortcut.{outcome}")
+        status_text = text(locale, f"shortcut.{outcome}")
         return ShortcutCheckinRead(
             habit_id=habit.id,
             habit_name=habit.name,

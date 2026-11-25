@@ -8,7 +8,10 @@ export interface FakeServer {
   offline: boolean;
   delayMs: number;
   today: string;
-  state: Map<string, { done: boolean; version: number }>;
+  /** value: quantity goals (habits listed in `quantity`) */
+  state: Map<string, { done: boolean; version: number; value?: number }>;
+  /** habit ids that are quantity goals: they take `value` */
+  quantity: Set<number>;
   requests: { habitId: number; date: string; body: Record<string, unknown> }[];
   /** Change a day directly, like another device would. */
   set(habitId: number, date: string, done: boolean): void;
@@ -24,6 +27,7 @@ export function createFakeServer(today = '2026-11-24'): FakeServer {
     delayMs: 0,
     today,
     state: new Map(),
+    quantity: new Set(),
     requests: [],
     set(habitId, date, done) {
       const key = `${habitId}:${date}`;
@@ -39,27 +43,46 @@ export function createFakeServer(today = '2026-11-24'): FakeServer {
       if (!match || init?.method !== 'PUT') return json(404, { detail: 'Not found', code: 'http.404' });
       const habitId = Number(match[1]);
       const date = match[2];
-      const body = JSON.parse(String(init.body)) as { done: boolean; base_version?: number; op_id?: string };
+      const body = JSON.parse(String(init.body)) as {
+        done?: boolean;
+        value?: number;
+        base_version?: number;
+        op_id?: string;
+      };
       server.requests.push({ habitId, date, body });
       if (date > server.today) return json(422, { detail: 'Future days cannot be checked off', code: 'checkin.future_day' });
       const key = `${habitId}:${date}`;
       const current = server.state.get(key) ?? { done: false, version: 0 };
-      const read = (s: { done: boolean; version: number }) => ({
+      const quantity = server.quantity.has(habitId);
+      if (body.value !== undefined && !quantity) {
+        return json(422, { detail: 'Only quantity goals take a value', code: 'checkin.value_not_allowed' });
+      }
+      const read = (s: { done: boolean; version: number; value?: number }) => ({
         habit_id: habitId,
         date,
         done: s.done,
         state: s.done ? 'done' : 'open',
         version: s.version,
+        value: quantity ? (s.value ?? 0) : null,
       });
-      if (current.done === body.done) return json(200, read(current));
+      const wanted = quantity ? (body.value ?? (body.done ? 1 : 0)) : body.done;
+      const now = quantity ? (current.value ?? 0) : current.done;
+      if (now === wanted) return json(200, read(current));
       if (body.base_version !== undefined && body.base_version !== current.version) {
         return json(409, {
           detail: 'conflict',
           code: 'checkin.conflict',
-          server: { done: current.done, version: current.version, updated_at: null },
+          server: {
+            done: current.done,
+            version: current.version,
+            updated_at: null,
+            ...(quantity ? { value: current.value ?? 0 } : {}),
+          },
         });
       }
-      const next = { done: body.done, version: current.version + 1 };
+      const next = quantity
+        ? { done: Number(wanted) > 0, version: current.version + 1, value: Number(wanted) }
+        : { done: Boolean(body.done), version: current.version + 1 };
       server.state.set(key, next);
       return json(200, read(next));
     }) as typeof fetch,

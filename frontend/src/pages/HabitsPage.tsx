@@ -1,28 +1,85 @@
 import { APP_NAME } from '../app/brand';
 import { useState, type FormEvent } from 'react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useErrorText, useI18n } from '../i18n/context';
-import type { Habit } from '../lib/types';
-import { WeekdayPicker } from '../components/habits/WeekdayPicker';
+import type { Group, Habit, HabitColor } from '../lib/types';
+import { colorStyle } from '../lib/habit-style';
+import { ColorPicker } from '../components/habits/ColorPicker';
+import { GoalFields } from '../components/habits/GoalFields';
+import { goalValid, sameGoal } from '../lib/goals';
+import { GroupsSection } from '../components/habits/GroupsSection';
+import { PausesSection } from '../components/habits/PausesSection';
 import { ShortcutPanel } from '../components/habits/ShortcutPanel';
-import { useHabitAction, useHabits } from '../hooks/useHabits';
+import { useHabitAction, useHabits, type Goal } from '../hooks/useHabits';
+import { useGroups } from '../hooks/useGroups';
 import { useSession } from '../hooks/useSession';
 
 export function HabitsPage() {
   const { t, format } = useI18n();
   const errorText = useErrorText();
   const habits = useHabits();
+  const groups = useGroups();
   const action = useHabitAction();
   const active = (habits.data ?? []).filter((h) => !h.archived_on);
   const archived = (habits.data ?? []).filter((h) => h.archived_on);
+  // Shown order while a new order is being saved, so the list does not jump back
+  const [pendingOrder, setPendingOrder] = useState<number[] | null>(null);
+  const ordered = pendingOrder
+    ? pendingOrder.map((id) => active.find((h) => h.id === id)).filter((h): h is Habit => Boolean(h))
+    : active;
 
+  const saveOrder = (ids: number[]) => {
+    setPendingOrder(ids);
+    action.mutate(
+      { type: 'order', items: ids.map((id) => ({ id, group_id: active.find((h) => h.id === id)?.group_id ?? null })) },
+      { onSettled: () => setPendingOrder(null) },
+    );
+  };
   const move = (index: number, delta: number) => {
-    const a = active[index];
-    const b = active[index + delta];
-    if (!a || !b) return;
-    // Swap positions; make them distinct if both have the same value
-    const aOrder = a.sort_order === b.sort_order ? b.sort_order + delta : b.sort_order;
-    action.mutate({ type: 'update', id: a.id, body: { sort_order: aOrder } });
-    action.mutate({ type: 'update', id: b.id, body: { sort_order: a.sort_order } });
+    const ids = ordered.map((h) => h.id);
+    if (index + delta < 0 || index + delta >= ids.length) return;
+    saveOrder(arrayMove(ids, index, index + delta));
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const nameOf = (id: string | number) => ordered.find((h) => h.id === Number(id))?.name ?? '';
+  const positionOf = (id: string | number | undefined) => ordered.findIndex((h) => h.id === Number(id)) + 1;
+  const announcements: Announcements = {
+    onDragStart: ({ active: dragged }) => t('habits.dnd.picked', { name: nameOf(dragged.id) }),
+    onDragOver: ({ active: dragged, over }) =>
+      over
+        ? t('habits.dnd.moved', { name: nameOf(dragged.id), position: positionOf(over.id), total: ordered.length })
+        : undefined,
+    onDragEnd: ({ active: dragged, over }) =>
+      over
+        ? t('habits.dnd.dropped', { name: nameOf(dragged.id), position: positionOf(over.id), total: ordered.length })
+        : undefined,
+    onDragCancel: ({ active: dragged }) => t('habits.dnd.cancelled', { name: nameOf(dragged.id) }),
+  };
+  const onDragEnd = ({ active: dragged, over }: DragEndEvent) => {
+    if (!over || dragged.id === over.id) return;
+    const ids = ordered.map((h) => h.id);
+    saveOrder(arrayMove(ids, ids.indexOf(Number(dragged.id)), ids.indexOf(Number(over.id))));
   };
 
   return (
@@ -30,25 +87,38 @@ export function HabitsPage() {
       <div className="page-head">
         <h1>{t('habits.title')}</h1>
       </div>
-      <NewHabitForm />
+      <NewHabitForm groups={groups.data ?? []} />
 
       {action.isError && <p role="alert" className="error">{errorText(action.error)}</p>}
       {habits.isPending && <p>{t('app.loading')}</p>}
       {habits.isError && <p role="alert" className="error">{errorText(habits.error)}</p>}
 
-      {active.length > 0 && (
+      {ordered.length > 0 && (
         <section aria-labelledby="active-heading">
           <h2 id="active-heading">{t('habits.active')}</h2>
-          <ul className="habit-list">
-            {active.map((habit, i) => (
-              <HabitItem
-                key={habit.id}
-                habit={habit}
-                onUp={i > 0 ? () => move(i, -1) : undefined}
-                onDown={i < active.length - 1 ? () => move(i, 1) : undefined}
-              />
-            ))}
-          </ul>
+          <p className="subtle" id="sort-hint">
+            {t('habits.sortHint')}
+          </p>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
+            accessibility={{ announcements, screenReaderInstructions: { draggable: t('habits.dnd.instructions') } }}
+          >
+            <SortableContext items={ordered.map((h) => h.id)} strategy={verticalListSortingStrategy}>
+              <ul className="habit-list">
+                {ordered.map((habit, i) => (
+                  <HabitItem
+                    key={habit.id}
+                    habit={habit}
+                    groups={groups.data ?? []}
+                    onUp={i > 0 ? () => move(i, -1) : undefined}
+                    onDown={i < ordered.length - 1 ? () => move(i, 1) : undefined}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         </section>
       )}
 
@@ -76,31 +146,69 @@ export function HabitsPage() {
           </ul>
         </details>
       )}
+
+      <GroupsSection />
+      <PausesSection habits={active} />
       <p className="subtle version">{t('app.version', { name: APP_NAME, version: __APP_VERSION__ })}</p>
     </>
   );
 }
 
-function NewHabitForm() {
+function GroupSelect({ groups, value, onChange }: { groups: Group[]; value: number | null; onChange: (id: number | null) => void }) {
+  const t = useI18n().t;
+  if (!groups.length) return null;
+  return (
+    <label className="field">
+      <span>{t('habits.group')}</span>
+      <select value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
+        <option value="">{t('habits.group.none')}</option>
+        {groups.map((group) => (
+          <option key={group.id} value={group.id}>
+            {group.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+const NEW_GOAL: Goal = { goal_type: 'days', target: null, weekdays: 127 };
+
+function NewHabitForm({ groups }: { groups: Group[] }) {
   const { today } = useSession();
   const t = useI18n().t;
   const errorText = useErrorText();
   const action = useHabitAction();
   const [name, setName] = useState('');
   const [cue, setCue] = useState('');
-  const [weekdays, setWeekdays] = useState(127);
+  const [goal, setGoal] = useState<Goal>(NEW_GOAL);
+  const [unit, setUnit] = useState('');
+  const [color, setColor] = useState<HabitColor | null>(null);
+  const [groupId, setGroupId] = useState<number | null>(null);
   const [startOn, setStartOn] = useState(today);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!weekdays) return;
+    if (!goalValid(goal)) return;
     action.mutate(
-      { type: 'create', body: { name, cue: cue || null, weekdays, start_on: startOn } },
+      {
+        type: 'create',
+        body: {
+          name,
+          cue: cue || null,
+          ...goal,
+          unit: goal.goal_type === 'quantity' ? unit || null : null,
+          color,
+          group_id: groupId,
+          start_on: startOn,
+        },
+      },
       {
         onSuccess: () => {
           setName('');
           setCue('');
-          setWeekdays(127);
+          setGoal(NEW_GOAL);
+          setUnit('');
         },
       },
     );
@@ -128,48 +236,91 @@ function NewHabitForm() {
           onChange={(e) => setCue(e.target.value)}
         />
       </label>
-      <WeekdayPicker value={weekdays} onChange={setWeekdays} />
+      <GoalFields value={goal} unit={unit} onChange={setGoal} onUnitChange={setUnit} />
+      <ColorPicker value={color} onChange={setColor} />
+      <GroupSelect groups={groups} value={groupId} onChange={setGroupId} />
       <label className="field">
         <span>{t('habits.startsOn')}</span>
         <input type="date" required value={startOn} onChange={(e) => setStartOn(e.target.value)} />
       </label>
       {action.isError && <p role="alert" className="error">{errorText(action.error)}</p>}
-      <button type="submit" className="button primary" disabled={action.isPending || !weekdays}>
+      <button type="submit" className="button primary" disabled={action.isPending || !goalValid(goal)}>
         {t('habits.create')}
       </button>
     </form>
   );
 }
 
-function HabitItem({ habit, onUp, onDown }: { habit: Habit; onUp?: () => void; onDown?: () => void }) {
+function goalSummary(habit: Habit, t: ReturnType<typeof useI18n>['t'], weekdays: (mask: number) => string): string {
+  if (habit.goal_type === 'weekly_count') return t('habits.summary.weekly_count', { target: habit.target ?? 1 });
+  if (habit.goal_type === 'quantity') {
+    const amount = habit.unit
+      ? t('habits.summary.quantityUnit', { target: habit.target ?? 1, unit: habit.unit })
+      : t('habits.summary.quantity', { target: habit.target ?? 1 });
+    return habit.weekdays === 127 ? amount : `${amount}, ${weekdays(habit.weekdays)}`;
+  }
+  return weekdays(habit.weekdays);
+}
+
+function HabitItem({
+  habit,
+  groups,
+  onUp,
+  onDown,
+}: {
+  habit: Habit;
+  groups: Group[];
+  onUp?: () => void;
+  onDown?: () => void;
+}) {
   const { today } = useSession();
   const { t, format } = useI18n();
   const errorText = useErrorText();
   const action = useHabitAction();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id });
   const [editing, setEditing] = useState(false);
   const [shortcut, setShortcut] = useState(false);
   const [name, setName] = useState(habit.name);
   const [cue, setCue] = useState(habit.cue ?? '');
-  const [weekdays, setWeekdays] = useState(habit.weekdays);
+  const current: Goal = { goal_type: habit.goal_type, target: habit.target, weekdays: habit.weekdays };
+  const [goal, setGoal] = useState<Goal>(current);
+  const [unit, setUnit] = useState(habit.unit ?? '');
+  const [color, setColor] = useState<HabitColor | null>(habit.color);
+  const [groupId, setGroupId] = useState<number | null>(habit.group_id);
   const [validFrom, setValidFrom] = useState(today);
+  const goalChanged = !sameGoal(goal, current);
 
   const startEdit = () => {
     setName(habit.name);
     setCue(habit.cue ?? '');
-    setWeekdays(habit.weekdays);
+    setGoal(current);
+    setUnit(habit.unit ?? '');
+    setColor(habit.color);
+    setGroupId(habit.group_id);
     setValidFrom(today);
     setEditing(true);
   };
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (!weekdays) return;
+    if (!goalValid(goal)) return;
     try {
-      if (name !== habit.name || (cue || null) !== habit.cue) {
-        await action.mutateAsync({ type: 'update', id: habit.id, body: { name, cue: cue || null } });
-      }
-      if (weekdays !== habit.weekdays) {
-        await action.mutateAsync({ type: 'schedule', id: habit.id, body: { weekdays, valid_from: validFrom } });
+      const details = {
+        name,
+        cue: cue || null,
+        unit: goal.goal_type === 'quantity' ? unit || null : habit.unit,
+        color,
+        group_id: groupId,
+      };
+      const changed =
+        details.name !== habit.name ||
+        details.cue !== habit.cue ||
+        details.unit !== habit.unit ||
+        details.color !== habit.color ||
+        details.group_id !== habit.group_id;
+      if (changed) await action.mutateAsync({ type: 'update', id: habit.id, body: details });
+      if (goalChanged) {
+        await action.mutateAsync({ type: 'schedule', id: habit.id, body: { ...goal, valid_from: validFrom } });
       }
       setEditing(false);
     } catch {
@@ -177,9 +328,15 @@ function HabitItem({ habit, onUp, onDown }: { habit: Habit; onUp?: () => void; o
     }
   };
 
+  const style = {
+    ...colorStyle(habit.color),
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   if (editing) {
     return (
-      <li className="habit-item">
+      <li className="habit-item" ref={setNodeRef} style={style}>
         <form className="habit-form" onSubmit={save} aria-label={t('habits.editLabel', { name: habit.name })}>
           <label className="field">
             <span>{t('habits.name')}</span>
@@ -189,17 +346,19 @@ function HabitItem({ habit, onUp, onDown }: { habit: Habit; onUp?: () => void; o
             <span>{t('habits.cue')}</span>
             <input maxLength={200} value={cue} onChange={(e) => setCue(e.target.value)} />
           </label>
-          <WeekdayPicker value={weekdays} onChange={setWeekdays} />
-          {weekdays !== habit.weekdays && (
+          <GoalFields value={goal} unit={unit} onChange={setGoal} onUnitChange={setUnit} />
+          {goalChanged && (
             <label className="field">
               <span>{t('habits.newPlanFrom')}</span>
               <input type="date" required value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
               <small className="subtle">{t('habits.newPlanHint')}</small>
             </label>
           )}
+          <ColorPicker value={color} onChange={setColor} />
+          <GroupSelect groups={groups} value={groupId} onChange={setGroupId} />
           {action.isError && <p role="alert" className="error">{errorText(action.error)}</p>}
           <div className="actions">
-            <button type="submit" className="button primary" disabled={action.isPending || !weekdays}>
+            <button type="submit" className="button primary" disabled={action.isPending || !goalValid(goal)}>
               {t('common.save')}
             </button>
             <button type="button" className="button" onClick={() => setEditing(false)}>
@@ -211,12 +370,27 @@ function HabitItem({ habit, onUp, onDown }: { habit: Habit; onUp?: () => void; o
     );
   }
 
+  const group = groups.find((g) => g.id === habit.group_id);
   return (
-    <li className="habit-item">
+    <li
+      className={`habit-item${isDragging ? ' is-dragging' : ''}`}
+      ref={setNodeRef}
+      style={style}
+    >
+      <button
+        type="button"
+        className="button icon drag-handle"
+        aria-label={t('habits.dragHandle', { name: habit.name })}
+        {...attributes}
+        {...listeners}
+      >
+        <span aria-hidden="true">⠿</span>
+      </button>
       <div className="habit-summary">
         <span className="habit-title">{habit.name}</span>
         <span className="subtle">
-          {format.weekdays(habit.weekdays)}
+          {goalSummary(habit, t, format.weekdays)}
+          {group && <> · {group.name}</>}
           {habit.cue && <> · {habit.cue}</>}
         </span>
       </div>

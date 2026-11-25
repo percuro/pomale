@@ -94,6 +94,10 @@ export interface Formatters {
   dateTime(isoUtc: string | null): string;
   /** "daily", "on weekdays", "Mon, Wed" … for a weekday bit mask (bit 0 = Monday) */
   weekdays(mask: number): string;
+  /** "November 2026" */
+  monthYear(iso: string): string;
+  /** 0.83 → "83%" / "83 %" */
+  percent(ratio: number): string;
 }
 
 export function createFormatters(locale: Locale, t: Translate): Formatters {
@@ -103,6 +107,8 @@ export function createFormatters(locale: Locale, t: Translate): Formatters {
   const dayShort = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
   const dayLong = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
   const stamp = new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' });
+  const month = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 });
   const weekdayShort = (index: number) => dayShort.format(new Date(MONDAY + index * 86_400_000)).replace(/\.$/, '');
   return {
     longDate: (iso) => long.format(parseIso(iso)),
@@ -121,5 +127,7 @@ export function createFormatters(locale: Locale, t: Translate): Formatters {
       if (mask === 0b1100000) return t('weekdays.summary.weekend');
       return [0, 1, 2, 3, 4, 5, 6].filter((i) => mask & (1 << i)).map(weekdayShort).join(', ');
     },
+    monthYear: (iso) => month.format(parseIso(iso)),
+    percent: (ratio) => percent.format(ratio),
   };
 }

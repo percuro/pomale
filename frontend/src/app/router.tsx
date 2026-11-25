@@ -3,6 +3,7 @@ import { AppLayout } from '../components/layout/AppLayout';
 import { TodayPage } from '../pages/TodayPage';
 import { WeekPage } from '../pages/WeekPage';
 import { HabitsPage } from '../pages/HabitsPage';
+import { HistoryPage } from '../pages/HistoryPage';
 import { StartPage } from '../pages/StartPage';
 import { AccountPage } from '../pages/AccountPage';
 import { AdminPage } from '../pages/AdminPage';
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: 'today', element: <TodayPage /> },
       { path: 'week', element: <WeekPage /> },
       { path: 'habits', element: <HabitsPage /> },
+      { path: 'history', element: <HistoryPage /> },
       { path: 'account', element: <AccountPage /> },
       { path: 'admin', element: <AdminPage /> },
       // Paths before 0.4 (bookmarks)

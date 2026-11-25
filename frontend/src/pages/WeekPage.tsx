@@ -1,6 +1,8 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { AmountDialog } from '../components/days/AmountDialog';
 import { addDays, weekStart } from '../lib/dates';
+import { byGroup, colorStyle } from '../lib/habit-style';
 import { STATE_ICON } from '../lib/states';
 import { useErrorText, useI18n } from '../i18n/context';
 import type { Day, HabitDays } from '../lib/types';
@@ -18,8 +20,13 @@ export function WeekPage() {
   const [active, setActive] = useState<[number, number]>([0, 0]);
   const gridRef = useRef<HTMLDivElement>(null);
 
+  const [amountFor, setAmountFor] = useState<{ habit: HabitDays; day: Day } | null>(null);
+
   const dates = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  const habits = days.data?.habits ?? [];
+  const sections = byGroup(days.data?.habits ?? [], days.data?.groups ?? []);
+  const showGroupNames = sections.some((section) => section.id !== null);
+  // Flat order for keyboard navigation across groups
+  const habits = sections.flatMap((section) => section.items);
 
   const focusCell = (row: number, col: number) => {
     const r = Math.max(0, Math.min(habits.length - 1, row));
@@ -47,7 +54,29 @@ export function WeekPage() {
 
   const toggle = (habit: HabitDays, day: Day) => {
     if (day.state === 'future') return;
-    setDay(habit.id, day.date, !day.done, day.version);
+    if (day.goal_type === 'quantity') setAmountFor({ habit, day });
+    else setDay(habit.id, day.date, !day.done, day.version);
+  };
+
+  const quotaText = (habit: HabitDays) => {
+    if (habit.goal_type === 'weekly_count' && habit.week && start === currentWeek) {
+      return t('week.weekQuota', { done: habit.week.done, target: habit.week.target });
+    }
+    return habit.quota.due > 0 ? t('week.quota', { done: habit.quota.done, due: habit.quota.due }) : t('week.nothingDue');
+  };
+
+  const cellLabel = (habit: HabitDays, day: Day, c: number) => {
+    const dayText = `${format.weekdayLong(c)} ${format.shortDate(day.date)}`;
+    const state = t(`state.${day.state}`);
+    const base =
+      day.goal_type === 'quantity' && day.state !== 'future'
+        ? t('week.cellValue', { habit: habit.name, day: dayText, value: day.value ?? 0, target: day.target ?? 1, state })
+        : t('week.cellLabel', { habit: habit.name, day: dayText, state });
+    return (
+      base +
+      (day.note ? t('week.cellNote') : '') +
+      (day.conflict ? t('week.cellConflict') : day.pending ? t('week.cellPending') : '')
+    );
   };
 
   return (
@@ -114,45 +143,54 @@ export function WeekPage() {
               </span>
             ))}
           </div>
-          {habits.map((habit, r) => (
-            <div role="row" className="week-row" key={habit.id}>
-              <span role="rowheader" className="week-name">
-                <span className="week-habit">{habit.name}</span>
-                <small className="quota">
-                  {habit.quota.due > 0
-                    ? t('week.quota', { done: habit.quota.done, due: habit.quota.due })
-                    : t('week.nothingDue')}
-                  {habit.archived && ` · ${t('week.archived')}`}
-                </small>
-              </span>
-              {habit.days.map((day, c) => (
-                <span role="gridcell" key={day.date} className={day.date === today ? 'is-today' : undefined}>
-                  <button
-                    type="button"
-                    data-cell={`${r}-${c}`}
-                    className={`cell state-${day.state}${day.pending ? ' is-pending' : ''}${day.conflict ? ' is-conflict' : ''}`}
-                    tabIndex={active[0] === r && active[1] === c ? 0 : -1}
-                    aria-pressed={day.state === 'future' ? undefined : day.done}
-                    aria-disabled={day.state === 'future'}
-                    aria-label={
-                      t('week.cellLabel', {
-                        habit: habit.name,
-                        day: `${format.weekdayLong(c)} ${format.shortDate(day.date)}`,
-                        state: t(`state.${day.state}`),
-                      }) + (day.conflict ? t('week.cellConflict') : day.pending ? t('week.cellPending') : '')
-                    }
-                    title={
-                      day.pending
-                        ? t('week.cellPendingTitle', { state: t(`state.${day.state}`) })
-                        : t(`state.${day.state}`)
-                    }
-                    onFocus={() => setActive([r, c])}
-                    onClick={() => toggle(habit, day)}
-                  >
-                    <span aria-hidden="true">{STATE_ICON[day.state]}</span>
-                  </button>
-                </span>
-              ))}
+          {sections.map((section) => (
+            <div role="rowgroup" key={section.id ?? 'none'}>
+              {showGroupNames && (
+                <div role="row" className="week-group">
+                  <span role="rowheader" aria-colspan={8}>
+                    {section.name ?? t('week.groupOther')}
+                  </span>
+                </div>
+              )}
+              {section.items.map((habit) => {
+                const r = habits.indexOf(habit);
+                return (
+                  <div role="row" className="week-row" key={habit.id} style={colorStyle(habit.color)}>
+                    <span role="rowheader" className="week-name">
+                      <span className="week-habit">{habit.name}</span>
+                      <small className="quota">
+                        {quotaText(habit)}
+                        {habit.archived && ` · ${t('week.archived')}`}
+                      </small>
+                    </span>
+                    {habit.days.map((day, c) => (
+                      <span role="gridcell" key={day.date} className={day.date === today ? 'is-today' : undefined}>
+                        <button
+                          type="button"
+                          data-cell={`${r}-${c}`}
+                          className={`cell state-${day.state}${day.pending ? ' is-pending' : ''}${day.conflict ? ' is-conflict' : ''}${day.note ? ' has-note' : ''}`}
+                          tabIndex={active[0] === r && active[1] === c ? 0 : -1}
+                          aria-pressed={day.state === 'future' || day.goal_type === 'quantity' ? undefined : day.done}
+                          aria-haspopup={day.goal_type === 'quantity' && day.state !== 'future' ? 'dialog' : undefined}
+                          aria-disabled={day.state === 'future'}
+                          aria-label={cellLabel(habit, day, c)}
+                          title={
+                            (day.pending
+                              ? t('week.cellPendingTitle', { state: t(`state.${day.state}`) })
+                              : t(`state.${day.state}`)) + (day.note ? ` – ${day.note}` : '')
+                          }
+                          onFocus={() => setActive([r, c])}
+                          onClick={() => toggle(habit, day)}
+                        >
+                          <span aria-hidden="true">
+                            {day.goal_type === 'quantity' && (day.value ?? 0) > 0 ? day.value : STATE_ICON[day.state]}
+                          </span>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -160,6 +198,17 @@ export function WeekPage() {
       <p id="week-help" className="subtle help">
         {t('week.help')}
       </p>
+      {amountFor && (
+        <AmountDialog
+          habitName={amountFor.habit.name}
+          date={amountFor.day.date}
+          value={amountFor.day.value ?? 0}
+          target={amountFor.day.target ?? 1}
+          unit={amountFor.habit.unit}
+          onSave={(value) => setDay(amountFor.habit.id, amountFor.day.date, { value }, amountFor.day.version)}
+          onClose={() => setAmountFor(null)}
+        />
+      )}
     </>
   );
 }

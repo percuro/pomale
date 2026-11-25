@@ -24,6 +24,8 @@ class ShortcutTokenCreated(ShortcutTokenRead):
 
 class ShortcutCheckinRequest(BaseModel):
     done: bool = True
+    # Quantity goals: how much to add (default 1)
+    amount: int | None = Field(default=None, ge=1, le=1000)
 
 
 class ShortcutCheckinRead(BaseModel):
@@ -31,8 +33,12 @@ class ShortcutCheckinRead(BaseModel):
     habit_name: str
     date: date
     done: bool
-    # Stable for automations: "done" (checked off now) or "already_done"
-    result: Literal["done", "already_done"]
+    # Stable for automations: "done" (checked off now), "already_done",
+    # or "counted" (quantity goals: amount added, see value and target)
+    result: Literal["done", "already_done", "counted"]
+    # quantity goals only
+    value: int | None = None
+    target: int | None = None
     # Human-readable, in the owner's language (else the phone's, else English)
     status: str
     message: str

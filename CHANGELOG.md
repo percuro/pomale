@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
+## 0.6.0 – goals, pauses, groups, history
+
+### Features
+
+- Three goal types per habit, each versioned with an effective date like the weekdays, so past weeks keep their numbers:
+  - **on chosen days** (as before),
+  - **n× a week, any day** ("run 3× a week"): today shows "1 of 3 this week"; once the week is done the habit moves to "done this week" and can still be checked off as extra,
+  - **an amount per day** ("8 glasses of water"): − and + on today, a tap on the row sets the target, days below the target are "partly done".
+- **Pauses** for holidays or illness, for all habits or one, also entered afterwards: paused days are not due and do not lower the quota. A weekly target shrinks in weeks with paused days and in the first week.
+- **Optional note** per habit and day, from its own button – never part of checking off. Shown in week and history, included in the CSV.
+- **Groups and colours:** named groups split today and week into sections; a colour from a fixed palette marks each habit (always next to its name, never instead of it).
+- **Drag to sort** on the habits page (touch, mouse, keyboard with screen-reader announcements), plus the arrow buttons.
+- **History page:** quota for the last 4, 12, 26 and 52 weeks, a 12-week trend with the numbers as a table, and a month calendar whose cells name their state. No streaks.
+- **Shortcut and quantity goals:** each run adds 1, or `amount` (1–1000); the answer reads "Water: 5 of 8 glasses".
+- API: `goal_type`, `target`, `unit`, `color` and `group_id` on habits; `value` on check-ins; `/v1/groups`, `/v1/pauses`, `PUT /v1/habits/order`, `PUT /v1/habits/{id}/days/{day}/note` and `GET /v1/history`.
+
+### Upgrade notes
+
+- Migration 0005 runs automatically. Existing habits become "on chosen days" goals; nothing changes for them.
+- **New `state` values** `paused` and `partial` in `/v1/days` and check-in answers. Clients should treat unknown states like "not planned".
+- `PUT /v1/habits/{id}/days/{day}` takes `done` **or** `value`; sending both, or a value for a non-quantity habit, is a 422.
+- Every day in `/v1/days` has the new fields `goal_type`, `target`, `paused`, `value` and `note`; the answer has `groups`, and each habit has `week` for weekly goals.
+- The shortcut's `result` can now also be `counted` (quantity goals).
+- **CSV export:** new columns `value`, `target` and `note` at the end, so existing evaluations keep working. Paused and partly done days are listed with their state.
+- The web app drops cached day lists from 0.5 once (they are reloaded); unsent changes stay queued and are sent as before.
+- New frontend dependency: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`.
+
 ## 0.5.0 – single sign-on, audit log
 
 ### Features

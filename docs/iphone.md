@@ -7,7 +7,7 @@ The interface is in English or German: it follows the language chosen on the acc
 1. Open your instance (e.g. `https://habits.example.org`) in **Safari**.
 2. Share → **Add to Home Screen**.
 3. Open it **from the new icon** and log in there. The home-screen app has its own cookie storage, so a login in Safari does not carry over. Logins last 30 days without use, at most 90 days (configurable). With single sign-on, see the note in [Single sign-on](oidc.md#iphone-home-screen-app).
-4. "Today" ("Heute"): tap a row to mark it done; "Undo" ("Rückgängig") next to it undoes. The row stays where it is.
+4. "Today" ("Heute"): tap a row to mark it done; "Undo" ("Rückgängig", an arrow on small screens) next to it undoes. The row stays where it is. Quantity goals have − and + below the row; a tap on the row sets the target. The pencil opens an optional note for the day.
 
 ### Offline
 
@@ -37,12 +37,15 @@ Checks off one habit from the home screen without opening the app. The shortcut 
 3. Action **Get Dictionary Value**: key `message` from "Contents of URL".
 4. Action **Show Result** (or "Show Notification") with that value.
 
-The server determines the date in the time zone of the habit's owner (account page); the shortcut does not send one. The message is in the owner's language, or the phone's if none is set. For automations, the field `result` is `done` or `already_done` in every language.
+The server determines the date in the time zone of the habit's owner (account page); the shortcut does not send one. The message is in the owner's language, or the phone's if none is set. For automations, the field `result` is `done`, `already_done` or `counted` in every language.
+
+**Quantity goals** (e.g. 8 glasses of water): every run adds 1 to today's amount. To add more at once, put a number field `amount` (1–1000) into the JSON body, e.g. "Ask for Input" → number → `amount`. The answer then reads "Water: 5 of 8 glasses" and has the fields `value` and `target`; `result` is `counted`. Two runs at the same moment both count.
 
 | Response (`message`) | Meaning |
 |---|---|
 | "…: Done today" ("Heute erledigt") | checked off |
 | "…: Already done" ("Bereits erledigt") | was already done, no second entry |
+| "…: 5 of 8" ("5 von 8") | quantity goal: amount added |
 | Error 401 | key wrong or revoked, or the account is deactivated |
 | Error 403 | key belongs to a different habit |
 | Error 409 | habit is archived |

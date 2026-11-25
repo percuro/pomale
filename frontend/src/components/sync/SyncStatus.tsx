@@ -69,10 +69,14 @@ export function SyncStatus() {
           </p>
           <dl className="conflict-states">
             <dt>{t('sync.thisDevice')}</dt>
-            <dd>{op.done ? t('sync.done') : t('sync.open')}</dd>
+            <dd>{op.value !== undefined ? String(op.value) : op.done ? t('sync.done') : t('sync.open')}</dd>
             <dt>{t('sync.server')}</dt>
             <dd>
-              {op.conflict!.done ? t('sync.done') : t('sync.open')}
+              {op.value !== undefined
+                ? String(op.conflict!.value ?? 0)
+                : op.conflict!.done
+                  ? t('sync.done')
+                  : t('sync.open')}
               {op.conflict!.updated_at && t('sync.changedAt', { time: format.dateTime(op.conflict!.updated_at) })}
             </dd>
           </dl>

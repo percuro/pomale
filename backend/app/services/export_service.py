@@ -1,9 +1,9 @@
 import csv
 import io
-from datetime import date
+from datetime import date, timedelta
 
 from app.repositories.habit_repository import HabitRepository
-from app.services.day_service import build_days
+from app.services.day_service import Entry, evaluate_range, week_start
 from app.services.i18n import text
 
 
@@ -20,20 +20,30 @@ def export_csv(
     starts = [s.valid_from for h in habits for s in h.schedules]
     start = start or (min(starts) if starts else today)
     end = min(end, today)
-    checkins = repository.checkins_between([h.id for h in habits], start, end)
-    done_by_habit: dict[int, set[date]] = {}
+    first, last = week_start(start), week_start(end) + timedelta(days=6)
+    checkins = repository.checkins_between([h.id for h in habits], first, last)
+    pauses = repository.pauses_overlapping(user_id, first, last)
+    entries_by_habit: dict[int, dict[date, Entry]] = {}
+    notes: dict[tuple[int, date], str] = {}
     for checkin in checkins:
-        if checkin.done:
-            done_by_habit.setdefault(checkin.habit_id, set()).add(checkin.local_date)
+        entries_by_habit.setdefault(checkin.habit_id, {})[checkin.local_date] = Entry(checkin.done, checkin.value)
+        if checkin.note:
+            notes[(checkin.habit_id, checkin.local_date)] = checkin.note
 
     buffer = io.StringIO()
     buffer.write("﻿")  # BOM: lets Excel detect UTF-8
     writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
-    writer.writerow([text(locale, f"csv.{column}") for column in ("date", "habit", "cue", "planned", "state")])
+    # New columns go at the end, so existing evaluations of the file keep working
+    columns = ("date", "habit", "cue", "planned", "state", "value", "target", "note")
+    writer.writerow([text(locale, f"csv.{column}") for column in columns])
     rows = []
     for habit in habits:
-        for info in build_days(habit.schedules, done_by_habit.get(habit.id, set()), start, end, today):
-            if not info.planned and not info.done:
+        habit_pauses = [p for p in pauses if p.habit_id is None or p.habit_id == habit.id]
+        entries = entries_by_habit.get(habit.id, {})
+        for info in evaluate_range(habit.schedules, entries, habit_pauses, start, end, today).days:
+            note = notes.get((habit.id, info.date))
+            # Leave out days without anything to say: not planned (weekly goals: not checked off)
+            if info.state == "not_planned" and not note:
                 continue
             rows.append(
                 (
@@ -43,6 +53,9 @@ def export_csv(
                     _cell(habit.cue),
                     text(locale, "csv.yes" if info.planned else "csv.no"),
                     text(locale, f"state.{info.state}"),
+                    "" if info.value is None else str(info.value),
+                    "" if info.target is None or info.goal_type == "days" else str(info.target),
+                    _cell(note),
                 )
             )
     rows.sort(key=lambda row: (row[0], row[1]))

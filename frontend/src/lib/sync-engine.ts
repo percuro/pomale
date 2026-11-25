@@ -12,6 +12,9 @@ import type { CheckinResponse } from './types';
 
 type Listener = () => void;
 
+/** What to set on a day: checked off or not, or an amount for quantity goals */
+export type DayChange = { done: boolean } | { value: number };
+
 /** A change the server refused; `code` is translated in the UI */
 export interface SyncError {
   code?: string;
@@ -75,14 +78,21 @@ class SyncEngine {
     return this.loaded;
   }
 
-  /** Set the target state of a day. knownVersion = version from the last server response. */
-  setDay(habitId: number, date: string, done: boolean, knownVersion: number): Promise<void> {
-    const next = this.chain.then(() => this.enqueue(habitId, date, done, knownVersion));
+  /**
+   * Set the target state of a day: `done`, or `{ value }` for quantity goals (an absolute
+   * amount, never "+1", so repeating it is harmless). knownVersion = version from the last
+   * server response. Quick taps on the same day replace each other in the queue.
+   */
+  setDay(habitId: number, date: string, change: boolean | DayChange, knownVersion: number): Promise<void> {
+    const normalized: DayChange = typeof change === 'boolean' ? { done: change } : change;
+    const next = this.chain.then(() => this.enqueue(habitId, date, normalized, knownVersion));
     this.chain = next.catch(() => {});
     return next;
   }
 
-  private async enqueue(habitId: number, date: string, done: boolean, knownVersion: number) {
+  private async enqueue(habitId: number, date: string, change: DayChange, knownVersion: number) {
+    const done = 'value' in change ? change.value > 0 : change.done;
+    const value = 'value' in change ? change.value : undefined;
     await this.load();
     const owner = this.owner;
     if (!owner) throw new Error('setDay without a signed-in account');
@@ -92,6 +102,7 @@ class SyncEngine {
           ...existing,
           op_id: newOpId(),
           done,
+          value,
           // Changing again during a conflict resolves it in favour of this device
           base_version: existing.conflict ? existing.conflict.version : existing.base_version,
           conflict: undefined,
@@ -101,6 +112,7 @@ class SyncEngine {
           habit_id: habitId,
           date,
           done,
+          value,
           base_version: knownVersion,
           created_at: Date.now(),
           user_id: owner.id,
@@ -160,7 +172,11 @@ class SyncEngine {
       try {
         const response = await apiFetch<CheckinResponse>(`/v1/habits/${op.habit_id}/days/${op.date}`, {
           method: 'PUT',
-          body: JSON.stringify({ done: op.done, op_id: op.op_id, base_version: op.base_version }),
+          body: JSON.stringify({
+            ...(op.value !== undefined ? { value: op.value } : { done: op.done }),
+            op_id: op.op_id,
+            base_version: op.base_version,
+          }),
         });
         await deleteOp(op.op_id);
         // A follow-up change to the same day made while sending (e.g. an immediate undo)
