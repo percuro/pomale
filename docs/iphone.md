@@ -18,6 +18,10 @@ The interface is in English or German: it follows the language chosen on the acc
 - If the same day was changed differently on another device in the meantime, the app shows **both states** and asks which one to keep ("Conflicting change" / "Abweichende Änderung"). Nothing is overwritten silently.
 - Logging out with unsent changes asks for confirmation. The changes stay on the phone and are sent when the same account logs in again; another account using the same phone never sends or sees them.
 
+## Reminders
+
+With iOS/iPadOS 16.4 or later the home-screen app can show reminders; Safari itself cannot. In the app: "Account" ("Konto") → **Reminders** ("Erinnerungen") → **Turn on for this device** ("Auf diesem Gerät einschalten") and allow notifications; **Send a test** ("Test senden") checks it. Set the times per habit under "Habits" → Edit. iPhone notifications have no "Done" button: a tap opens the app. Focus modes can hold them back. Details: [Reminders](reminders.md).
+
 ## Shortcut widget for a favourite habit
 
 Checks off one habit from the home screen without opening the app. The shortcut does not use the app's offline queue: without a connection it reports an error, never a success.
@@ -66,3 +70,4 @@ On the first run iOS asks whether the shortcut may access the address ("Allow").
 - [ ] A correction on the laptop shows up the next time the iPhone app is opened
 - [ ] Flight mode: check off → marked → flight mode off, open the app → sent
 - [ ] Shortcut: two taps give one entry; after revoking, no success message
+- [ ] Reminders in the home-screen app: turn on, test arrives; a reminder two minutes ahead arrives on the lock screen, a tap opens Today; none comes once the habit is done
