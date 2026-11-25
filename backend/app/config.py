@@ -6,6 +6,7 @@ See docs/configuration.md for the full reference.
 
 import logging
 import os
+from dataclasses import dataclass
 from functools import lru_cache
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -117,8 +118,66 @@ def get_audit_retention_days() -> int:
     return env_positive_int("AUDIT_RETENTION_DAYS", 180)
 
 
+@dataclass(frozen=True)
+class OidcSettings:
+    issuer: str
+    client_id: str
+    # None = public client: PKCE only, no client authentication at the token endpoint
+    client_secret: str | None
+    scopes: str
+    # Name on the sign-in button, e.g. "Authelia"; None = a translated "single sign-on"
+    label: str | None
+    auto_create: bool
+
+
+def get_oidc_settings() -> OidcSettings | None:
+    """None when OIDC is not configured (OIDC_ISSUER empty)."""
+    issuer = os.getenv("OIDC_ISSUER", "").strip()
+    if not issuer:
+        return None
+    parts = urlsplit(issuer)
+    if parts.scheme not in {"http", "https"} or not parts.netloc:
+        raise ConfigError(f"OIDC_ISSUER must start with https:// (got {issuer!r})")
+    client_id = os.getenv("OIDC_CLIENT_ID", "").strip()
+    if not client_id:
+        raise ConfigError("OIDC_CLIENT_ID is required when OIDC_ISSUER is set")
+    scopes = " ".join(os.getenv("OIDC_SCOPES", "").split()) or "openid profile email"
+    if "openid" not in scopes.split():
+        raise ConfigError(f"OIDC_SCOPES must contain openid (got {scopes!r})")
+    return OidcSettings(
+        # Compared exactly with the provider's "issuer"; only a trailing slash is forgiven
+        issuer=issuer,
+        client_id=client_id,
+        client_secret=os.getenv("OIDC_CLIENT_SECRET", "").strip() or None,
+        scopes=scopes,
+        label=os.getenv("OIDC_LABEL", "").strip()[:40] or None,
+        auto_create=env_bool("OIDC_AUTO_CREATE", False),
+    )
+
+
+def password_login_enabled() -> bool:
+    """PASSWORD_LOGIN=off: accounts sign in, register and are set up through OIDC only."""
+    return env_bool("PASSWORD_LOGIN", True)
+
+
+def get_oidc_redirect_uri() -> str:
+    return f"{get_public_url()}/api/v1/auth/oidc/callback"
+
+
+def _is_local(host: str) -> bool:
+    return host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".localhost")
+
+
 def validate() -> None:
     """Fail fast at startup with a readable message instead of on the first request."""
     get_public_url()
     get_default_timezone()
     get_registration_mode()
+    oidc = get_oidc_settings()
+    if not password_login_enabled() and oidc is None:
+        raise ConfigError("PASSWORD_LOGIN=off needs OIDC: set OIDC_ISSUER and OIDC_CLIENT_ID")
+    if oidc is not None:
+        # The provider is not contacted here: pomale starts even while it is down
+        host = urlsplit(oidc.issuer).hostname or ""
+        if oidc.issuer.startswith("http://") and not _is_local(host):
+            logger.warning("OIDC_ISSUER uses http://; tokens and codes travel unencrypted")

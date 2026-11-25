@@ -29,6 +29,14 @@ TEST_ENV = {
     "CORS_ORIGINS": "",
     "DEFAULT_TIMEZONE": "",
     "TRACKER_TZ": "",
+    "OIDC_ISSUER": "",
+    "OIDC_CLIENT_ID": "",
+    "OIDC_CLIENT_SECRET": "",
+    "OIDC_SCOPES": "",
+    "OIDC_LABEL": "",
+    "OIDC_AUTO_CREATE": "",
+    "PASSWORD_LOGIN": "",
+    "REGISTRATION": "",
 }
 
 
