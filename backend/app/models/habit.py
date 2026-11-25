@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import (
     Boolean,
@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Time,
     UniqueConstraint,
     func,
 )
@@ -20,6 +21,7 @@ GOAL_TYPES = ("days", "weekly_count", "quantity")
 WEEKLY_TARGET_MAX = 7
 QUANTITY_TARGET_MAX = 9999
 # Keys of the fixed palette; the frontend maps them to colours that pass contrast checks
+REMINDERS_MAX = 3
 HABIT_COLORS = ("slate", "red", "orange", "amber", "green", "teal", "blue", "purple", "pink")
 
 
@@ -59,6 +61,11 @@ class Habit(Base):
         order_by="HabitSchedule.valid_from",
     )
     checkins: Mapped[list["Checkin"]] = relationship(back_populates="habit", cascade="all, delete-orphan")
+    reminders: Mapped[list["HabitReminder"]] = relationship(
+        back_populates="habit",
+        cascade="all, delete-orphan",
+        order_by="HabitReminder.time",
+    )
 
 
 class HabitSchedule(Base):
@@ -127,3 +134,21 @@ class HabitPause(Base):
     end_on: Mapped[date] = mapped_column(Date, nullable=False)
     reason: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class HabitReminder(Base):
+    """Local time (account time zone) at which to remind if the habit is still open that day.
+
+    last_sent_on is the local date this time last fired; it is set before sending, so a reminder
+    goes out at most once per day even if the process dies while sending.
+    """
+
+    __tablename__ = "habit_reminders"
+    __table_args__ = (UniqueConstraint("habit_id", "time", name="uq_habit_reminders_time"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    habit_id: Mapped[int] = mapped_column(ForeignKey("habits.id", ondelete="CASCADE"), nullable=False, index=True)
+    time: Mapped[time] = mapped_column(Time, nullable=False)
+    last_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    habit: Mapped[Habit] = relationship(back_populates="reminders")
