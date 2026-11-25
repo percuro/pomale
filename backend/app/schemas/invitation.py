@@ -62,7 +62,16 @@ class RegisterRequest(AccountSettings):
     password: str = Field(min_length=1, max_length=256)
 
 
+class OidcMeta(BaseModel):
+    # Name for the button; null = the web app's translated default
+    label: str | None
+
+
 class MetaRead(BaseModel):
     version: str
     registration: Literal["invite", "open"]
     setup_needed: bool
+    # False: sign-in, registration and setup through OIDC only
+    password_login: bool
+    # null = OIDC not configured
+    oidc: OidcMeta | None

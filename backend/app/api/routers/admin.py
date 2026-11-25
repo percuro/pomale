@@ -4,11 +4,13 @@ from sqlalchemy.orm import Session
 from app.api.dependencies.auth import require_admin
 from app.db.database import get_db
 from app.models.user import User
+from app.repositories.auth_repository import AuthRepository
 from app.schemas.admin import AdminUserRead, AdminUserUpdate, AuditEventRead, AuditPage
 from app.schemas.invitation import InvitationCreate, InvitationCreated, InvitationRead
 from app.services import audit_service
 from app.services.admin_service import AdminService
 from app.services.invitation_service import InvitationService
+from app.services.oidc_service import OidcService
 
 router = APIRouter()
 
@@ -35,6 +37,15 @@ def create_password_reset(user_id: int, admin: User = Depends(require_admin), db
     """A one-time link with which the person sets a new password. Admins never see or set passwords."""
     target = AdminService(db).get_user(user_id)
     return InvitationService(db).create_password_reset(admin, target)
+
+
+@router.delete("/users/{user_id}/oidc", status_code=status.HTTP_204_NO_CONTENT)
+def unlink_oidc(user_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Remove the account's provider link and sign it out everywhere, e.g. when the provider account
+    changed hands. Then give the person a reset link to set a password or link anew."""
+    target = AdminService(db).get_user(user_id)
+    OidcService(db).unlink(target, actor=admin, by="admin")
+    AuthRepository(db).delete_sessions(target.id)
 
 
 @router.post("/invitations", response_model=InvitationCreated, status_code=status.HTTP_201_CREATED)

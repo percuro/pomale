@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import Request, Response
 
-from app.config import cookie_secure, env_positive_int
+from app.config import cookie_secure, env_positive_int, password_login_enabled
 from app.errors import AppError
 from app.models.user import AUTH_PASSWORD, ROLE_USER, User, UserSession
 from app.repositories.auth_repository import AuthRepository
@@ -55,6 +55,13 @@ def normalize_username(username: str) -> str:
             "Usernames have 3 to 32 characters: letters a-z, digits, dot, underscore or hyphen",
         )
     return username
+
+
+def require_password_login() -> None:
+    if not password_login_enabled():
+        raise AppError(
+            403, "auth.password_login_disabled", "Passwords are turned off on this instance; use single sign-on"
+        )
 
 
 def clear_session_cookie(response: Response) -> None:

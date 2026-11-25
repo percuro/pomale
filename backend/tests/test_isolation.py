@@ -31,6 +31,7 @@ ROUTES = {
     ("PATCH", "/v1/admin/users/{user_id}"): (403, {"is_active": False}),
     ("DELETE", "/v1/admin/users/{user_id}"): (403, None),
     ("POST", "/v1/admin/users/{user_id}/password-reset"): (403, None),
+    ("DELETE", "/v1/admin/users/{user_id}/oidc"): (403, None),
     ("DELETE", "/v1/admin/invitations/{invitation_id}"): (403, None),
 }
 

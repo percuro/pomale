@@ -152,16 +152,7 @@ class InvitationService:
         if invitation.purpose == PURPOSE_SIGNUP:
             username = normalize_username(data.username or "")
         AuthService.check_password(data.password)
-        now = utcnow()
-        # Claim the link first: of two simultaneous requests only one changes the row
-        claimed = self.db.execute(
-            update(Invitation)
-            .where(Invitation.id == invitation.id, Invitation.used_at.is_(None), Invitation.expires_at > now)
-            .values(used_at=now)
-        ).rowcount
-        if claimed != 1:
-            self.db.rollback()
-            raise invalid()
+        self.claim(invitation)
         if invitation.purpose == PURPOSE_SIGNUP:
             user = self._signup(invitation, username, data)
             audit_service.record(self.db, "account.created", actor=user, target=user, via="invite", role=user.role)
@@ -170,6 +161,21 @@ class InvitationService:
         audit_service.record(self.db, "invite.used", actor=user, target=user, purpose=invitation.purpose)
         self.auth.start_session(user, request, response)
         return user
+
+    def claim(self, invitation: Invitation) -> None:
+        """Mark the link as used (not yet committed); of two simultaneous requests only one succeeds."""
+        now = utcnow()
+        claimed = self.db.execute(
+            update(Invitation)
+            .where(Invitation.id == invitation.id, Invitation.used_at.is_(None), Invitation.expires_at > now)
+            .values(used_at=now)
+        ).rowcount
+        if claimed != 1:
+            self.db.rollback()
+            raise invalid()
+
+    def find_valid(self, token: str, request: Request) -> Invitation:
+        return self._find_valid(token, request)
 
     def _signup(self, invitation: Invitation, username: str, data: InvitationAccept) -> User:
         if self.auth.repository.get_user_by_username(username) is not None:

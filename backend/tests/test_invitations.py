@@ -200,7 +200,14 @@ class RegistrationAndMetaTest(InvitationTestCase):
     def test_closed_by_default(self):
         self.assertCode(self.register(), 403, "registration.closed")
         self.assertEqual(
-            self.guest.get("/v1/meta").json(), {"version": __version__, "registration": "invite", "setup_needed": False}
+            self.guest.get("/v1/meta").json(),
+            {
+                "version": __version__,
+                "registration": "invite",
+                "setup_needed": False,
+                "password_login": True,
+                "oidc": None,
+            },
         )
 
     def test_open_registration_creates_normal_accounts(self):

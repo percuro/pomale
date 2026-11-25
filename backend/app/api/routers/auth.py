@@ -13,7 +13,7 @@ from app.schemas.auth import LoginRequest, MeRead
 from app.schemas.invitation import RegisterRequest
 from app.services import audit_service, setup_service
 from app.services.account_service import me_read
-from app.services.auth_service import AuthService
+from app.services.auth_service import AuthService, require_password_login
 from app.services.login_rate_limiter import LoginRateLimiter, login_rate_limiter
 
 router = APIRouter()
@@ -29,6 +29,7 @@ def login(
     db: Session = Depends(get_db),
     now: datetime = Depends(get_now),
 ):
+    require_password_login()
     username = login_in.username.lower()
     ip_address = request.client.host if request.client else "unknown"
     login_rate_limiter.check(username, ip_address)
@@ -71,6 +72,7 @@ def register(
     """Only with REGISTRATION=open. New accounts get the role user."""
     if get_registration_mode() != "open":
         raise AppError(403, "registration.closed", "Registration is closed; ask an admin for an invitation")
+    require_password_login()
     if setup_service.needs_setup(db):
         # Otherwise a stranger could take over a fresh instance before its operator runs the setup
         raise AppError(409, "setup.required", "The instance has not been set up yet")
