@@ -1,17 +1,20 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { APP_NAME } from '../app/brand';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { OnlineOnly } from '../components/common/OnlineOnly';
 import { ShareLink } from '../components/common/ShareLink';
 import { useSession } from '../hooks/useSession';
 import { useErrorText, useI18n } from '../i18n/context';
+import { hasMessage } from '../i18n/core';
 import { apiFetch } from '../lib/api';
-import type { AdminUser, Invitation, InvitationCreated, Role } from '../lib/types';
+import type { AdminUser, AuditEvent, AuditPage, Invitation, InvitationCreated, Role } from '../lib/types';
+import { useOidcLabel } from '../hooks/useOidcLabel';
 
 const USERS_KEY = ['admin', 'users'] as const;
 const INVITATIONS_KEY = ['admin', 'invitations'] as const;
+const AUDIT_KEY = ['admin', 'audit'] as const;
 
 /** A link that was just created: shown once, then only its hash exists on the server */
 interface CreatedLink extends InvitationCreated {
@@ -33,6 +36,7 @@ export function AdminPage() {
         <InviteSection created={created} onCreated={setCreated} />
         <OpenLinksSection />
         <AccountsSection onResetLink={setCreated} />
+        <AuditSection />
       </OnlineOnly>
     </>
   );
@@ -172,7 +176,7 @@ function OpenLinksSection() {
   );
 }
 
-type Pending = { kind: 'deactivate' | 'delete'; user: AdminUser } | null;
+type Pending = { kind: 'deactivate' | 'delete' | 'unlink'; user: AdminUser } | null;
 
 function AccountsSection({ onResetLink }: { onResetLink: (link: CreatedLink) => void }) {
   const { me } = useSession();
@@ -194,6 +198,15 @@ function AccountsSection({ onResetLink }: { onResetLink: (link: CreatedLink) => 
     onSuccess: () => setPending(null),
     onSettled: refresh,
   });
+  const unlink = useMutation({
+    mutationFn: (id: number) => apiFetch<void>(`/v1/admin/users/${id}/oidc`, { method: 'DELETE' }),
+    onSuccess: () => setPending(null),
+    onSettled: refresh,
+  });
+  const provider = useOidcLabel();
+  const methods = (user: AdminUser) =>
+    [user.has_password && t('admin.methodPassword'), user.oidc_linked && provider].filter(Boolean).join(' + ') ||
+    t('admin.methodNone');
   const resetLink = useMutation({
     mutationFn: (user: AdminUser) =>
       apiFetch<InvitationCreated>(`/v1/admin/users/${user.id}/password-reset`, { method: 'POST' }),
@@ -208,11 +221,11 @@ function AccountsSection({ onResetLink }: { onResetLink: (link: CreatedLink) => 
     setPending(null);
     update.reset();
     remove.reset();
+    unlink.reset();
   };
-  const dialogError = pending && (pending.kind === 'delete' ? remove : update).isError
-    ? errorText((pending.kind === 'delete' ? remove : update).error)
-    : null;
-  const inlineError = !pending && (update.error ?? remove.error ?? resetLink.error);
+  const dialogMutation = pending?.kind === 'delete' ? remove : pending?.kind === 'unlink' ? unlink : update;
+  const dialogError = pending && dialogMutation.isError ? errorText(dialogMutation.error) : null;
+  const inlineError = !pending && (update.error ?? remove.error ?? resetLink.error ?? unlink.error);
 
   return (
     <section aria-labelledby="accounts-heading">
@@ -235,6 +248,8 @@ function AccountsSection({ onResetLink }: { onResetLink: (link: CreatedLink) => 
                 <span className="subtle">
                   {t(`role.${user.role}`)}
                   {!user.is_active && ` · ${t('admin.inactive')}`}
+                  {' · '}
+                  {t('admin.signInWith', { methods: methods(user) })}
                   {' · '}
                   {t('admin.accountInfo', {
                     created: format.dateTime(user.created_at),
@@ -287,6 +302,16 @@ function AccountsSection({ onResetLink }: { onResetLink: (link: CreatedLink) => 
                     {t('admin.resetLink')}
                   </button>
                 )}
+                {user.oidc_linked && (
+                  <button
+                    type="button"
+                    className="button"
+                    aria-label={label(t('admin.oidcUnlink'))}
+                    onClick={() => setPending({ kind: 'unlink', user })}
+                  >
+                    {t('admin.oidcUnlink')}
+                  </button>
+                )}
                 {!self && (
                   <button
                     type="button"
@@ -327,6 +352,107 @@ function AccountsSection({ onResetLink }: { onResetLink: (link: CreatedLink) => 
       >
         <p>{t('admin.deleteText')}</p>
       </ConfirmDialog>
+      <ConfirmDialog
+        open={pending?.kind === 'unlink'}
+        title={t('admin.oidcUnlinkTitle', { username: pending?.user.username ?? '', provider })}
+        confirmLabel={t('admin.oidcUnlink')}
+        danger
+        busy={unlink.isPending}
+        error={pending?.kind === 'unlink' ? dialogError : null}
+        onConfirm={() => pending && unlink.mutate(pending.user.id)}
+        onCancel={closeDialog}
+      >
+        <p>{t('admin.oidcUnlinkText', { username: pending?.user.username ?? '', provider })}</p>
+      </ConfirmDialog>
+    </section>
+  );
+}
+
+const AUDIT_PAGE_SIZE = 50;
+
+/** Details shown after the event text, e.g. "user → admin" or the key's label */
+function auditDetail(event: AuditEvent, t: ReturnType<typeof useI18n>['t']): string | null {
+  const d = event.details;
+  const parts: string[] = [];
+  if (typeof d.before === 'string' && typeof d.after === 'string') {
+    parts.push(`${t(`role.${d.before as Role}`)} → ${t(`role.${d.after as Role}`)}`);
+  }
+  if (typeof d.method === 'string') parts.push(d.method === 'oidc' ? 'OIDC' : t('admin.methodPassword'));
+  if (typeof d.label === 'string') parts.push(d.label);
+  if (typeof d.count === 'number') parts.push(String(d.count));
+  if (d.via === 'cli') parts.push(t('audit.viaCli'));
+  if (event.ip_prefix) parts.push(event.ip_prefix);
+  return parts.length ? parts.join(' · ') : null;
+}
+
+function AuditSection() {
+  const { t, format } = useI18n();
+  const errorText = useErrorText();
+  const [userId, setUserId] = useState<number | ''>('');
+  const users = useQuery({ queryKey: USERS_KEY, queryFn: () => apiFetch<AdminUser[]>('/v1/admin/users') });
+  const audit = useInfiniteQuery({
+    queryKey: [...AUDIT_KEY, userId],
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams({ limit: String(AUDIT_PAGE_SIZE) });
+      if (pageParam) params.set('before_id', String(pageParam));
+      if (userId) params.set('user_id', String(userId));
+      return apiFetch<AuditPage>(`/v1/admin/audit?${params}`);
+    },
+    initialPageParam: 0,
+    getNextPageParam: (page) => page.next_before_id ?? undefined,
+  });
+  const events = audit.data?.pages.flatMap((page) => page.events) ?? [];
+  const text = (event: AuditEvent) => {
+    const key = `audit.${event.event}`;
+    const params = { actor: event.actor_username ?? t('audit.nobody'), target: event.target_username ?? '—' };
+    return hasMessage(key) ? t(key, params) : event.event;
+  };
+
+  return (
+    <section aria-labelledby="audit-heading">
+      <h2 id="audit-heading">{t('admin.audit')}</h2>
+      <p className="subtle">{t('admin.auditIntro')}</p>
+      <label className="field">
+        <span>{t('admin.auditFilter')}</span>
+        <select value={userId} onChange={(e) => setUserId(e.target.value ? Number(e.target.value) : '')}>
+          <option value="">{t('admin.auditAll')}</option>
+          {(users.data ?? []).map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.username}
+            </option>
+          ))}
+        </select>
+      </label>
+      {audit.isPending && <p>{t('app.loading')}</p>}
+      {audit.isError && <p className="error" role="alert">{errorText(audit.error)}</p>}
+      {audit.isSuccess && events.length === 0 && <p className="subtle">{t('admin.auditEmpty')}</p>}
+      {events.length > 0 && (
+        <ul className="token-list card audit-list">
+          {events.map((event) => {
+            const detail = auditDetail(event, t);
+            return (
+              <li key={event.id}>
+                <span>
+                  <time dateTime={event.created_at} className="subtle">
+                    {format.dateTime(event.created_at)}
+                  </time>{' '}
+                  <span className={event.event.endsWith('failed') || event.event.endsWith('limited') ? 'warn' : undefined}>
+                    {text(event)}
+                  </span>
+                  {detail && <span className="subtle"> · {detail}</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {audit.hasNextPage && (
+        <div className="actions section-actions">
+          <button type="button" className="button" disabled={audit.isFetchingNextPage} onClick={() => audit.fetchNextPage()}>
+            {t('admin.auditMore')}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
