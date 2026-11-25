@@ -32,6 +32,7 @@ import { ShortcutPanel } from '../components/habits/ShortcutPanel';
 import { useHabitAction, useHabits, type Goal } from '../hooks/useHabits';
 import { useGroups } from '../hooks/useGroups';
 import { useSession } from '../hooks/useSession';
+import { ArrowDownIcon, ArrowUpIcon, GripIcon } from '../components/Icons';
 
 export function HabitsPage() {
   const { t, format } = useI18n();
@@ -134,7 +135,7 @@ export function HabitsPage() {
                   <span className="habit-title">{habit.name}</span>
                   <span className="subtle">{t('habits.archivedOn', { date: format.longDate(habit.archived_on!) })}</span>
                 </div>
-                <div className="actions">
+                <div className="button-row">
                   <button
                     type="button"
                     className="button"
@@ -370,7 +371,7 @@ function HabitItem({
           <GroupSelect groups={groups} value={groupId} onChange={setGroupId} />
           <ReminderTimes value={reminders} onChange={setReminders} />
           {action.isError && <p role="alert" className="error">{errorText(action.error)}</p>}
-          <div className="actions">
+          <div className="button-row">
             <button type="submit" className="button primary" disabled={action.isPending || !valid}>
               {t('common.save')}
             </button>
@@ -397,7 +398,7 @@ function HabitItem({
         {...attributes}
         {...listeners}
       >
-        <span aria-hidden="true">⠿</span>
+        <GripIcon />
       </button>
       <div className="habit-summary">
         <span className="habit-title">{habit.name}</span>
@@ -408,13 +409,12 @@ function HabitItem({
           {habit.reminders.length > 0 && (
             <>
               {' · '}
-              <span aria-hidden="true">🔔 </span>
               {t('reminders.summary', { times: habit.reminders.join(', ') })}
             </>
           )}
         </span>
       </div>
-      <div className="actions">
+      <div className="button-row">
         <button
           type="button"
           className="button icon"
@@ -422,7 +422,7 @@ function HabitItem({
           onClick={onUp}
           aria-label={t('habits.moveUp', { name: habit.name })}
         >
-          ↑
+          <ArrowUpIcon />
         </button>
         <button
           type="button"
@@ -431,7 +431,7 @@ function HabitItem({
           onClick={onDown}
           aria-label={t('habits.moveDown', { name: habit.name })}
         >
-          ↓
+          <ArrowDownIcon />
         </button>
         <button type="button" className="button" onClick={startEdit}>
           {t('habits.edit')}

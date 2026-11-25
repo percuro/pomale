@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AmountDialog } from '../components/days/AmountDialog';
 import { addDays, weekStart } from '../lib/dates';
 import { byGroup, colorStyle } from '../lib/habit-style';
-import { STATE_ICON } from '../lib/states';
+import { StateIcon } from '../components/days/StateIcon';
 import { useErrorText, useI18n } from '../i18n/context';
 import type { Day, HabitDays } from '../lib/types';
 import { setDay, useDays } from '../hooks/useDays';
@@ -182,9 +182,7 @@ export function WeekPage() {
                           onFocus={() => setActive([r, c])}
                           onClick={() => toggle(habit, day)}
                         >
-                          <span aria-hidden="true">
-                            {day.goal_type === 'quantity' && (day.value ?? 0) > 0 ? day.value : STATE_ICON[day.state]}
-                          </span>
+                          <StateIcon state={day.state} value={day.value} target={day.target} />
                         </button>
                       </span>
                     ))}

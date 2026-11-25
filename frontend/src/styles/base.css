@@ -1,0 +1,41 @@
+/*
+ * Shared base styles of fahrma and pomale: element defaults.
+ * This file is identical in both projects. See docs/design-language.md.
+ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+
+:root {
+  color-scheme: light dark;
+  font-family: var(--font-ui);
+  font-size: 100%;
+  line-height: var(--leading);
+  -webkit-text-size-adjust: 100%;
+}
+/* iPhone and iPad: follow the system text size; an installed web app has no browser zoom */
+@supports (font: -apple-system-body) {
+  :root { font: -apple-system-body; font-family: var(--font-ui); line-height: var(--leading); }
+}
+
+body {
+  background: var(--bg); color: var(--text);
+  min-height: 100dvh;
+  accent-color: var(--accent-fill);
+}
+
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; }
+h1 { font-size: var(--text-xl); line-height: var(--leading-tight); letter-spacing: -0.01em; margin: 0 0 var(--space-3); }
+h2 { font-size: var(--text-lg); line-height: 1.3; margin: var(--space-5) 0 var(--space-2); }
+h3 { font-size: var(--text-md); margin: var(--space-4) 0 var(--space-2); }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+code { font-size: 0.9em; }
+svg { flex: none; }
+
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Controls answer at once and show their own pressed state */
+a, button, summary, label, input, select, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}

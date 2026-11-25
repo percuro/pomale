@@ -5,6 +5,7 @@ import { OnlineOnly } from '../components/common/OnlineOnly';
 import { NewPasswordFields } from '../components/account/NewPasswordFields';
 import { OidcButton } from '../components/account/OidcButton';
 import { RemindersSection } from '../components/account/RemindersSection';
+import { LogoutSection } from '../components/account/LogoutSection';
 import { useOidcLabel } from '../hooks/useOidcLabel';
 import { useMeta } from '../hooks/useMeta';
 import { codeMessage } from '../i18n/core';
@@ -57,6 +58,7 @@ export function AccountPage() {
         <h1>{t('account.title')}</h1>
         <p className="subtle">{t('account.signedInAs', { username: me.username, role: t(`role.${me.role}`) })}</p>
       </div>
+      <LogoutSection />
       <OnlineOnly>
         {flash.reauth === 'ok' && <p role="status">{t('account.reauthDone')}</p>}
         <ProfileSection />
@@ -107,7 +109,7 @@ function ProfileSection() {
         </label>
         {update.isError && <p className="error" role="alert">{errorText(update.error)}</p>}
         {update.isSuccess && <p role="status">{t('common.saved')}</p>}
-        <div className="actions">
+        <div className="button-row">
           <button type="submit" className="button primary" disabled={update.isPending}>
             {t('common.save')}
           </button>
@@ -176,7 +178,7 @@ function PasswordSection() {
             <p className="error" role="alert">{errorText(change.error)}</p>
           ))}
         {change.isSuccess && <p role="status">{t('account.passwordChanged')}</p>}
-        <div className="actions">
+        <div className="button-row">
           <button
             type="submit"
             className="button primary"
@@ -250,7 +252,7 @@ function SessionsSection() {
         <p className="error" role="alert">{errorText(revoke.error ?? revokeOthers.error)}</p>
       )}
       {others.length > 1 && (
-        <div className="actions section-actions">
+        <div className="button-row section-actions">
           <button type="button" className="button" disabled={revokeOthers.isPending} onClick={() => revokeOthers.mutate()}>
             {t('account.logoutOthers')}
           </button>
@@ -266,7 +268,7 @@ function ExportSection() {
     <section aria-labelledby="export-heading">
       <h2 id="export-heading">{t('account.export')}</h2>
       <p className="subtle">{t('account.exportIntro')}</p>
-      <div className="actions section-actions">
+      <div className="button-row section-actions">
         <a className="button" href={`${API_BASE_URL}/v1/export.csv`} download>
           {t('account.exportButton')}
         </a>
@@ -304,7 +306,7 @@ function DeleteSection() {
     <section aria-labelledby="delete-heading">
       <h2 id="delete-heading">{t('account.delete')}</h2>
       <p className="subtle">{t('account.deleteIntro')}</p>
-      <div className="actions section-actions">
+      <div className="button-row section-actions">
         <button type="button" className="button danger" onClick={() => setOpen(true)}>
           {t('account.deleteButton')}
         </button>
@@ -397,7 +399,7 @@ function SignInSection({ flash }: { flash: Record<string, string> }) {
         ) : (
           <p className="subtle">{t('account.oidcNotLinked', { provider })}</p>
         )}
-        <div className="actions">
+        <div className="button-row">
           {me.oidc
             ? canUnlink && (
                 <button type="button" className="button" onClick={() => setDialog('unlink')}>

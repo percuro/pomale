@@ -108,7 +108,7 @@ function InviteSection({
             />
           </label>
           {create.isError && <p className="error" role="alert">{errorText(create.error)}</p>}
-          <div className="actions">
+          <div className="button-row">
             <button type="submit" className="button primary" disabled={create.isPending}>
               {t('admin.createInvite')}
             </button>
@@ -257,7 +257,7 @@ function AccountsSection({ onResetLink }: { onResetLink: (link: CreatedLink) => 
                   })}
                 </span>
               </div>
-              <div className="actions">
+              <div className="button-row">
                 <button
                   type="button"
                   className="button"
@@ -448,7 +448,7 @@ function AuditSection() {
         </ul>
       )}
       {audit.hasNextPage && (
-        <div className="actions section-actions">
+        <div className="button-row section-actions">
           <button type="button" className="button" disabled={audit.isFetchingNextPage} onClick={() => audit.fetchNextPage()}>
             {t('admin.auditMore')}
           </button>

@@ -43,7 +43,7 @@ export function GoalFields({
                 onChange={() => setType(goalType)}
               />
               <span aria-hidden="true">{t(`habits.goal.${goalType}`)}</span>
-              <span className="visually-hidden">{t(`habits.goal.${goalType}`)}</span>
+              <span className="sr-only">{t(`habits.goal.${goalType}`)}</span>
             </label>
           ))}
         </div>

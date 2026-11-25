@@ -101,7 +101,7 @@ export function ShortcutPanel({ habit }: { habit: Habit }) {
           </button>
         </div>
       ) : (
-        <form className="actions" onSubmit={submit}>
+        <form className="button-row" onSubmit={submit}>
           <label className="field inline">
             <span>{t('shortcut.device')}</span>
             <input value={label} maxLength={80} required onChange={(e) => setLabel(e.target.value)} />

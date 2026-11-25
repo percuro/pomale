@@ -1,0 +1,46 @@
+/*
+ * Shared design tokens of fahrma and pomale (same author, one design language).
+ * This file is identical in both projects; colours, radii and the display font
+ * live in each project's theme.css. See docs/design-language.md.
+ */
+:root {
+  /* Spacing: 4 px steps */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Type scale; nothing is set smaller than --text-xs (12 px) */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-figure: 2rem; /* one hero number per view: balance, kilometres, "4 of 5" */
+  --leading: 1.45;
+  --leading-tight: 1.2;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Sizes */
+  --tap: 2.75rem; /* minimum touch target: 44 CSS px */
+  --gutter: var(--space-4);
+  --content-width: 46rem;
+  --content-wide: 64rem;
+  --nav-height: 3.75rem; /* bottom navigation without the safe area */
+
+  /* Motion: feedback only, always behind prefers-reduced-motion */
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /*
+   * Window classes (custom properties cannot be used in media queries):
+   *   compact  < 37.5rem (600 px)   one column
+   *   medium   37.5rem – 52.49rem   content may use two columns
+   *   wide     ≥ 52.5rem (840 px)   navigation moves from the bottom into the top bar
+   */
+}

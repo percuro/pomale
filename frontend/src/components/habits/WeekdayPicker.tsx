@@ -24,14 +24,14 @@ export function WeekdayPicker({
         {[0, 1, 2, 3, 4, 5, 6].map((i) => {
           const bit = 1 << i;
           return (
-            <label key={i} className="chip">
+            <label key={i} className="choice">
               <input
                 type="checkbox"
                 checked={Boolean(value & bit)}
                 onChange={(e) => onChange(e.target.checked ? value | bit : value & ~bit)}
               />
               <span aria-hidden="true">{format.weekdayShort(i)}</span>
-              <span className="visually-hidden">{format.weekdayLong(i)}</span>
+              <span className="sr-only">{format.weekdayLong(i)}</span>
             </label>
           );
         })}

@@ -38,7 +38,7 @@ export function ReminderTimes({ value, onChange }: { value: string[]; onChange: 
       ))}
       {!timesValid(value) && <p className="error" role="alert">{t('reminders.invalid')}</p>}
       {value.length < REMINDERS_MAX && (
-        <div className="actions">
+        <div className="button-row">
           <button type="button" className="button" onClick={() => onChange([...value, ''])}>
             {t('reminders.add')}
           </button>

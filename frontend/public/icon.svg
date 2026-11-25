@@ -1,7 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="0" fill="#2f6b4f"/>
-  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="256" cy="256" r="150" stroke-width="28" opacity="0.35"/>
-    <path d="M181 262l52 52 100-112" stroke-width="40"/>
+  <clipPath id="shape"><rect width="512" height="512" rx="112"/></clipPath>
+  <g clip-path="url(#shape)">
+  
+  <rect width="512" height="512" fill="#f2f4ea"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="256" cy="256" r="140" stroke="#cfe0c4" stroke-width="36"/>
+    <path d="M395.5 243.8A140 140 0 1 1 292.2 120.8" stroke="#33682f" stroke-width="36"/>
+    <path d="M196 262l44 44 84-98" stroke="#33682f" stroke-width="40"/>
   </g>
+</g>
 </svg>

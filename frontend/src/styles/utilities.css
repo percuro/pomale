@@ -1,0 +1,23 @@
+/*
+ * Shared utilities of fahrma and pomale. They sit in the topmost layer, so a utility
+ * on an element always wins over the component it is used on. This file is identical
+ * in both projects. See docs/design-language.md.
+ */
+.subtle { color: var(--muted); }
+.small { font-size: var(--text-sm); }
+.error { color: var(--danger-text); font-weight: 600; }
+.plus { color: var(--plus); }
+.minus { color: var(--minus); }
+/* Quantities: digits of equal width, never broken across lines */
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.figure {
+  font-family: var(--font-display); font-size: var(--text-figure); font-weight: 700;
+  line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.m-0 { margin: 0; }
+.mt-0 { margin-top: 0; }
+.push-end { margin-left: auto; }

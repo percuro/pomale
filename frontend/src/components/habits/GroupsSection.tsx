@@ -3,6 +3,7 @@ import { useErrorText, useI18n } from '../../i18n/context';
 import { useGroupAction, useGroups } from '../../hooks/useGroups';
 import type { Group } from '../../lib/types';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { ArrowDownIcon, ArrowUpIcon } from '../Icons';
 
 export function GroupsSection() {
   const t = useI18n().t;
@@ -113,12 +114,12 @@ function GroupItem({
   return (
     <li className="habit-item">
       <span className="habit-summary habit-title">{group.name}</span>
-      <div className="actions">
+      <div className="button-row">
         <button type="button" className="button icon" disabled={!onUp} onClick={onUp} aria-label={t('groups.moveUp', { name: group.name })}>
-          ↑
+          <ArrowUpIcon />
         </button>
         <button type="button" className="button icon" disabled={!onDown} onClick={onDown} aria-label={t('groups.moveDown', { name: group.name })}>
-          ↓
+          <ArrowDownIcon />
         </button>
         <button
           type="button"

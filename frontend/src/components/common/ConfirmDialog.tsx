@@ -53,7 +53,7 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      className="dialog card"
+      className="dialog"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -74,8 +74,8 @@ export function ConfirmDialog({
               {error}
             </p>
           )}
-          <div className="actions">
-            <button type="submit" className={danger ? 'button danger' : 'button primary'} disabled={busy}>
+          <div className="button-row">
+            <button type="submit" className={danger ? 'button primary danger' : 'button primary'} disabled={busy}>
               {confirmLabel}
             </button>
             <button type="button" className="button" onClick={onCancel} disabled={busy}>

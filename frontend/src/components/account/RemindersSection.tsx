@@ -108,7 +108,7 @@ export function RemindersSection() {
         )}
         {test.isSuccess && <p role="status">{t('push.testSent')}</p>}
         {test.isError && <p className="error" role="alert">{errorText(test.error)}</p>}
-        <div className="actions">
+        <div className="button-row">
           {state === 'off' && (
             <button type="button" className="button primary" disabled={busy} onClick={() => turnOn.mutate()}>
               {t('push.turnOn')}
