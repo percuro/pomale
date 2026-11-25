@@ -68,3 +68,45 @@ class WebTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LifespanTest(unittest.TestCase):
+    """Starting the app creates the VAPID key and starts the reminder loop; stopping ends it."""
+
+    def setUp(self):
+        from unittest import mock
+
+        self.env = ApiTestEnvironment()
+        self.addCleanup(self.env.close)
+        patcher = mock.patch("app.web.SessionLocal", self.env.SessionLocal)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_reminders_start_and_stop(self):
+        from unittest import mock
+
+        from app.models import InstanceSecret
+        from app.services.scheduler import ReminderScheduler
+
+        with mock.patch.object(ReminderScheduler, "stop", autospec=True, side_effect=ReminderScheduler.stop) as stop:
+            with self.assertLogs("app.services.scheduler", "INFO"), TestClient(create_application(None)) as client:
+                self.assertEqual(client.get("/api/health").status_code, 200)
+            stop.assert_called_once()
+        db = self.env.SessionLocal()
+        try:
+            self.assertIsNotNone(db.get(InstanceSecret, "vapid_private_key"))
+        finally:
+            db.close()
+
+    def test_turned_off(self):
+        from unittest import mock
+
+        from app.models import InstanceSecret
+
+        with mock.patch.dict("os.environ", {"PUSH_ENABLED": "false"}), TestClient(create_application(None)):
+            pass
+        db = self.env.SessionLocal()
+        try:
+            self.assertIsNone(db.get(InstanceSecret, "vapid_private_key"))
+        finally:
+            db.close()
