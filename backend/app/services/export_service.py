@@ -1,9 +1,9 @@
 import csv
 import io
-from datetime import date
+from datetime import date, timedelta
 
 from app.repositories.habit_repository import HabitRepository
-from app.services.day_service import build_days
+from app.services.day_service import Entry, evaluate_range, week_start
 from app.services.i18n import text
 
 
@@ -20,11 +20,12 @@ def export_csv(
     starts = [s.valid_from for h in habits for s in h.schedules]
     start = start or (min(starts) if starts else today)
     end = min(end, today)
-    checkins = repository.checkins_between([h.id for h in habits], start, end)
-    done_by_habit: dict[int, set[date]] = {}
+    first, last = week_start(start), week_start(end) + timedelta(days=6)
+    checkins = repository.checkins_between([h.id for h in habits], first, last)
+    pauses = repository.pauses_overlapping(user_id, first, last)
+    entries_by_habit: dict[int, dict[date, Entry]] = {}
     for checkin in checkins:
-        if checkin.done:
-            done_by_habit.setdefault(checkin.habit_id, set()).add(checkin.local_date)
+        entries_by_habit.setdefault(checkin.habit_id, {})[checkin.local_date] = Entry(checkin.done, checkin.value)
 
     buffer = io.StringIO()
     buffer.write("﻿")  # BOM: lets Excel detect UTF-8
@@ -32,7 +33,9 @@ def export_csv(
     writer.writerow([text(locale, f"csv.{column}") for column in ("date", "habit", "cue", "planned", "state")])
     rows = []
     for habit in habits:
-        for info in build_days(habit.schedules, done_by_habit.get(habit.id, set()), start, end, today):
+        habit_pauses = [p for p in pauses if p.habit_id is None or p.habit_id == habit.id]
+        entries = entries_by_habit.get(habit.id, {})
+        for info in evaluate_range(habit.schedules, entries, habit_pauses, start, end, today).days:
             if not info.planned and not info.done:
                 continue
             rows.append(

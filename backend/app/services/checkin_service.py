@@ -1,10 +1,10 @@
 from datetime import date, timedelta
 
 from app.errors import AppError
-from app.models.habit import Checkin, Habit
+from app.models.habit import Checkin, Habit, HabitPause
 from app.repositories.habit_repository import HabitRepository
 from app.schemas.habit import CheckinRead, DayRead, DaysRead, HabitDaysRead, QuotaRead
-from app.services.day_service import build_days, day_state, is_planned, quota
+from app.services.day_service import Entry, Evaluation, evaluate_range, week_start
 
 MAX_RANGE_DAYS = 62
 
@@ -58,14 +58,21 @@ class CheckinService:
             self.repository.commit()
         return self._read(habit, day, checkin, today)
 
+    def evaluate(self, habit: Habit, start: date, end: date, today: date) -> Evaluation:
+        """One habit over start..end, loading the whole weeks around it."""
+        first, last = _whole_weeks(start, end)
+        checkins = self.repository.checkins_between([habit.id], first, last)
+        pauses = _pauses_for(habit, self.repository.pauses_overlapping(habit.user_id, first, last))
+        return evaluate_range(habit.schedules, _entries(checkins), pauses, start, end, today)
+
     def _read(self, habit: Habit, day: date, checkin: Checkin | None, today: date) -> CheckinRead:
-        done = bool(checkin and checkin.done)
-        planned = is_planned(habit.schedules, day)
+        # The state of one day can depend on its week (weekly goals)
+        info = self.evaluate(habit, day, day, today).days[0]
         return CheckinRead(
             habit_id=habit.id,
             date=day,
-            done=done,
-            state=day_state(planned, done, day, today),
+            done=info.done,
+            state=info.state,
             version=checkin.version if checkin else 0,
         )
 
@@ -75,7 +82,9 @@ class CheckinService:
         if (end - start) > timedelta(days=MAX_RANGE_DAYS):
             raise AppError(422, "range.too_long", f"At most {MAX_RANGE_DAYS} days at once", max_days=MAX_RANGE_DAYS)
         habits = self.repository.list_active_between(user_id, start)
-        checkins = self.repository.checkins_between([h.id for h in habits], start, end)
+        first, last = _whole_weeks(start, end)
+        checkins = self.repository.checkins_between([h.id for h in habits], first, last)
+        pauses = self.repository.pauses_overlapping(user_id, first, last)
         by_habit: dict[int, dict[date, Checkin]] = {}
         for checkin in checkins:
             by_habit.setdefault(checkin.habit_id, {})[checkin.local_date] = checkin
@@ -83,9 +92,11 @@ class CheckinService:
         result = []
         for habit in habits:
             entries = by_habit.get(habit.id, {})
-            done_dates = {d for d, c in entries.items() if c.done}
-            infos = build_days(habit.schedules, done_dates, start, end, today)
-            q = quota(infos, today)
+            evaluation = evaluate_range(
+                habit.schedules, _entries(entries.values()), _pauses_for(habit, pauses), start, end, today
+            )
+            infos = evaluation.days
+            q = evaluation.quota
             result.append(
                 HabitDaysRead(
                     id=habit.id,
@@ -106,3 +117,15 @@ class CheckinService:
                 )
             )
         return DaysRead(today=today, timezone=timezone, start=start, end=end, habits=result)
+
+
+def _whole_weeks(start: date, end: date) -> tuple[date, date]:
+    return week_start(start), week_start(end) + timedelta(days=6)
+
+
+def _entries(checkins) -> dict[date, Entry]:
+    return {c.local_date: Entry(done=c.done, value=c.value) for c in checkins}
+
+
+def _pauses_for(habit: Habit, pauses: list[HabitPause]) -> list[HabitPause]:
+    return [p for p in pauses if p.habit_id is None or p.habit_id == habit.id]

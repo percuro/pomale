@@ -1,0 +1,111 @@
+{
+  "about": "Shared cases for day evaluation: backend tests/test_quota_cases.py and frontend src/lib/evaluate.test.ts run the same set. Each week lists raw days Monday to Sunday: planned/paused/done as 7-character strings of 0 and 1, goal_type and target as one value or 7, value (quantity) as 7 numbers. States are expected for start..end.",
+  "cases": [
+    {
+      "name": "days: four of five, extra on Saturday",
+      "today": "2026-11-21", "start": "2026-11-16", "end": "2026-11-22",
+      "weeks": [{"start": "2026-11-16", "goal_type": "days", "target": null, "planned": "1111100", "paused": "0000000", "done": "1101110"}],
+      "expect": {"states": ["done", "done", "open", "done", "done", "extra_done", "future"], "quota": {"done": 4, "due": 5}, "week": null}
+    },
+    {
+      "name": "days: today counts only once done",
+      "today": "2026-11-24", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "days", "target": null, "planned": "1111111", "paused": "0000000", "done": "1000000"}],
+      "expect": {"states": ["done", "open", "future", "future", "future", "future", "future"], "quota": {"done": 1, "due": 1}, "week": null}
+    },
+    {
+      "name": "days: check-ins in the future are ignored",
+      "today": "2026-11-24", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "days", "target": null, "planned": "1111111", "paused": "0000000", "done": "0001000"}],
+      "expect": {"states": ["open", "open", "future", "future", "future", "future", "future"], "quota": {"done": 0, "due": 1}, "week": null}
+    },
+    {
+      "name": "days: paused days are not due, a check-in there is extra",
+      "today": "2026-11-27", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "days", "target": null, "planned": "1100111", "paused": "0011000", "done": "1001000"}],
+      "expect": {"states": ["done", "open", "paused", "extra_done", "open", "future", "future"], "quota": {"done": 1, "due": 2}, "week": null}
+    },
+    {
+      "name": "weekly: running week counts only what is done",
+      "today": "2026-11-26", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "weekly_count", "target": 3, "planned": "1111111", "paused": "0000000", "done": "1010000"}],
+      "expect": {"states": ["done", "not_planned", "done", "open", "future", "future", "future"], "quota": {"done": 2, "due": 2}, "week": {"done": 2, "target": 3}}
+    },
+    {
+      "name": "weekly: target reached, further check-ins are extra",
+      "today": "2026-11-26", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "weekly_count", "target": 3, "planned": "1111111", "paused": "0000000", "done": "1111000"}],
+      "expect": {"states": ["done", "done", "done", "extra_done", "future", "future", "future"], "quota": {"done": 3, "due": 3}, "week": {"done": 3, "target": 3}}
+    },
+    {
+      "name": "weekly: reached before today, today is not open",
+      "today": "2026-11-26", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "weekly_count", "target": 2, "planned": "1111111", "paused": "0000000", "done": "1100000"}],
+      "expect": {"states": ["done", "done", "not_planned", "not_planned", "future", "future", "future"], "quota": {"done": 2, "due": 2}, "week": {"done": 2, "target": 2}}
+    },
+    {
+      "name": "weekly: a finished week is due in full",
+      "today": "2026-11-23", "start": "2026-11-16", "end": "2026-11-29",
+      "weeks": [
+        {"start": "2026-11-16", "goal_type": "weekly_count", "target": 3, "planned": "1111111", "paused": "0000000", "done": "1000100"},
+        {"start": "2026-11-23", "goal_type": "weekly_count", "target": 3, "planned": "1111111", "paused": "0000000", "done": "0000000"}
+      ],
+      "expect": {
+        "states": ["done", "not_planned", "not_planned", "not_planned", "done", "not_planned", "not_planned", "open", "future", "future", "future", "future", "future", "future"],
+        "quota": {"done": 2, "due": 3}, "week": {"done": 0, "target": 3},
+        "weeks": [["2026-11-16", 2, 3], ["2026-11-23", 0, 0]]
+      }
+    },
+    {
+      "name": "weekly: a range that cuts weeks counts them whole",
+      "today": "2026-11-23", "start": "2026-11-20", "end": "2026-11-24",
+      "weeks": [
+        {"start": "2026-11-16", "goal_type": "weekly_count", "target": 3, "planned": "1111111", "paused": "0000000", "done": "1000100"},
+        {"start": "2026-11-23", "goal_type": "weekly_count", "target": 3, "planned": "1111111", "paused": "0000000", "done": "0000000"}
+      ],
+      "expect": {"states": ["done", "not_planned", "not_planned", "open", "future"], "quota": {"done": 2, "due": 3}, "week": {"done": 0, "target": 3}, "weeks": [["2026-11-16", 2, 3], ["2026-11-23", 0, 0]]}
+    },
+    {
+      "name": "weekly: paused days, reduced target, check-in on a paused day is extra",
+      "today": "2026-11-25", "start": "2026-11-16", "end": "2026-11-22",
+      "weeks": [{"start": "2026-11-16", "goal_type": "weekly_count", "target": 2, "planned": "1111100", "paused": "0000011", "done": "0101001"}],
+      "expect": {"states": ["not_planned", "done", "not_planned", "done", "not_planned", "paused", "extra_done"], "quota": {"done": 2, "due": 2}, "week": null}
+    },
+    {
+      "name": "weekly: more than the target in a finished week",
+      "today": "2026-11-25", "start": "2026-11-16", "end": "2026-11-22",
+      "weeks": [{"start": "2026-11-16", "goal_type": "weekly_count", "target": 2, "planned": "1111111", "paused": "0000000", "done": "1111000"}],
+      "expect": {"states": ["done", "done", "extra_done", "extra_done", "not_planned", "not_planned", "not_planned"], "quota": {"done": 2, "due": 2}, "week": null}
+    },
+    {
+      "name": "weekly: every active day paused, nothing due",
+      "today": "2026-11-25", "start": "2026-11-16", "end": "2026-11-22",
+      "weeks": [{"start": "2026-11-16", "goal_type": "weekly_count", "target": 0, "planned": "0000000", "paused": "1111111", "done": "0010000"}],
+      "expect": {"states": ["paused", "paused", "extra_done", "paused", "paused", "paused", "paused"], "quota": {"done": 0, "due": 0}, "week": null}
+    },
+    {
+      "name": "quantity: reached, partial and open days",
+      "today": "2026-11-26", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "quantity", "target": 8, "planned": "1111100", "paused": "0000000", "done": "1101000", "value": [8, 3, 0, 10, 0, 0, 0]}],
+      "expect": {"states": ["done", "partial", "open", "done", "future", "future", "future"], "quota": {"done": 2, "due": 4}, "week": null}
+    },
+    {
+      "name": "quantity: partial today does not count",
+      "today": "2026-11-26", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "quantity", "target": 8, "planned": "1111100", "paused": "0000000", "done": "1101000", "value": [8, 3, 0, 5, 0, 0, 0]}],
+      "expect": {"states": ["done", "partial", "open", "partial", "future", "future", "future"], "quota": {"done": 1, "due": 3}, "week": null}
+    },
+    {
+      "name": "quantity: any amount on an unplanned day is extra",
+      "today": "2026-11-29", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": "quantity", "target": 8, "planned": "1111100", "paused": "0000000", "done": "1111110", "value": [8, 8, 8, 8, 8, 2, 0]}],
+      "expect": {"states": ["done", "done", "done", "done", "done", "extra_done", "not_planned"], "quota": {"done": 5, "due": 5}, "week": null}
+    },
+    {
+      "name": "mixed: days goal until Wednesday, weekly goal from Thursday",
+      "today": "2026-11-30", "start": "2026-11-23", "end": "2026-11-29",
+      "weeks": [{"start": "2026-11-23", "goal_type": ["days", "days", "days", "weekly_count", "weekly_count", "weekly_count", "weekly_count"], "target": [null, null, null, 2, 2, 2, 2], "planned": "1111111", "paused": "0000000", "done": "1100100"}],
+      "expect": {"states": ["done", "done", "open", "not_planned", "done", "not_planned", "not_planned"], "quota": {"done": 3, "due": 5}, "week": null}
+    }
+  ]
+}

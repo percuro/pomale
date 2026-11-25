@@ -4,7 +4,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.habit import Checkin, Habit, HabitSchedule
+from app.models.habit import Checkin, Habit, HabitPause, HabitSchedule
 
 
 class HabitRepository:
@@ -75,6 +75,16 @@ class HabitRepository:
                     Checkin.local_date >= start,
                     Checkin.local_date <= end,
                 )
+            )
+        )
+
+    def pauses_overlapping(self, user_id: int, start: date, end: date) -> list[HabitPause]:
+        """The account's pauses that touch start..end, for all habits and single ones."""
+        return list(
+            self.db.scalars(
+                select(HabitPause)
+                .where(HabitPause.user_id == user_id, HabitPause.start_on <= end, HabitPause.end_on >= start)
+                .order_by(HabitPause.start_on, HabitPause.id)
             )
         )
 
