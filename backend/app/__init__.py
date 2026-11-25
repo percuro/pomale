@@ -1,3 +1,3 @@
 """pomale backend."""
 
-__version__ = "0.8.0-rc.1"
+__version__ = "0.8.0"

@@ -4,7 +4,7 @@
 
 Habits grow at their own pace. pomale is a small, self-hosted habit tracker for your phone and your laptop. Check off a habit in a second on the iPhone, review and correct the week on a big screen. No points, no streaks that reset to zero, no notes you have to write.
 
-> Status: 0.7 – reminders via Web Push. API tokens, JSON import/export and built-in backups are next on the [roadmap](#roadmap).
+> Status: 0.8 – a new look, with a design language shared with fahrma. API tokens, JSON import/export and built-in backups are next on the [roadmap](#roadmap).
 
 ## Features
 
@@ -52,8 +52,9 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - ~~**0.5** single sign-on (OpenID Connect), audit log~~ ✓
 - ~~**0.6** weekly targets ("3× a week"), quantities, pauses, history view~~ ✓
 - ~~**0.7** reminders via Web Push~~ ✓
-- **0.8** personal API tokens, JSON export/import, built-in scheduled backups
-- **0.9** beta hardening (accessibility, performance, upgrade tests)
+- ~~**0.8** new look, design language shared with fahrma~~ ✓
+- **0.9** personal API tokens, JSON export/import, built-in scheduled backups
+- **0.10** beta hardening (accessibility, performance, upgrade tests)
 - **1.0** stable API and configuration
 
 ## Sibling project

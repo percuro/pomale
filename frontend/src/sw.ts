@@ -21,7 +21,8 @@ declare let self: ServiceWorkerGlobalScope;
 self.skipWaiting();
 clientsClaim();
 
-precacheAndRoute(self.__WB_MANIFEST);
+// Icons are requested with ?v=… (see vite.config.ts); the cached file answers those too
+precacheAndRoute(self.__WB_MANIFEST, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/] });
 cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/api\//] }));
 

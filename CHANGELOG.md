@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
-## 0.8.0-rc.1 – a new look (release candidate)
+## 0.8.0 – a new look
 
 ### Features
 
@@ -18,6 +18,11 @@ All notable changes to this project are documented here. Versions follow [Semant
 ### Fixes
 
 - The button of a quantity goal on "Today" had a name for screen readers that did not contain its visible text.
+- Icons carry a version in their address (`/icon.svg?v=…`), so that browsers fetch a changed icon instead of showing the cached one for a week. Bookmarks pick up the new icon the next time the page is opened; some browsers only do so after the bookmark is added again.
+
+### Upgrade notes
+
+- No migration and no new settings. Logging out moved from the top bar to the account page. The roadmap moves by one version: API tokens, export/import and backups are planned for 0.9.
 
 ## 0.7.0 – reminders
 

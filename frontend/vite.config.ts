@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -9,12 +10,24 @@ const { version } = JSON.parse(readFileSync(new URL('./package.json', import.met
   version: string
 }
 
-/** Fills %APP_NAME%-style placeholders in index.html and emits the web app manifest. */
+/**
+ * Icons are cached for a week under their name, and browsers keep the icons of bookmarks
+ * even longer. A changed icon therefore gets a new address: /icon.svg?v=<its content>.
+ */
+function icon(file: string): string {
+  const content = readFileSync(new URL(`./public/${file}`, import.meta.url))
+  return `/${file}?v=${createHash('sha256').update(content).digest('hex').slice(0, 8)}`
+}
+
+/** Fills %APP_NAME%-style placeholders in index.html, versions the icons and emits the web app manifest. */
 function brand(): Plugin {
   const values: Record<string, string> = { APP_NAME, APP_SHORT_NAME, THEME_COLOR, THEME_COLOR_DARK }
   return {
     name: 'brand',
-    transformIndexHtml: (html) => html.replace(/%(APP_NAME|APP_SHORT_NAME|THEME_COLOR_DARK|THEME_COLOR)%/g, (_, key) => values[key]),
+    transformIndexHtml: (html) =>
+      html
+        .replace(/%(APP_NAME|APP_SHORT_NAME|THEME_COLOR_DARK|THEME_COLOR)%/g, (_, key) => values[key])
+        .replace(/href="\/(icon\.svg|apple-touch-icon\.png)"/g, (_, file) => `href="${icon(file)}"`),
     generateBundle() {
       this.emitFile({
         type: 'asset',
@@ -29,10 +42,10 @@ function brand(): Plugin {
             background_color: BACKGROUND_COLOR,
             theme_color: THEME_COLOR,
             icons: [
-              { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-              { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-              { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },
-              { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+              { src: icon('icon-192.png'), sizes: '192x192', type: 'image/png' },
+              { src: icon('icon-512.png'), sizes: '512x512', type: 'image/png' },
+              { src: icon('icon.svg'), sizes: 'any', type: 'image/svg+xml' },
+              { src: icon('icon-maskable-512.png'), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
             ],
           },
           null,
