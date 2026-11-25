@@ -37,7 +37,8 @@ def shortcut_check_in(
     now: datetime = Depends(get_now),
 ):
     done = data.done if data is not None else True
-    return _service(db).check_in_today(request, habit_id, done, now)
+    amount = data.amount if data is not None else None
+    return _service(db).check_in_today(request, habit_id, done, now, amount=amount)
 
 
 @router.get("/habits/{habit_id}/shortcut-tokens", response_model=list[ShortcutTokenRead])

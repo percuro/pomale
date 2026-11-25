@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -96,6 +96,24 @@ class HabitRepository:
 
     def get_checkin(self, habit_id: int, day: date) -> Checkin | None:
         return self.db.get(Checkin, (habit_id, day))
+
+    def add_to_value(self, habit_id: int, day: date, amount: int, target: int, maximum: int) -> None:
+        """Atomically add to a quantity day: two shortcut calls at once add up, nothing is lost."""
+        current = func.coalesce(Checkin.value, case((Checkin.done.is_(True), target), else_=0))
+        statement = (
+            update(Checkin)
+            .where(Checkin.habit_id == habit_id, Checkin.local_date == day)
+            .values(value=func.min(current + amount, maximum), done=True, version=Checkin.version + 1, last_op_id=None)
+            .execution_options(synchronize_session=False)
+        )
+        if self.db.execute(statement).rowcount:
+            self.db.commit()
+            return
+        self.db.rollback()
+        checkin = Checkin(habit_id=habit_id, local_date=day, done=True, value=min(amount, maximum), version=1)
+        if not self.insert_checkin(checkin):
+            # Someone else created the entry in the meantime: add to it
+            self.add_to_value(habit_id, day, amount, target, maximum)
 
     def insert_checkin(self, checkin: Checkin) -> bool:
         """Insert an entry. False if a concurrent request was faster."""

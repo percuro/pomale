@@ -92,6 +92,9 @@ class CheckinService:
             self.repository.commit()
         return self._read(habit, day, checkin, today)
 
+    def read_day(self, habit: Habit, day: date, today: date) -> CheckinRead:
+        return self._read(habit, day, self.repository.get_checkin(habit.id, day), today)
+
     def set_note(self, habit: Habit, day: date, note: str | None, today: date) -> NoteRead:
         """Notes are last-write-wins and never change `version`, so they cause no sync conflicts."""
         if day > today:

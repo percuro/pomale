@@ -26,20 +26,22 @@ class ExportTest(unittest.TestCase):
         text = response.content.decode("utf-8")
         self.assertTrue(text.startswith("﻿"))
         lines = text.lstrip("﻿").strip().split("\r\n")
-        self.assertEqual(lines[0], "datum;gewohnheit;hinweis;geplant;zustand")
+        self.assertEqual(lines[0], "datum;gewohnheit;hinweis;geplant;zustand;wert;ziel;notiz")
         self.assertEqual(
             lines[1:],
             [
-                "2026-11-16;'=Lesen;abends;ja;erledigt",
-                "2026-11-18;'=Lesen;abends;nein;zusätzlich erledigt",
-                "2026-11-23;'=Lesen;abends;ja;offen",
+                "2026-11-16;'=Lesen;abends;ja;erledigt;;;",
+                "2026-11-18;'=Lesen;abends;nein;zusätzlich erledigt;;;",
+                "2026-11-23;'=Lesen;abends;ja;offen;;;",
             ],
         )
 
     def test_language_follows_account_then_browser(self):
         self.client.post("/v1/habits", json={"name": "Lesen", "weekdays": 1, "start_on": "2026-11-16"})
         english = self.client.get("/v1/export.csv").text.lstrip("\ufeff").split("\r\n")
-        self.assertEqual(english[:2], ["date;habit;cue;planned;state", "2026-11-16;Lesen;;yes;open"])
+        self.assertEqual(
+            english[:2], ["date;habit;cue;planned;state;value;target;note", "2026-11-16;Lesen;;yes;open;;;"]
+        )
         german = self.client.get("/v1/export.csv", headers={"Accept-Language": "de-AT,de;q=0.9,en;q=0.5"})
         self.assertTrue(german.text.lstrip("\ufeff").startswith("datum;gewohnheit"))
         self.client.patch("/v1/account", json={"locale": "en"})
@@ -47,6 +49,28 @@ class ExportTest(unittest.TestCase):
             self.client.get("/v1/export.csv", headers={"Accept-Language": "de"})
             .text.lstrip("\ufeff")
             .startswith("date;")
+        )
+
+    def test_goal_types_pauses_and_notes(self):
+        water = self.client.post(
+            "/v1/habits", json={"name": "Water", "goal_type": "quantity", "target": 8, "start_on": "2026-11-23"}
+        ).json()
+        run = self.client.post(
+            "/v1/habits", json={"name": "Run", "goal_type": "weekly_count", "target": 2, "start_on": "2026-11-23"}
+        ).json()
+        self.client.put(f"/v1/habits/{water['id']}/days/2026-11-23", json={"value": 5})
+        self.client.put(f"/v1/habits/{water['id']}/days/2026-11-23/note", json={"note": "-hot day"})
+        self.client.put(f"/v1/habits/{run['id']}/days/2026-11-23", json={"done": True})
+        self.client.post("/v1/pauses", json={"habit_id": water["id"], "start_on": "2026-11-24", "end_on": "2026-11-24"})
+        lines = self.client.get("/v1/export.csv").text.lstrip("\ufeff").strip().split("\r\n")
+        self.assertEqual(
+            lines[1:],
+            [
+                "2026-11-23;Water;;yes;partly done;5;8;'-hot day",
+                "2026-11-23;Run;;yes;done;;2;",
+                "2026-11-24;Water;;no;paused;0;8;",
+                "2026-11-24;Run;;yes;open;;2;",
+            ],
         )
 
     def test_requires_login(self):

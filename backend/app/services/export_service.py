@@ -24,19 +24,26 @@ def export_csv(
     checkins = repository.checkins_between([h.id for h in habits], first, last)
     pauses = repository.pauses_overlapping(user_id, first, last)
     entries_by_habit: dict[int, dict[date, Entry]] = {}
+    notes: dict[tuple[int, date], str] = {}
     for checkin in checkins:
         entries_by_habit.setdefault(checkin.habit_id, {})[checkin.local_date] = Entry(checkin.done, checkin.value)
+        if checkin.note:
+            notes[(checkin.habit_id, checkin.local_date)] = checkin.note
 
     buffer = io.StringIO()
     buffer.write("﻿")  # BOM: lets Excel detect UTF-8
     writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
-    writer.writerow([text(locale, f"csv.{column}") for column in ("date", "habit", "cue", "planned", "state")])
+    # New columns go at the end, so existing evaluations of the file keep working
+    columns = ("date", "habit", "cue", "planned", "state", "value", "target", "note")
+    writer.writerow([text(locale, f"csv.{column}") for column in columns])
     rows = []
     for habit in habits:
         habit_pauses = [p for p in pauses if p.habit_id is None or p.habit_id == habit.id]
         entries = entries_by_habit.get(habit.id, {})
         for info in evaluate_range(habit.schedules, entries, habit_pauses, start, end, today).days:
-            if not info.planned and not info.done:
+            note = notes.get((habit.id, info.date))
+            # Leave out days without anything to say: not planned (weekly goals: not checked off)
+            if info.state == "not_planned" and not note:
                 continue
             rows.append(
                 (
@@ -46,6 +53,9 @@ def export_csv(
                     _cell(habit.cue),
                     text(locale, "csv.yes" if info.planned else "csv.no"),
                     text(locale, f"state.{info.state}"),
+                    "" if info.value is None else str(info.value),
+                    "" if info.target is None or info.goal_type == "days" else str(info.target),
+                    _cell(note),
                 )
             )
     rows.sort(key=lambda row: (row[0], row[1]))
