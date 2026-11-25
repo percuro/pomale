@@ -13,6 +13,8 @@ import { SetupPage } from '../../pages/SetupPage';
 import { useMeta } from '../../hooks/useMeta';
 import { syncEngine } from '../../lib/sync-engine';
 import { SyncBridge } from '../sync/SyncBridge';
+import { WorkerBridge } from '../sync/WorkerBridge';
+import { forgetLocalSubscription } from '../../lib/push';
 import { SyncStatus } from '../sync/SyncStatus';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { TimezoneHint } from './TimezoneHint';
@@ -64,8 +66,12 @@ function SignedIn({ me }: { me: Me }) {
   const [confirmLogout, setConfirmLogout] = useState(0);
   const logout = useMutation({
     mutationFn: () => apiFetch<void>('/v1/auth/logout', { method: 'POST' }),
-    // Forget local data only after a successful logout
-    onSuccess: () => signedOut(queryClient),
+    // Forget local data only after a successful logout. The server dropped this device's
+    // reminders; the browser subscription goes too, so the next account does not inherit it.
+    onSuccess: async () => {
+      await forgetLocalSubscription();
+      await signedOut(queryClient);
+    },
     onSettled: () => setConfirmLogout(0),
   });
 
@@ -106,6 +112,7 @@ function SignedIn({ me }: { me: Me }) {
         <p>{t('logout.pending', { count: confirmLogout })}</p>
       </ConfirmDialog>
       <SyncBridge owner={me} />
+      <WorkerBridge />
       <main id="content" className="content">
         {logout.isError && <p className="error" role="alert">{t('logout.failed')}</p>}
         <TimezoneHint me={me} />

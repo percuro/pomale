@@ -24,8 +24,10 @@ import { colorStyle } from '../lib/habit-style';
 import { ColorPicker } from '../components/habits/ColorPicker';
 import { GoalFields } from '../components/habits/GoalFields';
 import { goalValid, sameGoal } from '../lib/goals';
+import { normalizeTimes, sameTimes, timesValid } from '../lib/reminder-times';
 import { GroupsSection } from '../components/habits/GroupsSection';
 import { PausesSection } from '../components/habits/PausesSection';
+import { ReminderTimes } from '../components/habits/ReminderTimes';
 import { ShortcutPanel } from '../components/habits/ShortcutPanel';
 import { useHabitAction, useHabits, type Goal } from '../hooks/useHabits';
 import { useGroups } from '../hooks/useGroups';
@@ -186,10 +188,12 @@ function NewHabitForm({ groups }: { groups: Group[] }) {
   const [color, setColor] = useState<HabitColor | null>(null);
   const [groupId, setGroupId] = useState<number | null>(null);
   const [startOn, setStartOn] = useState(today);
+  const [reminders, setReminders] = useState<string[]>([]);
+  const valid = goalValid(goal) && timesValid(reminders);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!goalValid(goal)) return;
+    if (!valid) return;
     action.mutate(
       {
         type: 'create',
@@ -200,6 +204,7 @@ function NewHabitForm({ groups }: { groups: Group[] }) {
           unit: goal.goal_type === 'quantity' ? unit || null : null,
           color,
           group_id: groupId,
+          reminders: normalizeTimes(reminders),
           start_on: startOn,
         },
       },
@@ -209,6 +214,7 @@ function NewHabitForm({ groups }: { groups: Group[] }) {
           setCue('');
           setGoal(NEW_GOAL);
           setUnit('');
+          setReminders([]);
         },
       },
     );
@@ -239,12 +245,13 @@ function NewHabitForm({ groups }: { groups: Group[] }) {
       <GoalFields value={goal} unit={unit} onChange={setGoal} onUnitChange={setUnit} />
       <ColorPicker value={color} onChange={setColor} />
       <GroupSelect groups={groups} value={groupId} onChange={setGroupId} />
+      <ReminderTimes value={reminders} onChange={setReminders} />
       <label className="field">
         <span>{t('habits.startsOn')}</span>
         <input type="date" required value={startOn} onChange={(e) => setStartOn(e.target.value)} />
       </label>
       {action.isError && <p role="alert" className="error">{errorText(action.error)}</p>}
-      <button type="submit" className="button primary" disabled={action.isPending || !goalValid(goal)}>
+      <button type="submit" className="button primary" disabled={action.isPending || !valid}>
         {t('habits.create')}
       </button>
     </form>
@@ -288,7 +295,9 @@ function HabitItem({
   const [color, setColor] = useState<HabitColor | null>(habit.color);
   const [groupId, setGroupId] = useState<number | null>(habit.group_id);
   const [validFrom, setValidFrom] = useState(today);
+  const [reminders, setReminders] = useState<string[]>(habit.reminders);
   const goalChanged = !sameGoal(goal, current);
+  const valid = goalValid(goal) && timesValid(reminders);
 
   const startEdit = () => {
     setName(habit.name);
@@ -298,12 +307,13 @@ function HabitItem({
     setColor(habit.color);
     setGroupId(habit.group_id);
     setValidFrom(today);
+    setReminders(habit.reminders);
     setEditing(true);
   };
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (!goalValid(goal)) return;
+    if (!valid) return;
     try {
       const details = {
         name,
@@ -311,13 +321,15 @@ function HabitItem({
         unit: goal.goal_type === 'quantity' ? unit || null : habit.unit,
         color,
         group_id: groupId,
+        reminders: normalizeTimes(reminders),
       };
       const changed =
         details.name !== habit.name ||
         details.cue !== habit.cue ||
         details.unit !== habit.unit ||
         details.color !== habit.color ||
-        details.group_id !== habit.group_id;
+        details.group_id !== habit.group_id ||
+        !sameTimes(details.reminders, habit.reminders);
       if (changed) await action.mutateAsync({ type: 'update', id: habit.id, body: details });
       if (goalChanged) {
         await action.mutateAsync({ type: 'schedule', id: habit.id, body: { ...goal, valid_from: validFrom } });
@@ -356,9 +368,10 @@ function HabitItem({
           )}
           <ColorPicker value={color} onChange={setColor} />
           <GroupSelect groups={groups} value={groupId} onChange={setGroupId} />
+          <ReminderTimes value={reminders} onChange={setReminders} />
           {action.isError && <p role="alert" className="error">{errorText(action.error)}</p>}
           <div className="actions">
-            <button type="submit" className="button primary" disabled={action.isPending || !goalValid(goal)}>
+            <button type="submit" className="button primary" disabled={action.isPending || !valid}>
               {t('common.save')}
             </button>
             <button type="button" className="button" onClick={() => setEditing(false)}>
@@ -392,6 +405,13 @@ function HabitItem({
           {goalSummary(habit, t, format.weekdays)}
           {group && <> · {group.name}</>}
           {habit.cue && <> · {habit.cue}</>}
+          {habit.reminders.length > 0 && (
+            <>
+              {' · '}
+              <span aria-hidden="true">🔔 </span>
+              {t('reminders.summary', { times: habit.reminders.join(', ') })}
+            </>
+          )}
         </span>
       </div>
       <div className="actions">

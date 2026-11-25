@@ -25,6 +25,7 @@ export interface HabitInput extends Goal {
   unit: string | null;
   color: HabitColor | null;
   group_id: number | null;
+  reminders: string[];
   start_on?: string;
 }
 
@@ -34,6 +35,7 @@ export interface HabitUpdate {
   unit?: string | null;
   color?: HabitColor | null;
   group_id?: number | null;
+  reminders?: string[];
 }
 
 type Action =

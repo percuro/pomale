@@ -4,11 +4,13 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { OnlineOnly } from '../components/common/OnlineOnly';
 import { NewPasswordFields } from '../components/account/NewPasswordFields';
 import { OidcButton } from '../components/account/OidcButton';
+import { RemindersSection } from '../components/account/RemindersSection';
 import { useOidcLabel } from '../hooks/useOidcLabel';
 import { useMeta } from '../hooks/useMeta';
 import { codeMessage } from '../i18n/core';
 import { ApiError } from '../lib/api';
 import { startOidc, takeHashParams } from '../lib/oidc';
+import { forgetLocalSubscription } from '../lib/push';
 import { TimezoneSelect } from '../components/account/TimezoneSelect';
 import { useUpdateAccount } from '../hooks/useAccount';
 import { ME_KEY, signedOut } from '../hooks/useMe';
@@ -60,6 +62,7 @@ export function AccountPage() {
         <ProfileSection />
         {(meta.data?.oidc != null || me.oidc != null) && <SignInSection flash={flash} />}
         {passwordLogin && <PasswordSection />}
+        <RemindersSection />
         <SessionsSection />
         <ExportSection />
         <DeleteSection />
@@ -285,7 +288,10 @@ function DeleteSection() {
         method: 'DELETE',
         body: JSON.stringify(me.has_password ? { password } : {}),
       }),
-    onSuccess: () => signedOut(queryClient),
+    onSuccess: async () => {
+      await forgetLocalSubscription();
+      await signedOut(queryClient);
+    },
   });
 
   const close = () => {

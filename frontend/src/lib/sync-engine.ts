@@ -210,6 +210,13 @@ class SyncEngine {
     }
   }
 
+  /** Read the stored queue again and send it, e.g. after the service worker queued a change */
+  async refresh(): Promise<void> {
+    this.loaded = null;
+    await this.load();
+    await this.flush();
+  }
+
   /** Tests: forget the in-memory state (the stored queue is untouched) */
   reset() {
     this.loaded = null;
