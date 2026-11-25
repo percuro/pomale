@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useI18n } from '../../i18n/context';
+import { MinusIcon, PlusIcon } from '../Icons';
 
 /** Set the amount of a quantity goal for one day (week view). Works offline via the queue. */
 export function AmountDialog({
@@ -45,7 +46,7 @@ export function AmountDialog({
   return (
     <dialog
       ref={ref}
-      className="dialog card"
+      className="dialog"
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -58,8 +59,8 @@ export function AmountDialog({
           {t('week.amountLabel')} ({unit ? t('today.amountUnit', { value: parsed, target, unit }) : t('today.amount', { value: parsed, target })})
         </label>
         <div className="stepper">
-          <button type="button" className="button" aria-label={t('today.less', { name: habitName })} onClick={() => setAmount(String(Math.max(0, parsed - 1)))}>
-            −
+          <button type="button" className="button icon" aria-label={t('today.less', { name: habitName })} onClick={() => setAmount(String(Math.max(0, parsed - 1)))}>
+            <MinusIcon />
           </button>
           <input
             id={fieldId}
@@ -71,11 +72,11 @@ export function AmountDialog({
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
           />
-          <button type="button" className="button" aria-label={t('today.more', { name: habitName })} onClick={() => setAmount(String(Math.min(9999, parsed + 1)))}>
-            +
+          <button type="button" className="button icon" aria-label={t('today.more', { name: habitName })} onClick={() => setAmount(String(Math.min(9999, parsed + 1)))}>
+            <PlusIcon />
           </button>
         </div>
-        <div className="actions">
+        <div className="button-row">
           <button type="submit" className="button primary">
             {t('common.save')}
           </button>

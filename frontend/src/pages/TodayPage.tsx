@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { NoteDialog } from '../components/days/NoteDialog';
 import { addDays, weekStart } from '../lib/dates';
 import { byGroup, colorStyle } from '../lib/habit-style';
-import { STATE_ICON } from '../lib/states';
+import { StateIcon } from '../components/days/StateIcon';
+import { MinusIcon, PencilIcon, PlusIcon, UndoIcon } from '../components/Icons';
 import { useErrorText, useI18n } from '../i18n/context';
 import type { Day, HabitDays } from '../lib/types';
 import { setDay, useDays } from '../hooks/useDays';
@@ -65,12 +66,20 @@ export function TodayPage() {
 
   return (
     <>
-      <div className="page-head">
-        <h1>{t('today.title')}</h1>
-        <p className="subtle">
-          {format.longDate(today)}
-          {main.length > 0 && <> · {t('today.progress', { done: doneCount, total: main.length })}</>}
-        </p>
+      <div className="page-head today-head">
+        <div>
+          <h1>{t('today.title')}</h1>
+          <p className="subtle">
+            {format.longDate(today)}
+            {main.length > 0 && <> · {t('today.progress', { done: doneCount, total: main.length })}</>}
+          </p>
+        </div>
+        {/* The share that is done as a ring; the sentence next to it says the same */}
+        {main.length > 0 && (
+          <div className="ring" style={{ '--p': Math.round((doneCount / main.length) * 100) } as CSSProperties} aria-hidden="true">
+            <span>{doneCount}/{main.length}</span>
+          </div>
+        )}
       </div>
 
       {rows.length === 0 && (
@@ -138,12 +147,12 @@ function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) 
   const noteButton = (
     <button
       type="button"
-      className={`button note-button${day.note ? ' has-note' : ''}`}
+      className={`icon-button note-button${day.note ? ' has-note' : ''}`}
       aria-label={t('today.noteLabel', { name: habit.name }) + (day.note ? ` (${t('today.hasNote')})` : '')}
       title={day.note ?? t('today.note')}
       onClick={() => onNote({ habit, day })}
     >
-      <span aria-hidden="true">✎</span>
+      <PencilIcon />
     </button>
   );
 
@@ -159,35 +168,36 @@ function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) 
         <button
           type="button"
           className="today-main"
-          aria-label={`${habit.name}, ${amount}. ${t('today.reach', { name: habit.name })}`}
           aria-pressed={day.done}
           onClick={() => {
             if (value < target) set(target);
           }}
         >
-          <span className="state-icon" aria-hidden="true">{STATE_ICON[day.state]}</span>
+          <StateIcon state={day.state} value={value} target={target} />
           <span className="today-text">
             <span className="today-name">{habit.name}</span>
             {habit.cue && <span className="today-cue">{habit.cue}</span>}
             <span className="today-amount">{amount}</span>
             {status}
+            {/* The name of the button contains what is visible, then says what a tap does */}
+            <span className="sr-only">{t('today.reach', { name: habit.name })}</span>
           </span>
         </button>
         <div className="stepper" role="group" aria-label={amount}>
           <button
             type="button"
-            className="button"
+            className="button icon"
             aria-label={t('today.less', { name: habit.name })}
             disabled={value <= 0}
             onClick={() => set(value - 1)}
           >
-            −
+            <MinusIcon />
           </button>
           <span className="stepper-value" aria-live="polite">
             {value}
           </span>
-          <button type="button" className="button" aria-label={t('today.more', { name: habit.name })} onClick={() => set(value + 1)}>
-            +
+          <button type="button" className="button icon" aria-label={t('today.more', { name: habit.name })} onClick={() => set(value + 1)}>
+            <PlusIcon />
           </button>
         </div>
         {noteButton}
@@ -205,7 +215,7 @@ function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) 
           if (!day.done) setDay(habit.id, day.date, true, day.version);
         }}
       >
-        <span className="state-icon" aria-hidden="true">{STATE_ICON[day.state]}</span>
+        <StateIcon state={day.state} />
         <span className="today-text">
           <span className="today-name">{habit.name}</span>
           {habit.cue && <span className="today-cue">{habit.cue}</span>}
@@ -218,16 +228,13 @@ function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) 
       {/* Space stays reserved so the row does not jump when checking off */}
       <button
         type="button"
-        className="button undo"
+        className="icon-button undo"
         hidden={!day.done}
         aria-label={t('today.undoLabel', { name: habit.name })}
         title={t('today.undo')}
         onClick={() => setDay(habit.id, day.date, false, day.version)}
       >
-        <span className="undo-text">{t('today.undo')}</span>
-        <span className="undo-icon" aria-hidden="true">
-          ↶
-        </span>
+        <UndoIcon />
       </button>
       {noteButton}
     </li>

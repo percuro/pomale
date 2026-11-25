@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- pomale: a progress ring that is nearly closed, with a check. Full bleed, motif inside the maskable safe zone. -->
+  <rect width="512" height="512" fill="#f2f4ea"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="256" cy="256" r="140" stroke="#cfe0c4" stroke-width="36"/>
+    <path d="M395.5 243.8A140 140 0 1 1 292.2 120.8" stroke="#33682f" stroke-width="36"/>
+    <path d="M196 262l44 44 84-98" stroke="#33682f" stroke-width="40"/>
+  </g>
+</svg>

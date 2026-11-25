@@ -24,7 +24,7 @@ export function ShareLink({
       </p>
       <CopyField label={t('shortcut.url')} value={url} />
       <p className="subtle">{t('admin.linkExpires', { date: format.dateTime(expiresAt) })}</p>
-      <div className="actions">
+      <div className="button-row">
         {canShare && (
           <button
             type="button"

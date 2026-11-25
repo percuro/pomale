@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
+## 0.8.0 – a new look
+
+### Features
+
+- **New look "morning paper"**: moss green on a warm paper, a light top bar, capsule buttons, a rounded heading face on Apple devices and a new, light app icon. People who have the app on their home screen see the new icon after adding it again.
+- **The ring** shows the state of a day everywhere in the same way: empty when open, partly filled with the amount inside, filled with a check when done. "Today" shows the share that is done as a ring next to the date; the week and the history calendar use the same rings instead of boxes and characters.
+- The **navigation** has icons and marks the active view with a pill. It sits at the bottom on phones and tablets and moves into the top bar from 840 px (before: 640 px). The name of the app stays visible on a phone.
+- **Account** is an icon in the top bar. **Logging out** and, for administrators, the way to the **administration** moved to the account page: the bar is for places, not actions.
+- Drawn icons replace characters such as ✎, ↶ and ⠿, which looked different on every system.
+- Edges of fields and buttons and the focus ring are clearly stronger (at least 3 : 1); dialogs open as a sheet from the bottom on a phone.
+- On iPhone and iPad the text follows the system text size. The window title names the page ("Week · pomale").
+- Styles are split into five layers (`frontend/src/styles/`), with one set of colour roles and components shared with fahrma, see the [design language](docs/design-language.md). A test checks 40 colour pairs against the WCAG contrast minimum in both schemes; the end-to-end tests scan the main pages for WCAG 2.2 AA violations and for sideways scrolling at 320 px.
+
+### Fixes
+
+- The button of a quantity goal on "Today" had a name for screen readers that did not contain its visible text.
+- Icons carry a version in their address (`/icon.svg?v=…`), so that browsers fetch a changed icon instead of showing the cached one for a week. Bookmarks pick up the new icon the next time the page is opened; some browsers only do so after the bookmark is added again.
+
+### Upgrade notes
+
+- No migration and no new settings. Logging out moved from the top bar to the account page. The roadmap moves by one version: API tokens, export/import and backups are planned for 0.9.
+
 ## 0.7.0 – reminders
 
 ### Features

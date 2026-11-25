@@ -1,22 +1,20 @@
 import { APP_NAME } from '../../app/brand';
-import { useEffect, useState } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '../../lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Me } from '../../lib/types';
-import { ME_KEY, signedOut, useMe } from '../../hooks/useMe';
+import { ME_KEY, useMe } from '../../hooks/useMe';
 import { SessionContext } from '../../hooks/useSession';
 import { useToday } from '../../hooks/useToday';
 import { useI18n } from '../../i18n/context';
 import { LoginPage } from '../../pages/LoginPage';
 import { SetupPage } from '../../pages/SetupPage';
 import { useMeta } from '../../hooks/useMeta';
-import { syncEngine } from '../../lib/sync-engine';
 import { SyncBridge } from '../sync/SyncBridge';
 import { WorkerBridge } from '../sync/WorkerBridge';
-import { forgetLocalSubscription } from '../../lib/push';
 import { SyncStatus } from '../sync/SyncStatus';
-import { ConfirmDialog } from '../common/ConfirmDialog';
+import { BrandMark } from '../BrandMark';
+import { ChartIcon, CheckCircleIcon, ChecklistIcon, UserIcon, WeekIcon } from '../Icons';
 import { TimezoneHint } from './TimezoneHint';
 
 export function AppLayout() {
@@ -59,66 +57,67 @@ function SignedOut() {
 
 function SignedIn({ me }: { me: Me }) {
   const today = useToday(me.timezone, me.today);
-  const queryClient = useQueryClient();
   const { t, setAccountLocale } = useI18n();
   useEffect(() => setAccountLocale(me.locale), [me.locale, setAccountLocale]);
-
-  const [confirmLogout, setConfirmLogout] = useState(0);
-  const logout = useMutation({
-    mutationFn: () => apiFetch<void>('/v1/auth/logout', { method: 'POST' }),
-    // Forget local data only after a successful logout. The server dropped this device's
-    // reminders; the browser subscription goes too, so the next account does not inherit it.
-    onSuccess: async () => {
-      await forgetLocalSubscription();
-      await signedOut(queryClient);
-    },
-    onSettled: () => setConfirmLogout(0),
-  });
-
-  const onLogout = () => {
-    // Unsent changes stay on this device; ask before leaving them behind
-    const waiting = syncEngine.getSnapshot().ops.length;
-    if (waiting > 0) setConfirmLogout(waiting);
-    else logout.mutate();
-  };
+  useDocumentTitle();
 
   return (
     <SessionContext.Provider value={{ me, today }}>
       <a className="skip-link" href="#content">{t('app.skipToContent')}</a>
       <header className="topbar">
-        <span className="brand">{APP_NAME}</span>
-        <nav className="tabs" aria-label={t('nav.label')}>
-          <NavLink to="/today">{t('nav.today')}</NavLink>
-          <NavLink to="/week">{t('nav.week')}</NavLink>
-          <NavLink to="/history">{t('nav.history')}</NavLink>
-          <NavLink to="/habits">{t('nav.habits')}</NavLink>
+        <NavLink to="/" className="brand"><BrandMark />{APP_NAME}</NavLink>
+        <nav className="appnav" aria-label={t('nav.label')}>
+          <NavItem to="/today" icon={<CheckCircleIcon />}>{t('nav.today')}</NavItem>
+          <NavItem to="/week" icon={<WeekIcon />}>{t('nav.week')}</NavItem>
+          <NavItem to="/history" icon={<ChartIcon />}>{t('nav.history')}</NavItem>
+          <NavItem to="/habits" icon={<ChecklistIcon />}>{t('nav.habits')}</NavItem>
         </nav>
-        <div className="topbar-links">
-          <NavLink to="/account">{t('nav.account')}</NavLink>
-          {me.role === 'admin' && <NavLink to="/admin">{t('nav.admin')}</NavLink>}
-          <button type="button" className="link-button" onClick={onLogout}>
-            {t('nav.logout')}
-          </button>
-        </div>
+        <span className="spacer" />
+        {/* Account, administration and logging out live on the account page: the bar is for places, not actions */}
+        <NavLink to="/account" className="icon-button" aria-label={t('nav.account')}>
+          <UserIcon />
+        </NavLink>
       </header>
-      <ConfirmDialog
-        open={confirmLogout > 0}
-        title={t('logout.title')}
-        confirmLabel={t('logout.confirm')}
-        busy={logout.isPending}
-        onConfirm={() => logout.mutate()}
-        onCancel={() => setConfirmLogout(0)}
-      >
-        <p>{t('logout.pending', { count: confirmLogout })}</p>
-      </ConfirmDialog>
       <SyncBridge owner={me} />
       <WorkerBridge />
-      <main id="content" className="content">
-        {logout.isError && <p className="error" role="alert">{t('logout.failed')}</p>}
+      <main id="content" className="content wide">
         <TimezoneHint me={me} />
         <SyncStatus />
         <Outlet />
       </main>
     </SessionContext.Provider>
   );
+}
+
+/** One place of the navigation: icon and a short word; the active one gets the highlight. */
+function NavItem({ to, icon, children }: { to: string; icon: ReactNode; children: ReactNode }) {
+  return (
+    <NavLink to={to}>
+      <span className="nav-icon">{icon}</span>
+      <span className="nav-label">{children}</span>
+    </NavLink>
+  );
+}
+
+/**
+ * The window title follows the heading of the page ("Week · pomale"): an installed
+ * app shows it in its window and in the task switcher, a browser in its tab.
+ */
+function useDocumentTitle() {
+  useEffect(() => {
+    const main = document.getElementById('content');
+    if (!main) return;
+    const update = () => {
+      const heading = main.querySelector('h1')?.textContent?.trim();
+      const title = heading ? `${heading} · ${APP_NAME}` : APP_NAME;
+      if (document.title !== title) document.title = title;
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(main, { childList: true, subtree: true, characterData: true });
+    return () => {
+      observer.disconnect();
+      document.title = APP_NAME;
+    };
+  }, []);
 }

@@ -11,13 +11,13 @@ export function ColorPicker({ value, onChange }: { value: HabitColor | null; onC
       <legend>{t('habits.color')}</legend>
       <div className="chips">
         {[null, ...HABIT_COLORS].map((color) => (
-          <label key={color ?? 'none'} className="chip color-chip">
+          <label key={color ?? 'none'} className="choice color-chip">
             <input type="radio" name={name} checked={value === color} onChange={() => onChange(color)} />
             <span aria-hidden="true">
               <span className="swatch" style={color ? { background: `var(--habit-${color})` } : undefined} />
               {t(color ? `habits.color.${color}` : 'habits.color.none')}
             </span>
-            <span className="visually-hidden">{t(color ? `habits.color.${color}` : 'habits.color.none')}</span>
+            <span className="sr-only">{t(color ? `habits.color.${color}` : 'habits.color.none')}</span>
           </label>
         ))}
       </div>

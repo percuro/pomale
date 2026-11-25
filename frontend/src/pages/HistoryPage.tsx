@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { OnlineOnly } from '../components/common/OnlineOnly';
 import { addDays, weekStart } from '../lib/dates';
 import { colorStyle } from '../lib/habit-style';
-import { STATE_ICON } from '../lib/states';
+import { StateIcon } from '../components/days/StateIcon';
 import { useErrorText, useI18n } from '../i18n/context';
 import type { HistoryDay, HistoryHabit, HistoryWeek, Quota } from '../lib/types';
 import { useHabits } from '../hooks/useHabits';
@@ -205,7 +205,7 @@ function Calendar({ habit, from }: { habit: HistoryHabit; from: string }) {
         </div>
       </div>
       <table className="calendar">
-        <caption className="visually-hidden">
+        <caption className="sr-only">
           {habit.name}, {format.monthYear(month)}
         </caption>
         <thead>
@@ -237,9 +237,8 @@ function Calendar({ habit, from }: { habit: HistoryHabit; from: string }) {
                       <span className="calendar-date" aria-hidden="true">
                         {Number(date.slice(8))}
                       </span>
-                      <span aria-hidden="true">
-                        {habit.goal_type === 'quantity' && (day.value ?? 0) > 0 ? day.value : STATE_ICON[day.state]}
-                      </span>
+                      {/* The share of the ring uses today's target; the label of the day has the exact amount */}
+                      <StateIcon state={day.state} value={day.value} target={habit.target} />
                     </button>
                   </td>
                 );

@@ -80,7 +80,7 @@ export function SyncStatus() {
               {op.conflict!.updated_at && t('sync.changedAt', { time: format.dateTime(op.conflict!.updated_at) })}
             </dd>
           </dl>
-          <div className="actions">
+          <div className="button-row">
             <button type="button" className="button primary" onClick={() => void syncEngine.resolve(op.op_id, 'device')}>
               {t('sync.keepDevice')}
             </button>

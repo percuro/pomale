@@ -1,0 +1,117 @@
+/*
+ * pomale, "Morgenpapier": moss green on a warm, slightly green paper, a light top
+ * bar, soft corners and capsule buttons. Role names are shared with fahrma;
+ * see docs/design-language.md. Every pair is checked by styles/tokens.test.ts.
+ */
+:root {
+  --bg: #f2f4ea;
+  --surface: #fcfdf7;
+  --surface-2: #e6ead9;
+  --text: #20251c;
+  --muted: #5b6352;
+  --border: #d5dac6;
+  --border-strong: #7f8672;
+
+  --accent: #33682f;
+  --accent-fill: #33682f;
+  --on-accent-fill: #ffffff;
+  --accent-soft: #dcecd2;
+  --on-accent-soft: #1f4a1c;
+  --highlight: #dcecd2;
+  --on-highlight: #1f4a1c;
+
+  --chrome: #f2f4ea;
+  --on-chrome: #20251c;
+  --chrome-muted: #5b6352;
+  --chrome-brand: #33682f;
+  --chrome-border: #d5dac6;
+  --chrome-focus: #1b5fd1;
+
+  --feature-bg: #dcecd2;
+  --feature-text: #1f4a1c;
+  --feature-muted: #3f5a3a;
+  --feature-border: #dcecd2;
+  --feature-accent: #1f4a1c;
+  --feature-fill: #33682f;
+  --on-feature-fill: #ffffff;
+  --feature-danger: #8f2413;
+  --feature-focus: #1b5fd1;
+
+  --plus: #33682f;
+  --minus: #a8321f;
+  --danger: #a8321f;
+  --on-danger: #ffffff;
+  --danger-text: #9c2a18;
+  --danger-bg: #fbe6e0;
+  --warn-bg: #faefd0;
+  --warn-text: #654700;
+  --info-bg: #e0eaf6;
+  --info-text: #27507f;
+  --ok-bg: #dcecd2;
+  --ok-text: #1f4a1c;
+
+  --focus: #1b5fd1;
+  --shadow: 0 0.5rem 1.5rem rgb(32 37 28 / 0.18);
+
+  --radius-s: 0.625rem;
+  --radius-m: 1rem;
+  --radius-l: 1.375rem;
+  --radius-button: 999px;
+  --radius-field: 0.875rem;
+  --radius-pill: 999px;
+  /* Rounded system face on Apple devices, the plain system face everywhere else */
+  --font-display: ui-rounded, "SF Pro Rounded", var(--font-ui);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131610;
+    --surface: #1c2017;
+    --surface-2: #272c1f;
+    --text: #eaeee1;
+    --muted: #a5ac98;
+    --border: #3a4030;
+    --border-strong: #7a826b;
+
+    --accent: #9ccf8a;
+    --accent-fill: #9ccf8a;
+    --on-accent-fill: #10200c;
+    --accent-soft: #24371f;
+    --on-accent-soft: #c4e6b6;
+    --highlight: #2c4426;
+    --on-highlight: #c4e6b6;
+
+    --chrome: #131610;
+    --on-chrome: #eaeee1;
+    --chrome-muted: #a5ac98;
+    --chrome-brand: #9ccf8a;
+    --chrome-border: #3a4030;
+    --chrome-focus: #8cb6ff;
+
+    --feature-bg: #24371f;
+    --feature-text: #d5efca;
+    --feature-muted: #a9c79d;
+    --feature-border: #24371f;
+    --feature-accent: #c4e6b6;
+    --feature-fill: #9ccf8a;
+    --on-feature-fill: #10200c;
+    --feature-danger: #ffb4a6;
+    --feature-focus: #8cb6ff;
+
+    --plus: #9ccf8a;
+    --minus: #ff9a85;
+    --danger: #ff9a85;
+    --on-danger: #2a0b06;
+    --danger-text: #ffa593;
+    --danger-bg: #3b1c1a;
+    --warn-bg: #3a3016;
+    --warn-text: #f4d58a;
+    --info-bg: #1f2e44;
+    --info-text: #b4cdf0;
+    --ok-bg: #24371f;
+    --ok-text: #b9e2aa;
+
+    --focus: #8cb6ff;
+    --shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.5);
+  }
+}

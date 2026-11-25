@@ -73,7 +73,7 @@ export function NoteDialog({
   return (
     <dialog
       ref={ref}
-      className="dialog card"
+      className="dialog"
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -97,7 +97,7 @@ export function NoteDialog({
             {error}
           </p>
         )}
-        <div className="actions">
+        <div className="button-row">
           <button type="submit" className="button primary" disabled={busy || !online}>
             {t('note.save')}
           </button>
