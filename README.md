@@ -56,6 +56,10 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - **0.9** beta hardening (accessibility, performance, upgrade tests)
 - **1.0** stable API and configuration
 
+## Sibling project
+
+[fahrma](https://github.com/percuro/fahrma) is a cost tracker for shared cars by the same author: hosted the same way, under the same license, and built with the same [design language](docs/design-language.md) in a different character.
+
 ## License
 
 Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE) with an [addendum](LICENSE-ADDENDUM.md):
