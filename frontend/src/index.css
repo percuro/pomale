@@ -185,7 +185,6 @@ a { color: var(--accent); }
   display: grid; place-items: center; font-weight: 700; font-size: 1.1rem;
   border: 2px solid currentColor;
 }
-.state-label { flex: none; font-weight: 600; font-size: 0.9rem; }
 .today-row.state-done .today-main,
 .today-row.state-extra_done .today-main { cursor: default; }
 .today-row.state-done .today-main { background: var(--done-bg); color: var(--done-text); border-color: transparent; }
@@ -198,6 +197,19 @@ a { color: var(--accent); }
 .today-row.state-paused .today-main,
 .today-row.state-not_planned .today-main { color: var(--muted); }
 .today-amount { font-size: 0.95rem; font-weight: 600; }
+.today-status { font-size: 0.9rem; font-weight: 600; }
+@media (max-width: 40rem) {
+  /* Quantity goals: the stepper gets its own line, the name keeps the full width */
+  .today-row.quantity { flex-wrap: wrap; }
+  .today-row.quantity .today-main { flex-basis: 100%; }
+  .today-row.quantity .stepper { margin-left: auto; }
+  /* The undo button keeps its place (no jump) but only as an icon; its name stays "… Undo" */
+  .undo { padding: 0; font-size: 1.3rem; }
+  .undo .undo-text { display: none; }
+}
+@media (min-width: 40.01rem) {
+  .undo .undo-icon { display: none; }
+}
 /* Colour stripe; the name always says which habit it is */
 .today-row[style] .today-main { border-left: 0.4rem solid var(--habit-color); }
 .stepper { flex: none; display: flex; align-items: center; gap: 0.25rem; }
@@ -219,7 +231,6 @@ a { color: var(--accent); }
 
 @media (max-width: 24rem) {
   .today-row { flex-wrap: wrap; }
-  .state-label { display: none; }
 }
 
 /* Woche */

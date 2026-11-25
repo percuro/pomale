@@ -126,7 +126,7 @@ export function TodayPage() {
 function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) {
   const t = useI18n().t;
   const status = (
-    <span className="state-label">
+    <span className="today-status">
       {t(`state.${day.state}`)}
       {day.conflict ? (
         <span className="pending"> · {t('today.conflict')}</span>
@@ -170,8 +170,8 @@ function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) 
             <span className="today-name">{habit.name}</span>
             {habit.cue && <span className="today-cue">{habit.cue}</span>}
             <span className="today-amount">{amount}</span>
+            {status}
           </span>
-          {status}
         </button>
         <div className="stepper" role="group" aria-label={amount}>
           <button
@@ -212,8 +212,8 @@ function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) 
           {habit.week && day.goal_type === 'weekly_count' && (
             <span className="today-amount">{t('today.weekProgress', { done: habit.week.done, target: habit.week.target })}</span>
           )}
+          {status}
         </span>
-        {status}
       </button>
       {/* Space stays reserved so the row does not jump when checking off */}
       <button
@@ -221,9 +221,13 @@ function TodayRow({ habit, day, onNote }: Row & { onNote: (row: Row) => void }) 
         className="button undo"
         hidden={!day.done}
         aria-label={t('today.undoLabel', { name: habit.name })}
+        title={t('today.undo')}
         onClick={() => setDay(habit.id, day.date, false, day.version)}
       >
-        {t('today.undo')}
+        <span className="undo-text">{t('today.undo')}</span>
+        <span className="undo-icon" aria-hidden="true">
+          ↶
+        </span>
       </button>
       {noteButton}
     </li>
