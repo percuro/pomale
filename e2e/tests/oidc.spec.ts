@@ -88,16 +88,15 @@ test.describe('sign-in through OIDC (Dex)', () => {
     // The error is shown once and removed from the address bar
     expect(new URL(page.url()).hash).toBe('');
 
-    // The provider reports that the person cancelled: read the state from the start response
-    let authorizeUrl = '';
-    await page.route('**/api/v1/auth/oidc/start', async (route) => {
-      const response = await route.fetch();
-      authorizeUrl = ((await response.json()) as { authorize_url: string }).authorize_url;
-      await route.fulfill({ response });
+    // The provider reports that the person cancelled. Start through the API of the same browser
+    // context (shares the cookies; a page.route would miss requests the service worker answers).
+    const started = await page.request.post('/api/v1/auth/oidc/start', {
+      data: { purpose: 'login' },
+      headers: { 'X-Habit-CSRF': '1', Origin: baseURL! },
     });
-    await page.getByRole('button', { name: 'Anmelden mit Dex' }).click();
-    await page.locator('#login').waitFor();
-    const state = new URL(authorizeUrl).searchParams.get('state')!;
+    expect(started.ok(), await started.text()).toBeTruthy();
+    const { authorize_url } = (await started.json()) as { authorize_url: string };
+    const state = new URL(authorize_url).searchParams.get('state')!;
     await page.goto(`/api/v1/auth/oidc/callback?error=access_denied&state=${encodeURIComponent(state)}`);
     await expect(page.getByRole('alert')).toContainText('beim Anbieter abgebrochen');
     await fresh.close();
