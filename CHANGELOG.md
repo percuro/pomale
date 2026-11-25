@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
-## Unreleased – a new look
+## 0.8.0-rc.1 – a new look (release candidate)
 
 ### Features
 
