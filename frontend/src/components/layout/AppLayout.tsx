@@ -1,23 +1,26 @@
 import { APP_NAME } from '../../app/brand';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
 import type { Me } from '../../lib/types';
-import { ME_KEY, useMe } from '../../hooks/useMe';
+import { ME_KEY, signedOut, useMe } from '../../hooks/useMe';
 import { SessionContext } from '../../hooks/useSession';
 import { useToday } from '../../hooks/useToday';
+import { useI18n } from '../../i18n/context';
 import { LoginPage } from '../../pages/LoginPage';
 import { SetupPage } from '../../pages/SetupPage';
-import { useSetupStatus } from '../../hooks/useSetupStatus';
-import { clearAll } from '../../lib/offline-store';
+import { useMeta } from '../../hooks/useMeta';
 import { syncEngine } from '../../lib/sync-engine';
 import { SyncBridge } from '../sync/SyncBridge';
 import { SyncStatus } from '../sync/SyncStatus';
+import { ConfirmDialog } from '../common/ConfirmDialog';
+import { TimezoneHint } from './TimezoneHint';
 
 export function AppLayout() {
   const me = useMe();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
 
   useEffect(() => {
     const onUnauthorized = () => queryClient.setQueryData(ME_KEY, null);
@@ -26,13 +29,13 @@ export function AppLayout() {
   }, [queryClient]);
 
   if (me.isPending) {
-    return <main className="center"><p>Lädt …</p></main>;
+    return <main className="center"><p>{t('app.loading')}</p></main>;
   }
   if (me.isError) {
     return (
       <main className="center">
-        <p role="alert">Server nicht erreichbar.</p>
-        <button type="button" className="button" onClick={() => me.refetch()}>Erneut versuchen</button>
+        <p role="alert">{t('app.serverUnreachable')}</p>
+        <button type="button" className="button" onClick={() => me.refetch()}>{t('app.retry')}</button>
       </main>
     );
   }
@@ -43,52 +46,68 @@ export function AppLayout() {
 }
 
 function SignedOut() {
-  const setup = useSetupStatus();
-  if (setup.isPending) {
-    return <main className="center"><p>Lädt …</p></main>;
+  const meta = useMeta();
+  const { t, setAccountLocale } = useI18n();
+  useEffect(() => setAccountLocale(null), [setAccountLocale]);
+  if (meta.isPending) {
+    return <main className="center"><p>{t('app.loading')}</p></main>;
   }
-  return setup.data?.needed ? <SetupPage /> : <LoginPage />;
+  return meta.data?.setup_needed ? <SetupPage /> : <LoginPage />;
 }
 
 function SignedIn({ me }: { me: Me }) {
   const today = useToday(me.timezone, me.today);
   const queryClient = useQueryClient();
+  const { t, setAccountLocale } = useI18n();
+  useEffect(() => setAccountLocale(me.locale), [me.locale, setAccountLocale]);
+
+  const [confirmLogout, setConfirmLogout] = useState(0);
   const logout = useMutation({
     mutationFn: () => apiFetch<void>('/v1/auth/logout', { method: 'POST' }),
-    onSuccess: async () => {
-      // Delete local data only after a successful logout
-      await clearAll();
-      syncEngine.reset();
-      queryClient.clear();
-      queryClient.setQueryData(ME_KEY, null);
-    },
+    // Forget local data only after a successful logout
+    onSuccess: () => signedOut(queryClient),
+    onSettled: () => setConfirmLogout(0),
   });
 
   const onLogout = () => {
+    // Unsent changes stay on this device; ask before leaving them behind
     const waiting = syncEngine.getSnapshot().ops.length;
-    if (waiting > 0 && !window.confirm(`${waiting} Änderung(en) sind noch nicht übertragen und gehen beim Abmelden verloren. Trotzdem abmelden?`)) {
-      return;
-    }
-    logout.mutate();
+    if (waiting > 0) setConfirmLogout(waiting);
+    else logout.mutate();
   };
 
   return (
     <SessionContext.Provider value={{ me, today }}>
-      <a className="skip-link" href="#inhalt">Zum Inhalt</a>
+      <a className="skip-link" href="#content">{t('app.skipToContent')}</a>
       <header className="topbar">
         <span className="brand">{APP_NAME}</span>
-        <nav className="tabs" aria-label="Ansichten">
-          <NavLink to="/heute">Heute</NavLink>
-          <NavLink to="/woche">Woche</NavLink>
-          <NavLink to="/gewohnheiten">Gewohnheiten</NavLink>
+        <nav className="tabs" aria-label={t('nav.label')}>
+          <NavLink to="/today">{t('nav.today')}</NavLink>
+          <NavLink to="/week">{t('nav.week')}</NavLink>
+          <NavLink to="/habits">{t('nav.habits')}</NavLink>
         </nav>
-        <button type="button" className="link-button" onClick={onLogout}>
-          Abmelden
-        </button>
+        <div className="topbar-links">
+          <NavLink to="/account">{t('nav.account')}</NavLink>
+          {me.role === 'admin' && <NavLink to="/admin">{t('nav.admin')}</NavLink>}
+          <button type="button" className="link-button" onClick={onLogout}>
+            {t('nav.logout')}
+          </button>
+        </div>
       </header>
-      <SyncBridge />
-      <main id="inhalt" className="content">
-        {logout.isError && <p className="error" role="alert">Abmelden nicht möglich: keine Verbindung.</p>}
+      <ConfirmDialog
+        open={confirmLogout > 0}
+        title={t('logout.title')}
+        confirmLabel={t('logout.confirm')}
+        busy={logout.isPending}
+        onConfirm={() => logout.mutate()}
+        onCancel={() => setConfirmLogout(0)}
+      >
+        <p>{t('logout.pending', { count: confirmLogout })}</p>
+      </ConfirmDialog>
+      <SyncBridge owner={me} />
+      <main id="content" className="content">
+        {logout.isError && <p className="error" role="alert">{t('logout.failed')}</p>}
+        <TimezoneHint me={me} />
         <SyncStatus />
         <Outlet />
       </main>

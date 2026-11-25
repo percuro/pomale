@@ -285,3 +285,33 @@ a.button { display: inline-flex; align-items: center; text-decoration: none; }
 .token-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 .token-list li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }
 .version { margin-top: 2rem; font-size: 0.85rem; }
+
+/* Language choice on signed-out pages */
+.language-switcher { display: flex; justify-content: center; gap: 1rem; }
+
+/* Account, admin and the signed-out pages */
+.topbar-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+.topbar-links a {
+  min-height: var(--tap); display: inline-flex; align-items: center;
+  padding: 0 0.5rem; color: var(--accent); font-weight: 600;
+}
+.topbar-links a.active { color: var(--text); text-decoration: none; }
+.login-form { display: grid; gap: 1rem; }
+.login-form h1 { margin: 0; }
+.field select {
+  min-height: var(--tap); padding: 0 0.75rem; font: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); width: 100%;
+}
+.field small { font-size: 0.85rem; }
+.section-actions { margin-top: 0.75rem; }
+.button.danger { background: var(--error); color: var(--surface); border-color: var(--error); }
+.token-list.card { padding: 0.75rem 1rem; }
+.dialog {
+  width: min(30rem, calc(100vw - 2rem)); color: var(--text);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.3);
+}
+.dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+.dialog-body { display: grid; gap: 1rem; }
+.dialog-body h2 { margin: 0; }
+.dialog-text p { margin: 0 0 0.5rem; }

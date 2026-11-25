@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 
-from fastapi import HTTPException, status
-
+from app.errors import AppError
 from app.models.habit import Habit
 from app.repositories.habit_repository import HabitRepository
 from app.schemas.habit import HabitCreate, HabitRead, HabitUpdate, ScheduleRead, ScheduleUpdate
@@ -32,7 +31,7 @@ class HabitService:
     def get(self, habit_id: int, user_id: int) -> Habit:
         habit = self.repository.get_for_user(habit_id, user_id)
         if habit is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gewohnheit nicht gefunden")
+            raise AppError(404, "habit.not_found", "Habit not found")
         return habit
 
     def list(self, user_id: int, include_archived: bool) -> list[Habit]:
@@ -63,10 +62,7 @@ class HabitService:
     def set_schedule(self, habit_id: int, user_id: int, data: ScheduleUpdate, today: date) -> Habit:
         habit = self.get(habit_id, user_id)
         if habit.archived_on is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Archivierte Gewohnheit zuerst wieder aktivieren",
-            )
+            raise AppError(409, "habit.archived", "Reactivate the archived habit first")
         self.repository.upsert_schedule(habit, data.valid_from or today, data.weekdays)
         self.repository.commit(habit)
         return habit

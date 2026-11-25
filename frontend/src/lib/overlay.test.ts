@@ -34,6 +34,7 @@ const op = (date: string, done: boolean): QueuedOp => ({
   done,
   base_version: 0,
   created_at: 0,
+  user_id: 1,
 });
 
 describe('overlay', () => {

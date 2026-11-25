@@ -33,7 +33,8 @@ class SetupTest(unittest.TestCase):
         response = self.post()
         self.assertEqual(response.status_code, 200, response.text)
         self.assertIn(SESSION_COOKIE_NAME, response.headers["set-cookie"])
-        self.assertEqual(self.client.get("/v1/auth/me").json()["username"], "alex")
+        me = self.client.get("/v1/auth/me").json()
+        self.assertEqual((me["username"], me["role"]), ("alex", "admin"))
         self.assertEqual(self.client.get("/v1/setup").json(), {"needed": False})
         second = self.post(username="mallory")
         self.assertEqual(second.status_code, 409)
@@ -46,6 +47,24 @@ class SetupTest(unittest.TestCase):
         self.env.create_user()
         self.assertEqual(self.client.get("/v1/setup").json(), {"needed": False})
         self.assertEqual(self.post().status_code, 409)
+
+    def test_setup_stores_timezone_and_language(self):
+        response = self.client.post(
+            "/v1/setup",
+            json={
+                "token": self.token,
+                "username": "alex",
+                "password": PASSWORD,
+                "timezone": "America/New_York",
+                "locale": "en",
+            },
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual((response.json()["timezone"], response.json()["locale"]), ("America/New_York", "en"))
+
+    def test_invalid_username_rejected(self):
+        response = self.post(username="a b")
+        self.assertEqual((response.status_code, response.json()["code"]), (422, "account.invalid_username"))
 
     def test_weak_password_rejected(self):
         self.assertEqual(self.post(password="kurz").status_code, 422)

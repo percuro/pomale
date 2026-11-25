@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 
-from fastapi import HTTPException, status
-
+from app.errors import AppError
 from app.models.habit import Checkin, Habit
 from app.repositories.habit_repository import HabitRepository
 from app.schemas.habit import CheckinRead, DayRead, DaysRead, HabitDaysRead, QuotaRead
@@ -30,23 +29,19 @@ class CheckinService:
         server state instead of silently overwriting it.
         """
         if day > today:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail="Zukünftige Tage können nicht erfasst werden",
-            )
+            raise AppError(422, "checkin.future_day", "Future days cannot be checked off")
         checkin = self.repository.get_checkin(habit.id, day)
         current_done = bool(checkin and checkin.done)
         current_version = checkin.version if checkin else 0
         if current_done == done:
             return self._read(habit, day, checkin, today)
         if base_version is not None and base_version != current_version:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "message": "Der Eintrag wurde inzwischen auf einem anderen Gerät geändert",
-                    "server": self._read(habit, day, checkin, today).model_dump(mode="json")
-                    | {"updated_at": checkin.updated_at.isoformat() + "Z" if checkin else None},
-                },
+            raise AppError(
+                409,
+                "checkin.conflict",
+                "The entry was changed on another device in the meantime",
+                server=self._read(habit, day, checkin, today).model_dump(mode="json")
+                | {"updated_at": checkin.updated_at.isoformat() + "Z" if checkin else None},
             )
         if checkin is None:
             # Concurrent creation (double tap): one insert wins, the other reads its entry
@@ -76,12 +71,9 @@ class CheckinService:
 
     def days(self, user_id: int, start: date, end: date, today: date, timezone: str) -> DaysRead:
         if end < start:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Ende liegt vor Beginn")
+            raise AppError(422, "range.end_before_start", "The end date is before the start date")
         if (end - start) > timedelta(days=MAX_RANGE_DAYS):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"Höchstens {MAX_RANGE_DAYS} Tage auf einmal",
-            )
+            raise AppError(422, "range.too_long", f"At most {MAX_RANGE_DAYS} days at once", max_days=MAX_RANGE_DAYS)
         habits = self.repository.list_active_between(user_id, start)
         checkins = self.repository.checkins_between([h.id for h in habits], start, end)
         by_habit: dict[int, dict[date, Checkin]] = {}

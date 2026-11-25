@@ -1,9 +1,17 @@
-from datetime import date
+from datetime import UTC, date, datetime
 
-from app.config import get_default_timezone
-from app.services.day_service import today_in
+from fastapi import Depends
+
+from app.api.dependencies.auth import require_user
+from app.models.user import User
+from app.services.timezones import user_today
 
 
-def get_today() -> date:
-    """Today in the configured time zone. Tests replace it via dependency_overrides."""
-    return today_in(get_default_timezone())
+def get_now() -> datetime:
+    """The current moment (UTC, timezone-aware). Tests replace it via dependency_overrides."""
+    return datetime.now(UTC)
+
+
+def get_user_today(user: User = Depends(require_user), now: datetime = Depends(get_now)) -> date:
+    """Today in the time zone of the logged-in account."""
+    return user_today(user, now)

@@ -21,7 +21,7 @@ No account exists yet. Open https://habits.example.org/setup and enter this setu
 
 ```
 
-Open that address, enter the token and choose a username and password (at least 12 characters). The token is only valid until the first account exists. A restart without an account issues a new token; use the most recent one. Alternatively create the account on the command line:
+Open that address, enter the token and choose a username and password (at least 12 characters). This first account is an admin. The token is only valid until the first account exists. A restart without an account issues a new token; use the most recent one. Alternatively create the account on the command line:
 
 ```bash
 docker compose exec app python -m app.cli.create_user alex
@@ -85,7 +85,7 @@ docker compose up -d
 docker compose logs --tail=50 app
 ```
 
-Database migrations run automatically when the container starts. The image tag `:0` follows all 0.x releases; pin a specific version (e.g. `:0.3.0`) if you prefer to update deliberately. Read the [changelog](../CHANGELOG.md) before major updates.
+Database migrations run automatically when the container starts. The image tag `:0` follows all 0.x releases; pin a specific version (e.g. `:0.4.0`) if you prefer to update deliberately. Read the [changelog](../CHANGELOG.md) before major updates.
 
 ## Backup and restore
 
@@ -112,11 +112,26 @@ docker compose up -d
 
 Test a restore now and then; a backup you never restored is a hope, not a backup.
 
-## Account management
+## Users and invitations
+
+Every account has its own habits, time zone and language. Nobody, not even an admin, sees another account's habits or check-ins.
+
+- **Roles.** `admin` accounts may manage accounts; `user` accounts only their own data. The account created in the first-run setup is an admin; after an upgrade from 0.3 every existing account is an admin.
+- **Inviting.** Admin page → "Invite someone": choose the role and an optional note, create the link and send it yourself (copy it, or on a phone use the share sheet). The link works once and is valid for `INVITE_EXPIRY_DAYS` days (default 7). Open links are listed and can be revoked. The instance sends no e-mail.
+- **Forgotten passwords.** Admin page → the account → "Password-reset link". The person opens it and sets a new password; the link is valid for 24 hours, only the newest one works, and all devices of that account are logged out. Admins never see or set a password.
+- **Deactivating** logs the account out everywhere at once and stops its shortcut keys; its data stays until you reactivate or delete it. **Deleting** removes the account with all its data. People can also delete their own account on the account page.
+- **The last active admin** cannot be demoted, deactivated or deleted.
+- **Open registration:** with `REGISTRATION=open` a "Register" link appears on the login page; new accounts get the role user. For a private instance, invitations are the better choice.
+
+What admins see about other accounts: username, display name, role, active or deactivated, when it was created and when it was last active. Sessions store a coarse device name (e.g. "iPhone · Safari") for the owner's device list; no IP addresses are stored.
+
+### Command line
 
 ```bash
-docker compose exec app python -m app.cli.create_user <name>                   # new account
+docker compose exec app python -m app.cli.create_user <name>                   # new account (role user; the very first one is admin)
+docker compose exec app python -m app.cli.create_user <name> --role admin      # new admin
 docker compose exec app python -m app.cli.create_user <name> --reset-password  # new password, logs out all devices
+docker compose exec app python -m app.cli.set_role <name> admin                # emergency exit: make an account admin again
 ```
 
 ## Monitoring

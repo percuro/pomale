@@ -53,5 +53,17 @@ class ConfigTest(unittest.TestCase):
             config.validate()
 
 
+class AcceptLanguageTest(unittest.TestCase):
+    def test_picks_the_best_supported_language(self):
+        from app.services.i18n import accept_language
+
+        self.assertEqual(accept_language("de-AT,de;q=0.9,en;q=0.8"), "de")
+        self.assertEqual(accept_language("fr-FR,fr;q=0.9,en;q=0.7,de;q=0.8"), "de")
+        self.assertEqual(accept_language("en-US"), "en")
+        self.assertIsNone(accept_language("fr,it"))
+        self.assertIsNone(accept_language("de;q=0"))
+        self.assertIsNone(accept_language(None))
+
+
 if __name__ == "__main__":
     unittest.main()

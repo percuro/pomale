@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,7 +19,7 @@ class ShortcutTokenRead(BaseModel):
 
 
 class ShortcutTokenCreated(ShortcutTokenRead):
-    token: str = Field(description="Nur jetzt sichtbar; gespeichert wird nur der Hash")
+    token: str = Field(description="Shown only now; only its hash is stored")
 
 
 class ShortcutCheckinRequest(BaseModel):
@@ -30,5 +31,8 @@ class ShortcutCheckinRead(BaseModel):
     habit_name: str
     date: date
     done: bool
+    # Stable for automations: "done" (checked off now) or "already_done"
+    result: Literal["done", "already_done"]
+    # Human-readable, in the owner's language (else the phone's, else English)
     status: str
     message: str

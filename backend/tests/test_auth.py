@@ -2,6 +2,7 @@ import unittest
 from datetime import timedelta
 from http.cookies import SimpleCookie
 
+from app.errors import AppError
 from app.models.user import UserSession
 from app.services.auth_service import SESSION_COOKIE_NAME, AuthService, utcnow
 from tests.support import PASSWORD, ApiTestEnvironment
@@ -26,14 +27,25 @@ class AuthApiTest(unittest.TestCase):
         db.close()
 
     def test_short_password_rejected(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AppError):
             self.env.create_user("kurz", "zu-kurz")
 
     def test_login_sets_persistent_http_only_cookie(self):
         client = self.env.client(username=None)
         response = client.post("/v1/auth/login", json={"username": "ALEX", "password": PASSWORD})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"username": "alex", "today": "2026-11-24", "timezone": "UTC"})
+        me = response.json()
+        self.assertEqual(
+            {k: me[k] for k in ("username", "today", "timezone", "timezone_setting", "role", "locale")},
+            {
+                "username": "alex",
+                "today": "2026-11-24",
+                "timezone": "UTC",
+                "timezone_setting": None,
+                "role": "user",
+                "locale": None,
+            },
+        )
         cookie = SimpleCookie()
         cookie.load(response.headers["set-cookie"])
         morsel = cookie[SESSION_COOKIE_NAME]

@@ -4,13 +4,7 @@ from datetime import date
 
 from app.repositories.habit_repository import HabitRepository
 from app.services.day_service import build_days
-
-STATE_TEXT = {
-    "open": "offen",
-    "done": "erledigt",
-    "extra_done": "zusätzlich erledigt",
-    "not_planned": "nicht geplant",
-}
+from app.services.i18n import text
 
 
 def _cell(value: str | None) -> str:
@@ -19,7 +13,9 @@ def _cell(value: str | None) -> str:
     return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
 
 
-def export_csv(repository: HabitRepository, user_id: int, start: date | None, end: date, today: date) -> str:
+def export_csv(
+    repository: HabitRepository, user_id: int, start: date | None, end: date, today: date, locale: str
+) -> str:
     habits = repository.list_for_user(user_id, include_archived=True)
     starts = [s.valid_from for h in habits for s in h.schedules]
     start = start or (min(starts) if starts else today)
@@ -33,7 +29,7 @@ def export_csv(repository: HabitRepository, user_id: int, start: date | None, en
     buffer = io.StringIO()
     buffer.write("﻿")  # BOM: lets Excel detect UTF-8
     writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
-    writer.writerow(["datum", "gewohnheit", "hinweis", "geplant", "zustand"])
+    writer.writerow([text(locale, f"csv.{column}") for column in ("date", "habit", "cue", "planned", "state")])
     rows = []
     for habit in habits:
         for info in build_days(habit.schedules, done_by_habit.get(habit.id, set()), start, end, today):
@@ -45,8 +41,8 @@ def export_csv(repository: HabitRepository, user_id: int, start: date | None, en
                     habit.sort_order,
                     _cell(habit.name),
                     _cell(habit.cue),
-                    "ja" if info.planned else "nein",
-                    STATE_TEXT[info.state],
+                    text(locale, "csv.yes" if info.planned else "csv.no"),
+                    text(locale, f"state.{info.state}"),
                 )
             )
     rows.sort(key=lambda row: (row[0], row[1]))

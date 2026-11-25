@@ -1,28 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { longDate } from '../../lib/dates';
+import { codeMessage } from '../../i18n/core';
+import { useI18n } from '../../i18n/context';
 import { syncEngine } from '../../lib/sync-engine';
 import type { DaysResponse } from '../../lib/types';
 import { DAYS_KEY } from '../../hooks/useDays';
 import { useOnline } from '../../hooks/useOnline';
 import { useSync } from '../../hooks/useSync';
 
-function stateText(done: boolean) {
-  return done ? 'erledigt' : 'offen';
-}
-
-function formatTime(iso: string | null) {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  return ` (geändert ${date.toLocaleString('de-AT', { dateStyle: 'short', timeStyle: 'short' })})`;
-}
-
 /** Online changes usually confirm within milliseconds; only mention them if they hang. */
 const STUCK_AFTER_MS = 3000;
 
 /** Hints about connectivity, pending changes and conflicts. */
 export function SyncStatus() {
+  const { t, format } = useI18n();
   const online = useOnline();
   const { ops, lastError } = useSync();
   const queryClient = useQueryClient();
@@ -47,18 +38,22 @@ export function SyncStatus() {
       {(!online || stuck) && (
         <p className="sync-banner" role="status">
           <span aria-hidden="true">{online ? '⇅' : '⚠'}</span>{' '}
-          {!online && 'Offline. '}
-          {pending.length > 0
-            ? `${pending.length} ${pending.length === 1 ? 'Änderung wartet' : 'Änderungen warten'} auf Übertragung.`
-            : 'Änderungen werden auf diesem Gerät gespeichert und gesendet, sobald wieder Verbindung besteht.'}
+          {!online && `${t('sync.offline')} `}
+          {pending.length > 0 ? t('sync.waiting', { count: pending.length }) : t('sync.storedLocally')}
           {online && pending.length > 0 && (
             <button type="button" className="link-button" onClick={() => void syncEngine.flush()}>
-              Jetzt senden
+              {t('sync.sendNow')}
             </button>
           )}
         </p>
       )}
-      {lastError && <p className="error" role="alert">{lastError}</p>}
+      {lastError && (
+        <p className="error" role="alert">
+          {t('sync.notSaved', {
+            reason: codeMessage(lastError.code, t) ?? lastError.message,
+          })}
+        </p>
+      )}
       {conflicts.map((op) => (
         <section
           key={op.op_id}
@@ -67,26 +62,26 @@ export function SyncStatus() {
           aria-labelledby={`conflict-${op.op_id}`}
           aria-describedby={`conflict-desc-${op.op_id}`}
         >
-          <h2 id={`conflict-${op.op_id}`}>Abweichende Änderung</h2>
+          <h2 id={`conflict-${op.op_id}`}>{t('sync.conflictTitle')}</h2>
           <p id={`conflict-desc-${op.op_id}`}>
-            <strong>{names.get(op.habit_id) ?? `Gewohnheit ${op.habit_id}`}</strong>, {longDate(op.date)}: Dieser
-            Eintrag wurde auf einem anderen Gerät geändert, während diese Änderung noch nicht übertragen war.
+            <strong>{names.get(op.habit_id) ?? t('sync.habitFallback', { id: op.habit_id })}</strong>,{' '}
+            {format.longDate(op.date)}: {t('sync.conflictText')}
           </p>
           <dl className="conflict-states">
-            <dt>Auf diesem Gerät</dt>
-            <dd>{stateText(op.done)}</dd>
-            <dt>Auf dem Server</dt>
+            <dt>{t('sync.thisDevice')}</dt>
+            <dd>{op.done ? t('sync.done') : t('sync.open')}</dd>
+            <dt>{t('sync.server')}</dt>
             <dd>
-              {stateText(op.conflict!.done)}
-              {formatTime(op.conflict!.updated_at)}
+              {op.conflict!.done ? t('sync.done') : t('sync.open')}
+              {op.conflict!.updated_at && t('sync.changedAt', { time: format.dateTime(op.conflict!.updated_at) })}
             </dd>
           </dl>
           <div className="actions">
             <button type="button" className="button primary" onClick={() => void syncEngine.resolve(op.op_id, 'device')}>
-              Gerätestand übernehmen
+              {t('sync.keepDevice')}
             </button>
             <button type="button" className="button" onClick={() => void syncEngine.resolve(op.op_id, 'server')}>
-              Serverstand behalten
+              {t('sync.keepServer')}
             </button>
           </div>
         </section>

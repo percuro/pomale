@@ -12,7 +12,7 @@ class _NameMixin(BaseModel):
             return value
         value = value.strip()
         if not value:
-            raise ValueError("Name darf nicht leer sein")
+            raise ValueError("Name must not be empty")
         return value
 
     @field_validator("cue", check_fields=False)

@@ -1,25 +1,25 @@
 import { Link } from 'react-router-dom';
-import { errorText } from '../lib/api';
-import { addDays, longDate, weekStart } from '../lib/dates';
-import { STATE_ICON, STATE_LABEL } from '../lib/states';
+import { addDays, weekStart } from '../lib/dates';
+import { STATE_ICON } from '../lib/states';
+import { useErrorText, useI18n } from '../i18n/context';
 import type { Day, HabitDays } from '../lib/types';
 import { setDay, useDays } from '../hooks/useDays';
 import { useSession } from '../hooks/useSession';
 
 export function TodayPage() {
   const { today } = useSession();
+  const { t, format } = useI18n();
+  const errorText = useErrorText();
   // Load the whole week: shares the offline cache with the week view and keeps
   // working across midnight while the device is offline
   const start = weekStart(today);
   const days = useDays(start, addDays(start, 6));
 
-  if (days.isPending) return <p>Lädt …</p>;
+  if (days.isPending) return <p>{t('app.loading')}</p>;
   if (!days.data) {
     return (
       <p role="alert" className="error">
-        {days.error instanceof TypeError
-          ? 'Offline und für diesen Tag ist noch nichts auf dem Gerät gespeichert.'
-          : errorText(days.error)}
+        {days.error instanceof TypeError ? t('today.offlineNoData') : errorText(days.error)}
       </p>
     );
   }
@@ -37,16 +37,16 @@ export function TodayPage() {
   return (
     <>
       <div className="page-head">
-        <h1>Heute</h1>
+        <h1>{t('today.title')}</h1>
         <p className="subtle">
-          {longDate(today)}
-          {planned.length > 0 && <> · {doneCount} von {planned.length} erledigt</>}
+          {format.longDate(today)}
+          {planned.length > 0 && <> · {t('today.progress', { done: doneCount, total: planned.length })}</>}
         </p>
       </div>
 
       {rows.length === 0 && (
         <p className="empty">
-          Noch keine Gewohnheiten. <Link to="/gewohnheiten">Gewohnheit anlegen</Link>
+          {t('today.empty')} <Link to="/habits">{t('today.createHabit')}</Link>
         </p>
       )}
 
@@ -60,7 +60,7 @@ export function TodayPage() {
 
       {unplanned.length > 0 && (
         <details className="unplanned">
-          <summary>Heute nicht geplant ({unplanned.length})</summary>
+          <summary>{t('today.unplanned', { count: unplanned.length })}</summary>
           <ul className="today-list">
             {unplanned.map(({ habit, day }) => (
               <TodayRow key={habit.id} habit={habit} day={day} onSet={set} />
@@ -81,6 +81,7 @@ function TodayRow({
   day: Day;
   onSet: (habitId: number, done: boolean, version: number) => void;
 }) {
+  const t = useI18n().t;
   return (
     <li className={`today-row state-${day.state}`}>
       <button
@@ -97,11 +98,11 @@ function TodayRow({
           {habit.cue && <span className="today-cue">{habit.cue}</span>}
         </span>
         <span className="state-label">
-          {STATE_LABEL[day.state]}
+          {t(`state.${day.state}`)}
           {day.conflict ? (
-            <span className="pending"> · Konflikt</span>
+            <span className="pending"> · {t('today.conflict')}</span>
           ) : (
-            day.pending && <span className="pending"> · wartet auf Übertragung</span>
+            day.pending && <span className="pending"> · {t('today.pending')}</span>
           )}
         </span>
       </button>
@@ -110,10 +111,10 @@ function TodayRow({
         type="button"
         className="button undo"
         hidden={!day.done}
-        aria-label={`${habit.name}: Rückgängig`}
+        aria-label={t('today.undoLabel', { name: habit.name })}
         onClick={() => onSet(habit.id, false, day.version)}
       >
-        Rückgängig
+        {t('today.undo')}
       </button>
     </li>
   );

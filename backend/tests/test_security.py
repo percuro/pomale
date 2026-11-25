@@ -1,9 +1,10 @@
 import os
 import unittest
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 from fastapi.responses import Response
 
+from app.errors import AppError
 from app.middleware.csrf import enforce_csrf
 from app.services.login_rate_limiter import LoginRateLimiter
 
@@ -15,7 +16,7 @@ class LoginRateLimiterTest(unittest.TestCase):
             limiter.check("alex", "192.0.2.1")
             limiter.record_failure("alex", "192.0.2.1")
 
-        with self.assertRaises(HTTPException) as context:
+        with self.assertRaises(AppError) as context:
             limiter.check("alex", "192.0.2.1")
         self.assertEqual(context.exception.status_code, 429)
 
@@ -26,7 +27,7 @@ class LoginRateLimiterTest(unittest.TestCase):
         limiter = LoginRateLimiter()
         for i in range(20):
             limiter.record_failure(f"user{i}", "192.0.2.9")
-        with self.assertRaises(HTTPException):
+        with self.assertRaises(AppError):
             limiter.check("neu", "192.0.2.9")
 
 
