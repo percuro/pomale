@@ -230,8 +230,9 @@ class OidcClient:
             "code_challenge_method": "S256",
         }
         if reauth:
-            # Ask the provider to really check again, not to reuse its own session
-            params.update(prompt="login", max_age="0")
+            # Ask the provider to really check again, not to reuse its own session. prompt=login is
+            # the widely supported way; auth_time is checked in validate_id_token.
+            params["prompt"] = "login"
         endpoint = self.metadata().authorization_endpoint
         separator = "&" if "?" in endpoint else "?"
         return endpoint + separator + urllib.parse.urlencode(params)

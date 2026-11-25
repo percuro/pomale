@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
+## 0.5.0 – single sign-on, audit log
+
+### Features
+
+- Optional sign-in through your own OpenID Connect provider (Authelia, Authentik, Pocket ID, Keycloak, …), configured with `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_SCOPES` and `OIDC_LABEL`. See [docs/oidc.md](docs/oidc.md).
+  - Accounts get there through an invitation ("Continue with …"), by linking an existing account on the account page, in the first-run setup, or automatically with `OIDC_AUTO_CREATE=on`.
+  - `PASSWORD_LOGIN=off` turns passwords off entirely.
+  - Accounts without a password confirm sensitive changes by signing in at the provider again, and can set a password later.
+  - Admins see how each account signs in and can remove a provider link; reset links are now "recovery links" that set a password or link a provider account.
+- Audit log on the admin page: logins and failed logins, rate-limit blocks, account creation and deletion, password changes, roles, (de)activation, invitations, provider links and shortcut keys, also from the command line. Kept for `AUDIT_RETENTION_DAYS` (default 180).
+- `GET /api/v1/meta` also reports `password_login` and whether single sign-on is available; `/auth/me` reports `has_password` and the provider link.
+
+### Fixes
+
+- Logging out in the header now returns to the login page; before, the page stayed on the signed-in view with "not logged in" errors.
+
+### Security
+
+- OIDC: authorization code flow with PKCE (S256); only asymmetrically signed ID tokens; issuer, audience, `azp`, expiry, nonce and subject are checked; accounts are linked by issuer and subject, never by e-mail address. Each sign-in is bound to the browser that started it and works once within 10 minutes.
+- Linking a provider account needs the password; removing the last way to sign in is refused.
+- The audit log stores IP addresses only shortened (IPv4 /24, IPv6 /48) and only for failed logins and rate-limit blocks. A block is logged once, not for every refused request.
+
+### Upgrade notes
+
+- Migration 0004 runs automatically. Nothing to configure: without `OIDC_ISSUER` everything works as before.
+- New dependency: `joserfc` (JWT verification).
+- API: `DELETE /api/v1/account` and `POST /api/v1/account/password` take the password as before; accounts without a password leave it out and may get `403 auth.reauth_required`.
+
 ## 0.4.0 – accounts, invitations, German and English
 
 ### Features

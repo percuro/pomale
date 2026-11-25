@@ -65,7 +65,7 @@ class OidcClientTest(unittest.TestCase):
     def test_reauth_asks_the_provider_to_check_again(self):
         _identity, url = self.sign_in(reauth=True)
         self.assertIn("prompt=login", url)
-        self.assertIn("max_age=0", url)
+        self.assertNotIn("max_age", url)
 
     def test_old_auth_time_fails_reauth(self):
         verifier, challenge = pkce_pair()

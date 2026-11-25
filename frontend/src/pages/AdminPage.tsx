@@ -404,8 +404,9 @@ function AuditSection() {
   const events = audit.data?.pages.flatMap((page) => page.events) ?? [];
   const text = (event: AuditEvent) => {
     const key = `audit.${event.event}`;
-    const params = { actor: event.actor_username ?? t('audit.nobody'), target: event.target_username ?? '—' };
-    return hasMessage(key) ? t(key, params) : event.event;
+    const params = { actor: event.actor_username ?? t('audit.nobody'), target: event.target_username ?? '' };
+    // Without a target (e.g. an unknown username): drop the empty "()" instead of showing it
+    return hasMessage(key) ? t(key, params).replace(' ()', '') : event.event;
   };
 
   return (

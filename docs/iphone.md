@@ -6,7 +6,7 @@ The interface is in English or German: it follows the language chosen on the acc
 
 1. Open your instance (e.g. `https://habits.example.org`) in **Safari**.
 2. Share → **Add to Home Screen**.
-3. Open it **from the new icon** and log in there. The home-screen app has its own cookie storage, so a login in Safari does not carry over. Logins last 30 days without use, at most 90 days (configurable).
+3. Open it **from the new icon** and log in there. The home-screen app has its own cookie storage, so a login in Safari does not carry over. Logins last 30 days without use, at most 90 days (configurable). With single sign-on, see the note in [Single sign-on](oidc.md#iphone-home-screen-app).
 4. "Today" ("Heute"): tap a row to mark it done; "Undo" ("Rückgängig") next to it undoes. The row stays where it is.
 
 ### Offline
