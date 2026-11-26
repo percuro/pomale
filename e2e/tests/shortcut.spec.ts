@@ -10,13 +10,17 @@ test('shortcut key checks off today and stops working after revoking', async ({ 
   await item.getByRole('button', { name: 'Schlüssel anlegen' }).click();
   const header = item.locator('.copy-field', { hasText: 'Header Authorization' }).locator('code');
   const authorization = (await header.textContent())!.trim();
-  expect(authorization).toMatch(/^Bearer ht_/);
+  expect(authorization).toMatch(/^Bearer pm_/);
   await expect(item.locator('.copy-field', { hasText: 'URL' }).locator('code')).toHaveText(
     `${baseURL}/api/v1/habits/${habit.id}/days/today`,
   );
 
-  // The iOS shortcut sends neither cookies nor CSRF headers
-  const shortcut = await playwright.request.newContext({ baseURL });
+  // The iOS shortcut sends neither cookies nor CSRF headers (a new context would inherit both from the config)
+  const shortcut = await playwright.request.newContext({
+    baseURL,
+    storageState: { cookies: [], origins: [] },
+    extraHTTPHeaders: {},
+  });
   const tap = () =>
     shortcut.put(`/api/v1/habits/${habit.id}/days/today`, {
       headers: { Authorization: authorization },
