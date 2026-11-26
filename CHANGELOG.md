@@ -2,6 +2,39 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
+## 0.11.0-rc.1 – beta (release candidate)
+
+No new features: this release makes pomale sturdier to run and to update before the API and the settings are frozen in 1.0.
+
+### Updates
+
+- **Tested updates:** every change is now tested by starting the 0.3.0 image and the previous release, adding data, and starting the new image on the same volume. Accounts, habits, check-ins, archived habits and shortcut keys must survive unchanged, and the updated instance must log in, check off with an old shortcut key and back up and restore. You can update from any release since 0.3.0 straight to the newest one; see [Updates](docs/self-hosting.md#updates).
+- Release images are only built after all checks have passed for the tagged commit.
+
+### Accessibility
+
+- After a change of page the focus moves to the start of the content and screen readers announce the new page, as after a page load. Before, the focus stayed on the link in the navigation.
+- A missing or used invitation link now has a heading.
+- The automatic WCAG 2.2 AA checks now also cover dialogs, forms and results that appear after a click, the setup, invitation and registration pages and the English interface. See [Accessibility](docs/accessibility.md).
+
+### Performance
+
+- The app start loads about a fifth less code (452 instead of 574 kB, 140 instead of 170 kB compressed): history, habits, account and administration load the first time they are opened. Offline use is unchanged; the app keeps all pages on the device.
+- The JSON export no longer runs one database query per habit.
+
+### Fixes
+
+- `GET /api/v1/today` (Siri, Home Assistant) listed a habit archived the same day as still open.
+- Five wrong setup tokens from anyone blocked the first-run setup for everyone for 15 minutes. They are now counted per IP address.
+- A failed daily backup could leave a half-written file in the backup folder; an unreadable backup folder stopped the daily backups until the next restart.
+- Stopping the container while a backup or a round of reminders was running no longer cuts it off; pomale waits up to 10 seconds for it.
+
+### Upgrade notes
+
+- **Settings are checked more strictly.** A switch must be `true`/`false`, `on`/`off`, `yes`/`no` or `1`/`0`, a number a whole number above 0, and `COOKIE_SAMESITE` one of `lax`, `strict` or `none`. Anything else now stops the start with a message naming the variable; before, an unknown switch value silently meant "off" (for example `BACKUP_ENABLED=ja` turned backups off) and a wrong number meant the default. Empty variables still mean the default. Check `docker compose logs app` after the update.
+- **Request size:** a request body may be at most 1 MB (imports 5 MB as before) and must come with a `Content-Length`. Browsers, iOS shortcuts, curl and reverse proxies send one; a body sent in chunks without a length is refused with 411.
+- No migration, no new settings.
+
 ## 0.10.0 – keys, export, backups
 
 ### Features
