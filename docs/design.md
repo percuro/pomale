@@ -14,7 +14,9 @@ An installed web app (home screen) opens independently of the browser, works off
 
 ## Dates
 
-The key of an entry is `(habit, local date)`. "Today" is computed in the configured time zone (by the server for the shortcut, by the browser with `Intl` for offline use), never from the server clock. An entry made offline before midnight and sent after midnight keeps its original date. Schedule changes carry an effective date, so last week's quota does not change when you change your plan today.
+The key of an entry is `(habit, local date)`. "Today" is computed in the configured time zone (by the server for the shortcut, by the browser with `Intl` for offline use), never from the server clock. An entry made offline before midnight and sent after midnight keeps its original date.
+
+An account can let its day end after midnight, at a full hour up to 06:00 (`day_end_hour`). Until then the night belongs to the day before: at 00:30 with a day end of 01:00, "today" is still yesterday's date, and so is the week. Only the hour on the local clock is compared, never a duration, so on the nights the clocks change the night is simply an hour shorter or longer. Like a change of time zone, changing the day end never moves an entry; it only changes which day is "today". Schedule changes carry an effective date, so last week's quota does not change when you change your plan today.
 
 ## Goal types and the quota
 

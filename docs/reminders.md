@@ -9,7 +9,8 @@ pomale can remind you of a habit that is still open: a notification at a time yo
 - Habits due in the **same minute** come as one notification ("3 habits open: Read, Water, Stretch").
 - A notification for one habit has a **Done** button on Android and desktop browsers. It checks the habit off for that day without opening the app; if the phone is offline, the check-off waits in the app's queue and is sent when you next open pomale. iPhone and iPad do not show buttons: a tap opens the app.
 - Each reminder fires **at most once a day**. Editing a habit does not send it again.
-- If the server was down at the reminder time (e.g. during an update), it catches up for **15 minutes**; older reminders are dropped instead of arriving all at once.
+- If your day ends after midnight (account page → "My day ends at"), a reminder time **before the day end belongs to the day that is ending**: with a day end of 02:00, a reminder at 00:30 asks about the day before, and its Done button checks off that day. The habit form marks such times with "counts for the day before". Changing the day end in the middle of the night can skip or repeat one reminder that night.
+- If the server was down at the reminder time (e.g. during an update), it catches up for **15 minutes**, also across the end of the day (a reminder at 23:55 is still sent at 00:05, for the day it was meant for); older reminders are dropped instead of arriving all at once.
 - On days when clocks change, a time that does not exist (e.g. 02:30 when clocks jump to 03:00) is sent one hour later; a time that happens twice is sent once.
 
 ## Turning it on
@@ -36,7 +37,7 @@ Reminders are per device. Logging out on a device, or ending its session under "
 ## Troubleshooting
 
 - **"Notifications are blocked":** permission was refused once. Allow it in the browser's site settings (iPhone: Settings → Notifications → pomale), then reload the account page.
-- **Test works, reminders do not arrive:** check the time zone on the account page and that the habit is really open at that time. Reminders come only for habits that are planned and not yet done.
+- **Test works, reminders do not arrive:** check the time zone and the day end on the account page and that the habit is really open at that time. Reminders come only for habits that are planned and not yet done.
 - **Nothing at all on Android:** battery optimisation can delay notifications of the browser; allow it to run in the background.
 - **"The push service did not accept the notification":** the server could not reach the push service. The server needs outgoing HTTPS (port 443) to the push services listed under `PUSH_ALLOWED_HOSTS` in the [configuration](configuration.md).
 

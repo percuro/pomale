@@ -1,7 +1,8 @@
-"""Time zone per account: "today" is always the account's calendar day.
+"""Time zone and day end per account: "today" is always the account's own day.
 
-An account without its own time zone uses the server's DEFAULT_TIMEZONE. Check-ins are
-calendar days and never move; changing the time zone only changes which day is "today".
+An account without its own time zone uses the server's DEFAULT_TIMEZONE. With a day end after
+midnight (day_end_hour), the hours before it still belong to the day before. Check-ins are
+calendar days and never move; changing either setting only changes which day is "today".
 """
 
 from datetime import date, datetime
@@ -36,4 +37,4 @@ def user_zone(user: User) -> ZoneInfo:
 
 
 def user_today(user: User, now: datetime) -> date:
-    return today_in(user_zone(user), now)
+    return today_in(user_zone(user), now, user.day_end_hour or 0)

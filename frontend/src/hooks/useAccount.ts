@@ -8,6 +8,7 @@ export interface AccountUpdate {
   display_name?: string | null;
   timezone?: string | null;
   locale?: Locale | null;
+  day_end_hour?: number;
 }
 
 /** PATCH /account; the new "me" replaces the cached one (time zone and language apply at once). */
@@ -18,7 +19,7 @@ export function useUpdateAccount() {
     onSuccess: async (me) => {
       void cacheSet('me', me);
       queryClient.setQueryData(ME_KEY, me);
-      // "Today" may have moved with the time zone
+      // "Today" may have moved with the time zone or the day end
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== ME_KEY[0] });
     },
   });

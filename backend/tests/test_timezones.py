@@ -109,6 +109,20 @@ class AccountSettingsTest(unittest.TestCase):
             self.assertEqual((response.status_code, response.json()["code"]), (422, "validation"), body)
         self.assertEqual(self.client.patch("/v1/account", json={"display_name": "x" * 81}).status_code, 422)
 
+    def test_day_end(self):
+        me = self.client.get("/v1/auth/me").json()
+        self.assertEqual(me["day_end_hour"], 0)
+        me = self.client.patch("/v1/account", json={"day_end_hour": 3}).json()
+        self.assertEqual(me["day_end_hour"], 3)
+        # Other changes keep it
+        me = self.client.patch("/v1/account", json={"locale": "en"}).json()
+        self.assertEqual(me["day_end_hour"], 3)
+        for value in (-1, 7, 24, None, "1:00", 1.5):
+            response = self.client.patch("/v1/account", json={"day_end_hour": value})
+            self.assertEqual((response.status_code, response.json()["code"]), (422, "validation"), value)
+        self.assertEqual(self.client.patch("/v1/account", json={"day_end_hour": 6}).json()["day_end_hour"], 6)
+        self.assertEqual(self.client.patch("/v1/account", json={"day_end_hour": 0}).json()["day_end_hour"], 0)
+
     def test_requires_login(self):
         self.assertEqual(self.env.client(username=None).patch("/v1/account", json={}).status_code, 401)
 
@@ -116,6 +130,50 @@ class AccountSettingsTest(unittest.TestCase):
         self.client.patch("/v1/account", json={"timezone": "Asia/Tokyo", "locale": "en"})
         me = self.env.client("alex", PASSWORD).get("/v1/auth/me").json()
         self.assertEqual((me["timezone"], me["locale"], me["role"]), ("Asia/Tokyo", "en", "user"))
+
+
+class DayEndTest(unittest.TestCase):
+    """A day end after midnight: the night still belongs to the day before, for every client."""
+
+    def setUp(self):
+        self.env = ApiTestEnvironment()
+        # Wednesday 00:30 in Honolulu (UTC-10)
+        self.env.now = datetime(2026, 11, 25, 10, 30, tzinfo=UTC)
+        self.env.create_user("owl", timezone="Pacific/Honolulu", day_end_hour=1)
+        self.env.create_user("lark", timezone="Pacific/Honolulu")
+        self.owl = self.env.client("owl")
+        self.lark = self.env.client("lark")
+        shortcut_rate_limiter.reset()
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_me_and_days_follow_the_day_end(self):
+        owl = self.owl.get("/v1/auth/me").json()
+        self.assertEqual((owl["today"], owl["day_end_hour"]), ("2026-11-24", 1))
+        self.assertEqual(self.owl.get("/v1/days").json()["today"], "2026-11-24")
+        self.assertEqual(self.lark.get("/v1/auth/me").json()["today"], "2026-11-25")
+        # One hour later the owl's Wednesday starts too
+        self.env.now = datetime(2026, 11, 25, 11, 0, tzinfo=UTC)
+        self.assertEqual(self.owl.get("/v1/auth/me").json()["today"], "2026-11-25")
+
+    def test_the_calendar_day_is_still_the_future(self):
+        habit = self.owl.post("/v1/habits", json={"name": "Read", "start_on": "2026-11-23"}).json()
+        self.assertEqual(
+            self.owl.put(f"/v1/habits/{habit['id']}/days/2026-11-24", json={"done": True}).status_code, 200
+        )
+        future = self.owl.put(f"/v1/habits/{habit['id']}/days/2026-11-25", json={"done": True})
+        self.assertEqual((future.status_code, future.json()["code"]), (422, "checkin.future_day"))
+
+    def test_shortcut_checks_off_the_day_before(self):
+        habit = self.owl.post("/v1/habits", json={"name": "Read", "start_on": "2026-11-23"}).json()
+        token = self.owl.post(f"/v1/habits/{habit['id']}/shortcut-tokens", json={"label": "iPhone"}).json()["token"]
+        phone = self.env.client(username=None)
+        phone.headers.clear()
+        response = phone.put(
+            f"/v1/habits/{habit['id']}/days/today", headers={"Authorization": f"Bearer {token}"}, json={"done": True}
+        )
+        self.assertEqual(response.json()["date"], "2026-11-24")
 
 
 if __name__ == "__main__":

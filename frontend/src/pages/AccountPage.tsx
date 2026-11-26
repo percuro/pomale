@@ -13,6 +13,7 @@ import { ApiError } from '../lib/api';
 import { startOidc, takeHashParams } from '../lib/oidc';
 import { forgetLocalSubscription } from '../lib/push';
 import { TimezoneSelect } from '../components/account/TimezoneSelect';
+import { DayEndSelect } from '../components/account/DayEndSelect';
 import { useUpdateAccount } from '../hooks/useAccount';
 import { ME_KEY, signedOut } from '../hooks/useMe';
 import { useSession } from '../hooks/useSession';
@@ -81,10 +82,16 @@ function ProfileSection() {
   const [displayName, setDisplayName] = useState(me.display_name ?? '');
   const [timezone, setTimezone] = useState(me.timezone_setting ?? '');
   const [locale, setLocale] = useState<Locale | ''>(me.locale ?? '');
+  const [dayEndHour, setDayEndHour] = useState(me.day_end_hour ?? 0);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    update.mutate({ display_name: displayName.trim() || null, timezone: timezone || null, locale: locale || null });
+    update.mutate({
+      display_name: displayName.trim() || null,
+      timezone: timezone || null,
+      locale: locale || null,
+      day_end_hour: dayEndHour,
+    });
   };
 
   return (
@@ -96,6 +103,7 @@ function ProfileSection() {
           <input maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
         </label>
         <TimezoneSelect value={timezone} serverDefault={me.default_timezone} onChange={setTimezone} />
+        <DayEndSelect value={dayEndHour} onChange={setDayEndHour} />
         <label className="field">
           <span>{t('account.language')}</span>
           <select value={locale} onChange={(e) => setLocale(e.target.value as Locale | '')}>

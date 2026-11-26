@@ -41,7 +41,7 @@ Checks off one habit from the home screen without opening the app. The shortcut 
 3. Action **Get Dictionary Value**: key `message` from "Contents of URL".
 4. Action **Show Result** (or "Show Notification") with that value.
 
-The server determines the date in the time zone of the habit's owner (account page); the shortcut does not send one. The message is in the owner's language, or the phone's if none is set. For automations, the field `result` is `done`, `already_done` or `counted` in every language.
+The server determines the date in the time zone and with the day end of the habit's owner (account page); the shortcut does not send one. With a day end of 01:00, a run at 00:30 checks off the day before. The message is in the owner's language, or the phone's if none is set. For automations, the field `result` is `done`, `already_done` or `counted` in every language.
 
 **Quantity goals** (e.g. 8 glasses of water): every run adds 1 to today's amount. To add more at once, put a number field `amount` (1–1000) into the JSON body, e.g. "Ask for Input" → number → `amount`. The answer then reads "Water: 5 of 8 glasses" and has the fields `value` and `target`; `result` is `counted`. Two runs at the same moment both count.
 

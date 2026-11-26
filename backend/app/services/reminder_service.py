@@ -1,9 +1,12 @@
 """Reminders: at a habit's reminder time, notify the account's devices if the habit is still open.
 
 Runs once a minute from the scheduler (see scheduler.py), outside of any request. A reminder fires
-when its local time has come, it has not fired today, and it is at most GRACE old: after a short
-restart missed reminders are caught up, after a long outage they are dropped instead of arriving
-in a burst. last_sent_on is committed before sending, so nothing is sent twice.
+when its local time has come, it has not fired for that day, and it is at most GRACE old: after a
+short restart missed reminders are caught up, after a long outage they are dropped instead of
+arriving in a burst. last_sent_on is committed before sending, so nothing is sent twice.
+
+Days are the account's own days: with a day end after midnight, a reminder time before the day
+end belongs to the day that is ending (00:30 with a day end of 02:00 reminds of "yesterday").
 """
 
 import json
@@ -21,7 +24,7 @@ from app.models.push import PushSubscription
 from app.models.user import User
 from app.repositories.habit_repository import HabitRepository
 from app.services.checkin_service import CheckinService
-from app.services.day_service import DayInfo, WeekProgress
+from app.services.day_service import DayInfo, WeekProgress, today_in
 from app.services.i18n import resolve_locale, text
 from app.services.push_service import record_result
 from app.services.timezones import user_zone
@@ -41,14 +44,31 @@ def reminder_moment(day: date, at: time, zone: ZoneInfo) -> datetime:
     return datetime.combine(day, at, tzinfo=zone).astimezone(UTC)
 
 
-def is_due(at: time, last_sent_on: date | None, now: datetime, zone: ZoneInfo) -> bool:
-    today = now.astimezone(zone).date()
-    if last_sent_on == today:
-        return False
-    # Compare in UTC: subtracting two times in the same zone ignores clock changes
-    moment = reminder_moment(today, at, zone)
+def reminder_moment_on(day: date, at: time, zone: ZoneInfo, day_end_hour: int = 0) -> datetime:
+    """The UTC instant of a reminder that belongs to `day`: a time before the day end falls on the
+    next calendar day, because that is where the account's day still runs."""
+    calendar_day = day + timedelta(days=1) if at.hour < day_end_hour else day
+    return reminder_moment(calendar_day, at, zone)
+
+
+def due_on(at: time, last_sent_on: date | None, now: datetime, zone: ZoneInfo, day_end_hour: int = 0) -> date | None:
+    """The day a reminder fires for at `now`, or None. The day before is checked too, so that a
+    reminder shortly before the day end is still caught up just after it."""
     now_utc = now.astimezone(UTC)
-    return moment <= now_utc and now_utc - moment <= GRACE
+    today = today_in(zone, now, day_end_hour)
+    for day in (today, today - timedelta(days=1)):
+        # Sent for this day or a later one: an earlier day never fires afterwards
+        if last_sent_on is not None and last_sent_on >= day:
+            continue
+        # Compare in UTC: subtracting two times in the same zone ignores clock changes
+        moment = reminder_moment_on(day, at, zone, day_end_hour)
+        if moment <= now_utc and now_utc - moment <= GRACE:
+            return day
+    return None
+
+
+def is_due(at: time, last_sent_on: date | None, now: datetime, zone: ZoneInfo, day_end_hour: int = 0) -> bool:
+    return due_on(at, last_sent_on, now, zone, day_end_hour) is not None
 
 
 @dataclass(frozen=True)
@@ -127,23 +147,30 @@ class ReminderService:
         checkins = CheckinService(HabitRepository(db))
         for user, reminders in by_user.values():
             zone = user_zone(user)
-            today = now.astimezone(zone).date()
-            due = [(r, h) for r, h in reminders if is_due(r.time, r.last_sent_on, now, zone)]
+            day_end_hour = user.day_end_hour or 0
+            today = today_in(zone, now, day_end_hour)
+            due = []
+            for reminder, habit in reminders:
+                day = due_on(reminder.time, reminder.last_sent_on, now, zone, day_end_hour)
+                if day is not None:
+                    due.append((reminder, habit, day))
             if not due:
                 continue
-            for reminder, _ in due:
-                reminder.last_sent_on = today
+            for reminder, _, day in due:
+                reminder.last_sent_on = day
             db.commit()
-            habits = list({habit.id: habit for _, habit in due}.values())
-            items = []
-            for habit in habits:
-                evaluation = checkins.evaluate(habit, today, today, today)
-                if evaluation.days[0].state in OPEN_STATES:
-                    entry = checkins.repository.get_checkin(habit.id, today)
-                    version = entry.version if entry else 0
-                    items.append(OpenHabit(habit, evaluation.days[0], evaluation.week, version))
-            if items:
-                jobs.append((user.id, build_payload(resolve_locale(user, None), items, today, user.id)))
+            # Usually one day; a reminder caught up from the day before comes as its own notification
+            for day in sorted({day for _, _, day in due}):
+                habits = list({habit.id: habit for _, habit, due_day in due if due_day == day}.values())
+                items = []
+                for habit in habits:
+                    evaluation = checkins.evaluate(habit, day, day, today)
+                    if evaluation.days[0].state in OPEN_STATES:
+                        entry = checkins.repository.get_checkin(habit.id, day)
+                        version = entry.version if entry else 0
+                        items.append(OpenHabit(habit, evaluation.days[0], evaluation.week, version))
+                if items:
+                    jobs.append((user.id, build_payload(resolve_locale(user, None), items, day, user.id)))
         return jobs
 
     def _send(self, db: Session, user_id: int, payload: dict, now: datetime) -> int:
