@@ -456,6 +456,7 @@ export const de = {
   'audit.shortcut.key_revoked': '{actor} hat einen Kurzbefehl-Schlüssel widerrufen',
   'audit.token.created': '{actor} hat einen API-Schlüssel angelegt',
   'audit.token.revoked': '{actor} hat einen API-Schlüssel widerrufen',
+  'audit.account.imported': '{actor} hat Daten aus einer Datei importiert',
   'audit.push.device_added': '{actor} hat Erinnerungen auf einem Gerät eingeschaltet',
   'audit.push.device_removed': '{actor} hat Erinnerungen auf einem Gerät ausgeschaltet',
 
@@ -507,6 +508,8 @@ export const de = {
   'error.token.invalid_scopes': 'Wähle mindestens eine Berechtigung.',
   'error.token.invalid_expiry': 'Wähle 30, 90 oder 365 Tage oder kein Ablaufdatum.',
   'error.token.limit_reached': 'Höchstens 50 aktive Schlüssel pro Konto. Widerrufe zuerst einen.',
+  'error.import.not_empty': 'Importieren geht nur in ein Konto ohne Gewohnheiten, Gruppen und Pausen.',
+  'error.import.too_large': 'Die Datei ist zu groß (höchstens 5 MB).',
   'error.setup.done': 'Die Einrichtung ist bereits abgeschlossen.',
   'error.setup.invalid_token': 'Das Setup-Token ist falsch.',
   'error.setup.required': 'Diese Instanz ist noch nicht eingerichtet.',
