@@ -2,12 +2,7 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
-## 0.11.0-rc.2 – beta (release candidate)
-
-- Fixed: on iPhone and iPad, date and time fields ("Starts on", pauses, reminder times) stuck out of the form on the right and showed their value centred. They now have the width of the other fields and start on the left; tapping still opens the picker.
-- Everything else as in 0.11.0-rc.1 below. No migration, no new settings.
-
-## 0.11.0-rc.1 – beta (release candidate)
+## 0.11.0 – beta
 
 No new features: this release makes pomale sturdier to run and to update before the API and the settings are frozen in 1.0.
 
@@ -33,6 +28,7 @@ No new features: this release makes pomale sturdier to run and to update before 
 - Five wrong setup tokens from anyone blocked the first-run setup for everyone for 15 minutes. They are now counted per IP address.
 - A failed daily backup could leave a half-written file in the backup folder; an unreadable backup folder stopped the daily backups until the next restart.
 - Stopping the container while a backup or a round of reminders was running no longer cuts it off; pomale waits up to 10 seconds for it.
+- On iPhone and iPad, date and time fields ("Starts on", pauses, reminder times) stuck out of the form on the right and showed their value centred. They now have the width of the other fields and start on the left; tapping still opens the picker.
 
 ### Upgrade notes
 
