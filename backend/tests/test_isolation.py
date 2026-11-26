@@ -32,6 +32,7 @@ ROUTES = {
     ("POST", "/v1/habits/{habit_id}/shortcut-tokens"): (404, {"label": "mine now"}),
     ("DELETE", "/v1/habits/{habit_id}/shortcut-tokens/{token_id}"): (404, None),
     ("DELETE", "/v1/account/sessions/{session_id}"): (404, None),
+    ("DELETE", "/v1/account/tokens/{token_id}"): (404, None),
     ("DELETE", "/v1/push/subscriptions/{subscription_id}"): (404, None),
     ("POST", "/v1/push/subscriptions/{subscription_id}/test"): (404, None),
     # Shortcut: authenticated by key only; A's key on B's habit is refused the same way as on any other id

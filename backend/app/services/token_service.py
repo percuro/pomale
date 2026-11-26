@@ -22,6 +22,7 @@ from app.errors import AppError
 from app.models.api_token import SCOPE_CHECKIN, SCOPE_READ, SCOPES, ApiToken
 from app.models.habit import Habit
 from app.models.user import User
+from app.schemas.token import TokenRead
 from app.services import audit_service
 from app.services.auth_service import utcnow
 from app.services.login_rate_limiter import LoginRateLimiter
@@ -71,6 +72,19 @@ def bearer_token(request: Request) -> str | None:
 
 def _invalid() -> AppError:
     return AppError(401, "token.invalid", "Key is invalid, expired or revoked", headers={"WWW-Authenticate": "Bearer"})
+
+
+def token_read(token: ApiToken) -> TokenRead:
+    return TokenRead(
+        id=token.id,
+        label=token.label,
+        scopes=sorted(token.scope_set, key=SCOPES.index),
+        habit_ids=token.habit_ids,
+        created_at=token.created_at,
+        last_used_at=token.last_used_at,
+        expires_at=token.expires_at,
+        revoked_at=token.revoked_at,
+    )
 
 
 def token_for(request: Request) -> ApiToken | None:

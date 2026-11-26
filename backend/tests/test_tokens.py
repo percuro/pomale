@@ -2,7 +2,7 @@
 
 import re
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from app.main import app
 from app.models.api_token import ApiToken
@@ -203,6 +203,67 @@ class TokenTest(unittest.TestCase):
         self.assertIsNotNone(first)
         self.call(token, "GET", "/v1/days")
         self.assertEqual(last_used(), first)
+
+
+class TokenManagementTest(unittest.TestCase):
+    def setUp(self):
+        self.env = ApiTestEnvironment(today=date(2026, 11, 24))
+        self.env.create_user("alex")
+        self.client = self.env.client("alex")
+        self.habit = self.client.post("/v1/habits", json={"name": "Lesen"}).json()
+
+    def tearDown(self):
+        self.env.close()
+
+    def test_create_list_and_revoke(self):
+        body = {"label": "Home Assistant", "scopes": ["checkin", "read"], "habit_ids": [self.habit["id"]]}
+        created = self.client.post("/v1/account/tokens", json=body)
+        self.assertEqual(created.status_code, 201, created.text)
+        data = created.json()
+        self.assertTrue(data["token"].startswith("pm_"))
+        self.assertEqual(
+            (data["scopes"], data["habit_ids"], data["expires_at"]), (["read", "checkin"], [self.habit["id"]], None)
+        )
+        listed = self.client.get("/v1/account/tokens").json()
+        self.assertEqual([t["label"] for t in listed], ["Home Assistant"])
+        self.assertNotIn("token", listed[0])
+        self.assertEqual(self.client.delete(f"/v1/account/tokens/{data['id']}").status_code, 204)
+        self.assertIsNotNone(self.client.get("/v1/account/tokens").json()[0]["revoked_at"])
+        # Revoking twice is fine
+        self.assertEqual(self.client.delete(f"/v1/account/tokens/{data['id']}").status_code, 204)
+
+    def test_expiry(self):
+        data = self.client.post("/v1/account/tokens", json={"scopes": ["read"], "expires_in_days": 90}).json()
+        created, expires = (datetime.fromisoformat(data[k]) for k in ("created_at", "expires_at"))
+        self.assertEqual(expires - created, timedelta(days=90))
+        self.assertEqual(data["habit_ids"], [])
+
+    def test_invalid_input(self):
+        for body in ({"scopes": []}, {"scopes": ["admin"]}, {"scopes": ["read"], "expires_in_days": 7}, {}):
+            response = self.client.post("/v1/account/tokens", json=body)
+            self.assertEqual((response.status_code, response.json()["code"]), (422, "validation"), body)
+        self.env.create_user("sam")
+        foreign = self.env.client("sam").post("/v1/habits", json={"name": "Sam's"}).json()
+        response = self.client.post("/v1/account/tokens", json={"scopes": ["read"], "habit_ids": [foreign["id"]]})
+        self.assertEqual(response.status_code, 404)
+
+    def test_at_most_fifty_active_keys(self):
+        for _ in range(50):
+            self.assertEqual(self.client.post("/v1/account/tokens", json={"scopes": ["read"]}).status_code, 201)
+        full = self.client.post("/v1/account/tokens", json={"scopes": ["read"]})
+        self.assertEqual((full.status_code, full.json()["code"]), (409, "token.limit_reached"))
+        first = self.client.get("/v1/account/tokens").json()[-1]["id"]
+        self.client.delete(f"/v1/account/tokens/{first}")
+        self.assertEqual(self.client.post("/v1/account/tokens", json={"scopes": ["read"]}).status_code, 201)
+
+    def test_shortcut_keys_show_up_in_the_list(self):
+        self.client.post(f"/v1/habits/{self.habit['id']}/shortcut-tokens", json={"label": "iPhone"})
+        listed = self.client.get("/v1/account/tokens").json()
+        self.assertEqual((listed[0]["label"], listed[0]["scopes"]), ("iPhone", ["checkin"]))
+        # A general key is not listed as a shortcut key of the habit
+        self.client.post("/v1/account/tokens", json={"scopes": ["read"], "habit_ids": [self.habit["id"]]})
+        shortcut_keys = self.client.get(f"/v1/habits/{self.habit['id']}/shortcut-tokens").json()
+        self.assertEqual([t["label"] for t in shortcut_keys], ["iPhone"])
 
 
 if __name__ == "__main__":
