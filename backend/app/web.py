@@ -20,6 +20,7 @@ from app.db.database import SessionLocal
 from app.main import app as api
 from app.middleware.security_headers import add_security_headers
 from app.services import setup_service
+from app.services.backup_scheduler import BackupScheduler
 from app.services.scheduler import ReminderScheduler
 from app.services.webpush.keys import ensure_vapid_keys
 
@@ -76,11 +77,28 @@ async def lifespan(_app: FastAPI):
         raise
     announce_setup_token()
     scheduler = start_reminders()
+    backups = start_backups()
     try:
         yield
     finally:
         if scheduler is not None:
             await scheduler.stop()
+        if backups is not None:
+            await backups.stop()
+
+
+def start_backups() -> BackupScheduler | None:
+    if not config.backup_enabled():
+        logger.info("Daily backups are turned off (BACKUP_ENABLED=false)")
+        return None
+    scheduler = BackupScheduler(
+        config.get_backup_dir(),
+        config.get_backup_keep_days(),
+        config.get_backup_time(),
+        config.get_default_timezone(),
+    )
+    scheduler.start()
+    return scheduler
 
 
 def start_reminders() -> ReminderScheduler | None:

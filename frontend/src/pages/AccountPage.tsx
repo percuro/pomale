@@ -14,6 +14,8 @@ import { startOidc, takeHashParams } from '../lib/oidc';
 import { forgetLocalSubscription } from '../lib/push';
 import { TimezoneSelect } from '../components/account/TimezoneSelect';
 import { DayEndSelect } from '../components/account/DayEndSelect';
+import { DataSection } from '../components/account/DataSection';
+import { TokensSection } from '../components/account/TokensSection';
 import { useUpdateAccount } from '../hooks/useAccount';
 import { ME_KEY, signedOut } from '../hooks/useMe';
 import { useSession } from '../hooks/useSession';
@@ -67,7 +69,8 @@ export function AccountPage() {
         {passwordLogin && <PasswordSection />}
         <RemindersSection />
         <SessionsSection />
-        <ExportSection />
+        <TokensSection />
+        <DataSection />
         <DeleteSection />
       </OnlineOnly>
     </>
@@ -266,21 +269,6 @@ function SessionsSection() {
           </button>
         </div>
       )}
-    </section>
-  );
-}
-
-function ExportSection() {
-  const { t } = useI18n();
-  return (
-    <section aria-labelledby="export-heading">
-      <h2 id="export-heading">{t('account.export')}</h2>
-      <p className="subtle">{t('account.exportIntro')}</p>
-      <div className="button-row section-actions">
-        <a className="button" href={`${API_BASE_URL}/v1/export.csv`} download>
-          {t('account.exportButton')}
-        </a>
-      </div>
     </section>
   );
 }

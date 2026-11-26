@@ -18,6 +18,7 @@ from app.repositories.auth_repository import AuthRepository
 from app.services.auth_service import SESSION_COOKIE_NAME, AuthService, utcnow
 from app.services.login_rate_limiter import login_rate_limiter
 from app.services.push_service import test_rate_limiter
+from app.services.token_service import token_rate_limiter
 
 PASSWORD = "sicheres-passwort-123"
 TEST_ORIGIN = "http://localhost:5173"
@@ -25,6 +26,11 @@ TEST_ORIGIN = "http://localhost:5173"
 # values): CSRF on, allowed origin = the test clients' origin, default time zone.
 TEST_ENV = {
     "PUBLIC_URL": TEST_ORIGIN,
+    "BACKUP_ENABLED": "false",
+    "BACKUP_DIR": "",
+    "BACKUP_TIME": "",
+    "BACKUP_KEEP_DAYS": "",
+    "API_DOCS": "",
     "CSRF_PROTECTION": "true",
     "COOKIE_SECURE": "false",
     "CORS_ORIGINS": "",
@@ -56,6 +62,7 @@ class ApiTestEnvironment:
         self.SessionLocal = sessionmaker(bind=self.engine, autoflush=False)
         login_rate_limiter.reset()
         test_rate_limiter.reset()
+        token_rate_limiter.reset()
 
         def _db():
             db = self.SessionLocal()

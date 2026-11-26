@@ -206,6 +206,55 @@ export interface Meta {
   password_login: boolean;
   /** null = OIDC not configured; label = name for the button (null = default text) */
   oidc: { label: string | null } | null;
+  /** /api/openapi.json is served */
+  api_docs: boolean;
+}
+
+export type TokenScope = 'read' | 'checkin';
+
+/** A personal API key; the key itself is only shown once, when it is created */
+export interface ApiToken {
+  id: number;
+  label: string;
+  scopes: TokenScope[];
+  /** empty = all habits */
+  habit_ids: number[];
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ApiTokenCreated extends ApiToken {
+  token: string;
+}
+
+export interface ImportResult {
+  groups: number;
+  habits: number;
+  checkins: number;
+  pauses: number;
+  reminders: number;
+  settings: string[];
+}
+
+export interface BackupFile {
+  name: string;
+  size: number;
+  created_at: string;
+}
+
+export interface BackupStatus {
+  enabled: boolean;
+  time: string;
+  timezone: string;
+  keep_days: number;
+  directory: string;
+  count: number;
+  total_size: number;
+  latest: BackupFile | null;
+  last_error: string | null;
+  last_error_at: string | null;
 }
 
 export interface SessionInfo {

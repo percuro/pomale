@@ -5,34 +5,16 @@ copy: this yields one consistent state even while the app is writing. Uncompress
 so deduplicating backup tools only store the changes between runs.
 """
 
-import sqlite3
 import sys
 
-from app.config import get_database_url
+from app.services.backup_service import database_path, write_dump
 
-
-def database_path() -> str:
-    url = get_database_url()
-    prefix = "sqlite:///"
-    if not url.startswith(prefix):
-        raise SystemExit("Only SQLite databases are supported")
-    return url[len(prefix) :]
+__all__ = ["database_path", "main"]
 
 
 def main() -> None:
-    path = database_path()
-    source = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=30)
-    snapshot = sqlite3.connect(":memory:")
-    try:
-        source.backup(snapshot)
-    finally:
-        source.close()
-    out = sys.stdout
-    for line in snapshot.iterdump():
-        out.write(line)
-        out.write("\n")
-    snapshot.close()
-    out.flush()
+    write_dump(sys.stdout)
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":

@@ -1,23 +1,23 @@
-import re
 from urllib.parse import urlparse
 
 from fastapi import Request
 
 from app.config import csrf_enabled, get_allowed_origins
 from app.errors import error_response
+from app.services.auth_service import SESSION_COOKIE_NAME
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 CSRF_HEADER = "X-Habit-CSRF"
-# iOS shortcut: authenticates with a bearer key only and sends neither cookie nor Origin
-SHORTCUT_PATH = re.compile(r"^(/api)?/v1/habits/\d+/days/today$")
 
 
-def _is_shortcut_request(request: Request) -> bool:
+def _is_api_key_request(request: Request) -> bool:
+    """An API key (iOS shortcut, scripts) sends no session cookie and no Origin. A browser never adds
+    a bearer key on its own, so such a request cannot be forged by another site; what a key may do
+    is limited in token_service. With the session cookie, the request is a session (require_user
+    decides the same way) and checked as usual. Other cookies, e.g. of an auth proxy, change nothing."""
     return (
-        request.method == "PUT"
-        and SHORTCUT_PATH.match(request.url.path) is not None
-        and request.headers.get("Authorization", "").lower().startswith("bearer ")
-        and "cookie" not in request.headers
+        request.headers.get("Authorization", "").lower().startswith("bearer ")
+        and SESSION_COOKIE_NAME not in request.cookies
     )
 
 
@@ -28,7 +28,7 @@ def _rejected():
 async def enforce_csrf(request: Request, call_next):
     if not csrf_enabled() or request.method not in UNSAFE_METHODS:
         return await call_next(request)
-    if _is_shortcut_request(request):
+    if _is_api_key_request(request):
         return await call_next(request)
 
     if request.headers.get(CSRF_HEADER) != "1":

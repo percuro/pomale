@@ -7,7 +7,9 @@ See docs/configuration.md for the full reference.
 import logging
 import os
 from dataclasses import dataclass
+from datetime import time
 from functools import lru_cache
+from pathlib import Path
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -164,6 +166,45 @@ def get_oidc_redirect_uri() -> str:
     return f"{get_public_url()}/api/v1/auth/oidc/callback"
 
 
+def api_docs_enabled() -> bool:
+    """API_DOCS=false hides /api/openapi.json (the API itself is unaffected)."""
+    return env_bool("API_DOCS", True)
+
+
+def backup_enabled() -> bool:
+    """BACKUP_ENABLED=false turns off the daily backup (a backup can still be made by hand)."""
+    return env_bool("BACKUP_ENABLED", True)
+
+
+def get_backup_time() -> time:
+    """BACKUP_TIME: local time (DEFAULT_TIMEZONE) of the daily backup, "HH:MM"."""
+    value = os.getenv("BACKUP_TIME", "").strip() or "03:00"
+    try:
+        hours, minutes = value.split(":")
+        return time(int(hours), int(minutes))
+    except ValueError as exc:
+        raise ConfigError(f"BACKUP_TIME must be a time like 03:00, not {value!r}") from exc
+
+
+def get_backup_keep_days() -> int:
+    value = os.getenv("BACKUP_KEEP_DAYS", "").strip() or "14"
+    if not value.isdigit() or not 1 <= int(value) <= 365:
+        raise ConfigError(f"BACKUP_KEEP_DAYS must be a number of days from 1 to 365, not {value!r}")
+    return int(value)
+
+
+def get_backup_dir() -> Path:
+    """BACKUP_DIR, by default "backups" next to the database file (/data/backups in the image)."""
+    value = os.getenv("BACKUP_DIR", "").strip()
+    if value:
+        return Path(value)
+    url = get_database_url()
+    prefix = "sqlite:///"
+    if not url.startswith(prefix):
+        raise ConfigError("Backups need a SQLite DATABASE_URL")
+    return Path(url[len(prefix) :]).parent / "backups"
+
+
 def push_enabled() -> bool:
     """PUSH_ENABLED=false turns reminders off: no scheduler, no push endpoints, no UI."""
     return env_bool("PUSH_ENABLED", True)
@@ -206,6 +247,9 @@ def validate() -> None:
     get_registration_mode()
     if push_enabled():
         get_push_contact()
+    get_backup_time()
+    get_backup_keep_days()
+    get_backup_dir()
     oidc = get_oidc_settings()
     if not password_login_enabled() and oidc is None:
         raise ConfigError("PASSWORD_LOGIN=off needs OIDC: set OIDC_ISSUER and OIDC_CLIENT_ID")

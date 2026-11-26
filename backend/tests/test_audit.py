@@ -111,10 +111,10 @@ class AuditLogTest(unittest.TestCase):
             ),
             (
                 lambda: sam.post(f"/v1/habits/{habit['id']}/shortcut-tokens", json={"label": "iPhone"}),
-                "shortcut.key_created",
+                "token.created",
                 "sam",
                 None,
-                {"habit_id": habit["id"], "label": "iPhone"},
+                {"label": "iPhone", "scopes": "checkin", "habits": 1},
             ),
             (
                 lambda: sam.post(
@@ -155,12 +155,12 @@ class AuditLogTest(unittest.TestCase):
                 (name, actor, target, details),
             )
 
-    def test_shortcut_key_revoked(self):
+    def test_key_revoked(self):
         sam = self.env.client("sam")
         habit = sam.post("/v1/habits", json={"name": "Lesen"}).json()
         key = sam.post(f"/v1/habits/{habit['id']}/shortcut-tokens", json={"label": "iPad"}).json()
         sam.delete(f"/v1/habits/{habit['id']}/shortcut-tokens/{key['id']}")
-        event = self.last("shortcut.key_revoked")
+        event = self.last("token.revoked")
         self.assertEqual((event.actor_username, audit_service.details_of(event)["label"]), ("sam", "iPad"))
 
     def test_invitation_used_revoked_and_account_created(self):

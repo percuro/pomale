@@ -1,0 +1,170 @@
+{
+  "format": "pomale-export",
+  "version": 1,
+  "app_version": "0.10.0",
+  "exported_at": "2026-11-24T18:00:00",
+  "account": {
+    "timezone": "America/New_York",
+    "locale": "en",
+    "day_end_hour": 1
+  },
+  "groups": [
+    {
+      "ref": 1,
+      "name": "Morning",
+      "sort_order": 1
+    },
+    {
+      "ref": 2,
+      "name": "Evening",
+      "sort_order": 2
+    }
+  ],
+  "habits": [
+    {
+      "ref": 1,
+      "name": "Read",
+      "cue": "after dinner",
+      "sort_order": 1,
+      "archived_on": null,
+      "unit": null,
+      "color": "teal",
+      "group_ref": 2,
+      "created_at": "2026-11-02T08:00:00",
+      "schedules": [
+        {
+          "valid_from": "2026-11-02",
+          "weekdays": 31,
+          "goal_type": "days",
+          "target": null
+        },
+        {
+          "valid_from": "2026-11-16",
+          "weekdays": 127,
+          "goal_type": "days",
+          "target": null
+        }
+      ],
+      "reminders": [
+        "21:00"
+      ],
+      "checkins": [
+        {
+          "date": "2026-11-17",
+          "done": true,
+          "value": null,
+          "note": null
+        },
+        {
+          "date": "2026-11-18",
+          "done": true,
+          "value": null,
+          "note": "Chapter 3"
+        },
+        {
+          "date": "2026-11-19",
+          "done": false,
+          "value": null,
+          "note": "Too tired"
+        },
+        {
+          "date": "2026-11-20",
+          "done": true,
+          "value": null,
+          "note": null
+        }
+      ]
+    },
+    {
+      "ref": 2,
+      "name": "Water",
+      "cue": null,
+      "sort_order": 2,
+      "archived_on": null,
+      "unit": "glasses",
+      "color": null,
+      "group_ref": 1,
+      "created_at": "2026-11-02T08:01:00",
+      "schedules": [
+        {
+          "valid_from": "2026-11-02",
+          "weekdays": 127,
+          "goal_type": "quantity",
+          "target": 8
+        }
+      ],
+      "reminders": [
+        "10:00",
+        "15:30"
+      ],
+      "checkins": [
+        {
+          "date": "2026-11-23",
+          "done": true,
+          "value": 8,
+          "note": null
+        },
+        {
+          "date": "2026-11-24",
+          "done": true,
+          "value": 5,
+          "note": null
+        }
+      ]
+    },
+    {
+      "ref": 3,
+      "name": "Run",
+      "cue": null,
+      "sort_order": 3,
+      "archived_on": "2026-11-24",
+      "unit": null,
+      "color": "red",
+      "group_ref": null,
+      "created_at": "2026-11-02T08:02:00",
+      "schedules": [
+        {
+          "valid_from": "2026-11-02",
+          "weekdays": 127,
+          "goal_type": "weekly_count",
+          "target": 3
+        },
+        {
+          "valid_from": "2026-11-25",
+          "weekdays": 0,
+          "goal_type": "weekly_count",
+          "target": 3
+        }
+      ],
+      "reminders": [],
+      "checkins": [
+        {
+          "date": "2026-11-10",
+          "done": true,
+          "value": null,
+          "note": null
+        },
+        {
+          "date": "2026-11-12",
+          "done": true,
+          "value": null,
+          "note": null
+        }
+      ]
+    }
+  ],
+  "pauses": [
+    {
+      "habit_ref": 2,
+      "start_on": "2026-11-03",
+      "end_on": "2026-11-03",
+      "reason": null
+    },
+    {
+      "habit_ref": null,
+      "start_on": "2026-11-09",
+      "end_on": "2026-11-11",
+      "reason": "Holiday"
+    }
+  ]
+}

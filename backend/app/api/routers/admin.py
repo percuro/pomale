@@ -1,13 +1,24 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
+from app import config
 from app.api.dependencies.auth import require_admin
 from app.db.database import get_db
+from app.errors import AppError
 from app.models.user import User
 from app.repositories.auth_repository import AuthRepository
-from app.schemas.admin import AdminUserRead, AdminUserUpdate, AuditEventRead, AuditPage
+from app.schemas.admin import (
+    AdminUserRead,
+    AdminUserUpdate,
+    AuditEventRead,
+    AuditPage,
+    BackupFileRead,
+    BackupStatusRead,
+)
 from app.schemas.invitation import InvitationCreate, InvitationCreated, InvitationRead
-from app.services import audit_service
+from app.services import audit_service, backup_service
 from app.services.admin_service import AdminService
 from app.services.invitation_service import InvitationService
 from app.services.oidc_service import OidcService
@@ -91,3 +102,36 @@ def list_audit_events(
         ],
         next_before_id=events[-1].id if more else None,
     )
+
+
+def _backup_read(backup: backup_service.BackupFile) -> BackupFileRead:
+    return BackupFileRead(name=backup.name, size=backup.size, created_at=backup.created_at)
+
+
+@router.get("/backups", response_model=BackupStatusRead)
+def backup_status():
+    """The built-in backups. They cannot be downloaded here: admins do not see other accounts' data."""
+    directory = config.get_backup_dir()
+    backups = backup_service.list_backups(directory)
+    return BackupStatusRead(
+        enabled=config.backup_enabled(),
+        time=config.get_backup_time().strftime("%H:%M"),
+        timezone=config.get_default_timezone_name(),
+        keep_days=config.get_backup_keep_days(),
+        directory=str(directory),
+        count=len(backups),
+        total_size=sum(b.size for b in backups),
+        latest=_backup_read(backups[0]) if backups else None,
+        last_error=backup_service.state.last_error,
+        last_error_at=backup_service.state.last_error_at,
+    )
+
+
+@router.post("/backups", response_model=BackupFileRead, status_code=status.HTTP_201_CREATED)
+def create_backup(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    try:
+        backup = backup_service.create_backup(config.get_backup_dir(), datetime.now(UTC), config.get_backup_keep_days())
+    except Exception as exc:
+        raise AppError(500, "backup.failed", "The backup failed; see the server log") from exc
+    audit_service.record(db, "backup.created", actor=admin, name=backup.name)
+    return _backup_read(backup)

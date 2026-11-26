@@ -5,6 +5,7 @@ import { APP_NAME } from '../app/brand';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { OnlineOnly } from '../components/common/OnlineOnly';
 import { ShareLink } from '../components/common/ShareLink';
+import { BackupsSection } from '../components/admin/BackupsSection';
 import { useSession } from '../hooks/useSession';
 import { useErrorText, useI18n } from '../i18n/context';
 import { hasMessage } from '../i18n/core';
@@ -36,6 +37,7 @@ export function AdminPage() {
         <InviteSection created={created} onCreated={setCreated} />
         <OpenLinksSection />
         <AccountsSection onResetLink={setCreated} />
+        <BackupsSection />
         <AuditSection />
       </OnlineOnly>
     </>

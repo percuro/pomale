@@ -4,7 +4,7 @@
 
 Habits grow at their own pace. pomale is a small, self-hosted habit tracker for your phone and your laptop. Check off a habit in a second on the iPhone, review and correct the week on a big screen. No points, no streaks that reset to zero, no notes you have to write.
 
-> Status: 0.9 – your day can end after midnight, for night owls. API tokens, JSON import/export and built-in backups are next on the [roadmap](#roadmap).
+> Status: 0.10 – personal API keys, JSON export and import, built-in daily backups. Beta hardening is next on the [roadmap](#roadmap).
 
 ## Features
 
@@ -17,12 +17,13 @@ Habits grow at their own pace. pomale is a small, self-hosted habit tracker for 
 - **Groups, colours and drag-to-sort** (with a keyboard alternative), and an optional note per habit and day.
 - **Reminders:** up to three times per habit, sent only if the habit is still open – on iPhone (home-screen app, iOS 16.4+), Android and desktop browsers, with a "Done" button where the system shows one. End-to-end encrypted, no extra service.
 - **Works offline:** installable web app (iPhone home screen, Android, desktop). Changes made offline are queued, marked, and sent when the app is back online. A conflicting change from another device is shown to you, never silently overwritten.
-- **iOS shortcut widget:** a revocable key for exactly one habit lets an iOS Shortcut check it off from the home screen.
+- **iOS shortcut widget:** a revocable key for exactly one habit lets an iOS Shortcut check it off from the home screen, and Siri can tell you what is still open today.
+- **API keys** for scripts and home automation such as Home Assistant: read and/or check off, optionally for some habits only – never more. The API is described in `/api/openapi.json`.
 - **For a family, a flat share or a club:** admins invite people with a one-time link; everyone has their own habits, time zone and language, and nobody sees anyone else's data.
 - **Single sign-on (optional):** log in through your own OpenID Connect provider such as Authelia, Authentik or Pocket ID, with or without pomale passwords.
 - **Audit log** for admins: logins, roles, invitations and keys.
 - **English and German**, following the browser or the account's choice.
-- **CSV export**, plain SQL backups, health endpoint.
+- **Your data stays yours:** CSV for spreadsheets, a complete JSON export that imports into an empty account on any pomale, built-in daily backups, plain SQL dumps for your own backup tool, health endpoint.
 - **Small footprint:** one container, one SQLite file, no external services (reminders use the browsers' own push services).
 
 ## Quick start
@@ -42,7 +43,8 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - [Configuration](docs/configuration.md): all environment variables
 - [Single sign-on](docs/oidc.md): OpenID Connect with Authelia, Authentik, Pocket ID and others
 - [Reminders](docs/reminders.md): Web Push on iPhone, Android and desktop, privacy, troubleshooting
-- [iPhone](docs/iphone.md): home-screen app, offline use, reminders, shortcut widget
+- [iPhone](docs/iphone.md): home-screen app, offline use, reminders, shortcut widget, Siri
+- [API](docs/api.md): API keys, examples with curl and Home Assistant, JSON export and import
 - [Development](docs/development.md): running and testing from source
 - [Design notes](docs/design.md): why it works the way it does
 - [Design language](docs/design-language.md): the look, and the rules behind it
@@ -55,7 +57,7 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - ~~**0.7** reminders via Web Push~~ ✓
 - ~~**0.8** new look, design language shared with fahrma~~ ✓
 - ~~**0.9** day end after midnight, per account~~ ✓
-- **0.10** personal API tokens, JSON export/import, built-in scheduled backups, a shortcut that lists what is still open today, API documentation at `/api/docs`
+- ~~**0.10** personal API keys, JSON export/import, built-in daily backups, "what is still open today", `/api/openapi.json`~~ ✓
 - **0.11** beta hardening (accessibility, performance, upgrade tests)
 - **1.0** stable API and configuration
 - **Later:** outgoing webhooks on check-ins

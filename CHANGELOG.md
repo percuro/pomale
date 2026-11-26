@@ -2,7 +2,34 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
-## 0.9.0-rc.1 – night owls (release candidate)
+## 0.10.0 – keys, export, backups
+
+### Features
+
+- **API keys** ("Account" → "API keys"): for scripts, iOS shortcuts and home automation. A key can **read** (days, habits, history, exports) and/or **check off** (done, amounts, notes), for all habits or only some, optionally expiring after 30, 90 or 365 days. Everything else – the account, sessions, devices, keys, changing habits, administration – is never reachable with a key; new endpoints stay closed until they are allowed explicitly. See [docs/api.md](docs/api.md), with a Home Assistant example.
+- **What is still open today:** `GET /api/v1/today` lists the open habits with their progress and one sentence in the account's language ("Still open: Read, Water (3 of 8 glasses)"), e.g. for Siri ([docs/iphone.md](docs/iphone.md)) or a Home Assistant sensor.
+- **JSON export and import** ("Account" → "Your data"): everything of an account in one file – habits with plans, reminder times, check-ins and notes, groups, pauses, time zone, language and day end. The file imports into an account without habits, groups and pauses, all or nothing, e.g. to move to another instance. Admins can do the same with `app.cli.export_account` and `app.cli.import_account`.
+- **Built-in daily backups:** at 03:00 (`DEFAULT_TIMEZONE`) a compressed SQL dump goes to `/data/backups` and is kept for 14 days; a new or long-stopped instance backs up a minute after starting. "Administration" → "Backups" shows the state and backs up on demand. `python -m app.cli.backup` backs up now, `restore_sql --from <file>` restores a backup file. See [Backup and restore](docs/self-hosting.md#backup-and-restore).
+- **API description** at `/api/openapi.json` for Postman, Bruno, Insomnia or code generators, with the operations a key can use and their scopes.
+
+### Fixes
+
+- Five wrong shortcut keys from anywhere blocked every shortcut of the instance for 15 minutes. Wrong keys are now counted per IP address (20 in 15 minutes).
+- `/api/docs` and `/api/redoc` were served by accident and stayed empty under the Content-Security-Policy. They are gone; the description is `/api/openapi.json`.
+- Dependabot alert for `minimatch` (build tools only): `glob` is pinned to a fixed version.
+
+### Upgrade notes
+
+- 0.10.0 also brings everything from 0.9.0-rc.1 below (a day end after midnight, migration 0007); 0.9 was not released on its own.
+- **Migration 0008** runs automatically. Shortcut keys become API keys that may check off their one habit; **shortcuts set up on phones keep working** with their `ht_…` keys. New keys start with `pm_`. Going back to 0.9 keeps the shortcut keys but drops other API keys.
+- **Backups are on by default** and write to `/data/backups`, next to the database on the same volume (usually a few MB). Set `BACKUP_ENABLED=false` if you back up another way. New settings: `BACKUP_ENABLED`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `BACKUP_DIR`, `API_DOCS`.
+- Daily backups run inside the app process, like reminders: still exactly one instance with one worker.
+- A request with `Authorization: Bearer …` and without the session cookie is authenticated as an API key everywhere (before: only the shortcut endpoint) and needs no CSRF header.
+- The shortcut endpoint `PUT /v1/habits/{id}/days/today` now also accepts a logged-in session. An invalid key answers `401` with `code` `token.invalid` (was `shortcut.invalid_token`); a key for another habit `403` with `token.habit_not_allowed` (was `shortcut.wrong_habit`).
+- Audit log: keys are logged as `token.created` and `token.revoked`; older entries keep `shortcut.key_*`. New: `account.imported`, `backup.created`.
+- New endpoints: `GET/POST/DELETE /v1/account/tokens`, `GET /v1/today`, `GET /v1/export.json`, `POST /v1/import`, `GET/POST /v1/admin/backups`; `/v1/meta` has `api_docs`.
+
+## 0.9.0-rc.1 – night owls (release candidate, released with 0.10.0)
 
 ### Features
 

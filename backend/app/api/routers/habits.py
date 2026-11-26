@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
@@ -9,6 +9,7 @@ from app.db.database import get_db
 from app.repositories.habit_repository import HabitRepository
 from app.schemas.habit import HabitCreate, HabitOrder, HabitRead, HabitUpdate, ScheduleUpdate
 from app.services.habit_service import HabitService, habit_read
+from app.services.token_service import allowed_habit_ids
 
 router = APIRouter()
 
@@ -19,12 +20,15 @@ def _service(db: Session) -> HabitService:
 
 @router.get("", response_model=list[HabitRead])
 def list_habits(
+    request: Request,
     include_archived: bool = False,
     user=Depends(require_user),
     db: Session = Depends(get_db),
     today: date = Depends(get_user_today),
 ):
-    return [habit_read(h, today) for h in _service(db).list(user.id, include_archived)]
+    allowed = allowed_habit_ids(request)
+    habits = _service(db).list(user.id, include_archived)
+    return [habit_read(h, today) for h in habits if allowed is None or h.id in allowed]
 
 
 @router.post("", response_model=HabitRead, status_code=status.HTTP_201_CREATED)

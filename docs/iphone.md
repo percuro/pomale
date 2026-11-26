@@ -36,7 +36,7 @@ Checks off one habit from the home screen without opening the app. The shortcut 
 2. Action **Get Contents of URL**:
    - URL: the address shown, ending in `/days/today`
    - Method: **PUT**
-   - Headers: `Authorization` = `Bearer ht_…` (the value shown)
+   - Headers: `Authorization` = `Bearer pm_…` (the value shown; keys created before 0.10 start with `ht_` and keep working)
    - Request Body: **JSON**, field `done`, type **Boolean**, value **true**
 3. Action **Get Dictionary Value**: key `message` from "Contents of URL".
 4. Action **Show Result** (or "Show Notification") with that value.
@@ -51,9 +51,9 @@ The server determines the date in the time zone and with the day end of the habi
 | "…: Already done" ("Bereits erledigt") | was already done, no second entry |
 | "…: 5 of 8" ("5 von 8") | quantity goal: amount added |
 | Error 401 | key wrong or revoked, or the account is deactivated |
-| Error 403 | key belongs to a different habit |
+| Error 403 | key belongs to a different habit, or may not check off |
 | Error 409 | habit is archived |
-| Error 429 | too many failed attempts, wait 15 minutes |
+| Error 429 | too many failed attempts from this network, wait 15 minutes |
 | Network error | nothing recorded; tap again or use the web app |
 
 ### 3. Widget
@@ -61,6 +61,18 @@ The server determines the date in the time zone and with the day end of the habi
 Long-press the home screen → **Edit** → **Add Widget** → **Shortcuts** → choose a size → select the shortcut in the widget.
 
 On the first run iOS asks whether the shortcut may access the address ("Allow"). Depending on the iOS version the Shortcuts app opens briefly. Check on your device: two taps must give "Already done" ("Bereits erledigt"), and in flight mode there must be no success message.
+
+## What is still open? (Siri)
+
+Asks pomale which habits are still open today and shows or speaks the answer, e.g. "Still open: Read, Water (3 of 8 glasses)".
+
+1. "Account" ("Konto") → **API keys** ("API-Schlüssel") → name it, e.g. "iPhone Siri", permission **Read** ("Lesen") only → **Create key**. Copy the key.
+2. Shortcuts app → **+** → name it, e.g. "What's open". Siri runs it when you say its name.
+3. Action **Get Contents of URL**: your instance's address followed by `/api/v1/today`, method **GET**, header `Authorization` = `Bearer pm_…`.
+4. Action **Get Dictionary Value**: key `message`.
+5. Action **Speak Text** or **Show Result** with that value.
+
+The answer is in the account's language. Add the shortcut as a widget like the one above. More about keys and the answer: [API](api.md).
 
 ## Checklist
 
@@ -70,4 +82,5 @@ On the first run iOS asks whether the shortcut may access the address ("Allow").
 - [ ] A correction on the laptop shows up the next time the iPhone app is opened
 - [ ] Flight mode: check off → marked → flight mode off, open the app → sent
 - [ ] Shortcut: two taps give one entry; after revoking, no success message
+- [ ] "What's open" via Siri reads the sentence; after checking everything off it says all is done
 - [ ] Reminders in the home-screen app: turn on, test arrives; a reminder two minutes ahead arrives on the lock screen, a tap opens Today; none comes once the habit is done

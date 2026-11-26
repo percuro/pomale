@@ -1,8 +1,8 @@
 import unittest
 from datetime import timedelta
 
+from app.models.api_token import ApiToken
 from app.models.habit import Checkin, Habit
-from app.models.shortcut_token import ShortcutToken
 from app.models.user import User, UserSession
 from app.services.auth_service import utcnow
 from app.services.devices import describe_user_agent
@@ -155,7 +155,7 @@ class DeleteAccountTest(AccountTestCase):
         self.assertEqual(self.client.get("/v1/auth/me").status_code, 401)
         self.assertEqual(self.count(User), 1)
         self.assertEqual(self.count(Habit), 1)
-        self.assertEqual((self.count(Checkin), self.count(ShortcutToken)), (0, 0))
+        self.assertEqual((self.count(Checkin), self.count(ApiToken)), (0, 0))
         self.assertEqual([h["name"] for h in self.sam.get("/v1/habits").json()], ["Laufen"])
         login = self.env.client(username=None).post("/v1/auth/login", json={"username": "alex", "password": PASSWORD})
         self.assertEqual(login.status_code, 401)

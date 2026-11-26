@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.migration_support import alembic
+from tests.migration_support import alembic, table_columns, table_source
 
 FIXTURE = Path(__file__).with_name("fixtures") / "v0.3.0.sql"
 DATA_TABLES = ("users", "user_sessions", "habits", "habit_schedules", "checkins", "shortcut_tokens")
@@ -15,9 +15,10 @@ def snapshot(connection: sqlite3.Connection) -> dict[str, list[tuple]]:
     """All original columns of the 0.3.0 tables, so new columns do not affect the comparison."""
     result = {}
     for table in DATA_TABLES:
-        columns = [row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')]
-        original = [c for c in columns if c in ORIGINAL_COLUMNS[table]]
-        result[table] = connection.execute(f'SELECT {", ".join(original)} FROM "{table}" ORDER BY 1, 2').fetchall()
+        original = [c for c in table_columns(connection, table) if c in ORIGINAL_COLUMNS[table]]
+        result[table] = connection.execute(
+            f"SELECT {', '.join(original)} FROM {table_source(connection, table)} ORDER BY 1, 2"
+        ).fetchall()
     return result
 
 

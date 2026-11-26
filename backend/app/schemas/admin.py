@@ -43,3 +43,24 @@ class AuditPage(BaseModel):
     events: list[AuditEventRead]
     # Pass as before_id for the next (older) page; null = no more entries
     next_before_id: int | None
+
+
+class BackupFileRead(BaseModel):
+    name: str
+    size: int
+    created_at: datetime
+
+
+class BackupStatusRead(BaseModel):
+    # The daily backup (BACKUP_ENABLED); a backup by hand works either way
+    enabled: bool
+    time: str
+    timezone: str
+    keep_days: int
+    directory: str
+    count: int
+    total_size: int
+    latest: BackupFileRead | None
+    # The last failed attempt since the server started; null after a success
+    last_error: str | None
+    last_error_at: datetime | None

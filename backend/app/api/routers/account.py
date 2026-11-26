@@ -11,9 +11,11 @@ from app.errors import AppError
 from app.models.user import User
 from app.schemas.auth import AccountUpdate, MeRead, PasswordChange, PasswordConfirmation, SessionRead
 from app.schemas.oidc import OidcUnlink
+from app.schemas.token import TokenCreate, TokenCreated, TokenRead
 from app.services.account_service import AccountService, me_read
 from app.services.auth_service import clear_session_cookie, require_password_login, utcnow
 from app.services.oidc_service import OidcService
+from app.services.token_service import TokenService, token_read
 
 router = APIRouter()
 
@@ -87,3 +89,20 @@ def unlink_oidc(
         raise AppError(409, "account.last_login_method", "This is the only way to sign in to this account")
     AccountService(db).confirm(user, data.password, request, request.state.session_id)
     OidcService(db).unlink(user, actor=user, by="self")
+
+
+@router.get("/tokens", response_model=list[TokenRead])
+def list_tokens(user: User = Depends(require_user), db: Session = Depends(get_db)):
+    """API keys of this account, newest first, revoked ones included."""
+    return [token_read(token) for token in TokenService(db).list_for(user)]
+
+
+@router.post("/tokens", response_model=TokenCreated, status_code=status.HTTP_201_CREATED)
+def create_token(data: TokenCreate, user: User = Depends(require_user), db: Session = Depends(get_db)):
+    token, raw = TokenService(db).create(user, data.label, list(data.scopes), data.habit_ids, data.expires_in_days)
+    return TokenCreated(**token_read(token).model_dump(), token=raw)
+
+
+@router.delete("/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_token(token_id: int, user: User = Depends(require_user), db: Session = Depends(get_db)):
+    TokenService(db).revoke(user, token_id)

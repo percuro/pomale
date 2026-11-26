@@ -1,4 +1,6 @@
 from fastapi import Depends, FastAPI
+from fastapi.openapi.utils import get_openapi
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.api.dependencies.auth import require_admin, require_user
@@ -18,12 +20,41 @@ from app.api.routers.push import router as push_router
 from app.api.routers.setup import router as setup_router
 from app.api.routers.shortcuts import public_router as shortcut_public_router
 from app.api.routers.shortcuts import router as shortcut_router
-from app.config import APP_NAME
+from app.config import APP_NAME, api_docs_enabled
 from app.errors import install_error_handlers
+from app.middleware.body_limit import limit_import_body
 from app.middleware.csrf import enforce_csrf
+from app.services.auth_service import SESSION_COOKIE_NAME
+from app.services.token_service import TOKEN_ROUTES
 
-app = FastAPI(title=f"{APP_NAME} API", version=__version__)
+DESCRIPTION = """
+The API behind the pomale web app. Paths in this document are relative to `/api`.
+
+**Authentication.** The web app uses a session cookie. Scripts, iOS shortcuts and home automation
+use a personal API key from the account page: `Authorization: Bearer pm_…`. A key can only reach
+the operations marked "API key" below, with its scope:
+
+- `read`: days, habits, groups, pauses, history, exports and `GET /v1/today`
+- `checkin`: check off, amounts and notes
+
+A key may be limited to some habits; it then sees only those, and history, exports, groups and
+pauses need a key for all habits. Requests with a key need no CSRF header.
+
+Guide with examples: https://github.com/percuro/pomale/blob/main/docs/api.md
+"""
+
+# Docs pages are not served: the strict Content-Security-Policy allows no CDN scripts. The schema
+# is served by the route below, so API_DOCS is read per request.
+app = FastAPI(
+    title=f"{APP_NAME} API",
+    version=__version__,
+    description=DESCRIPTION,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 app.middleware("http")(enforce_csrf)
+app.middleware("http")(limit_import_body)
 install_error_handlers(app)
 
 
@@ -46,3 +77,35 @@ app.include_router(days_router, prefix="/v1", tags=["days"], dependencies=protec
 app.include_router(shortcut_router, prefix="/v1", tags=["shortcut"], dependencies=protected)
 app.include_router(export_router, prefix="/v1", tags=["export"], dependencies=protected)
 app.include_router(admin_router, prefix="/v1/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+
+def build_openapi() -> dict:
+    if app.openapi_schema is not None:
+        return app.openapi_schema
+    schema = get_openapi(title=app.title, version=app.version, description=app.description, routes=app.routes)
+    schema["servers"] = [{"url": "/api"}]
+    schema.setdefault("components", {})["securitySchemes"] = {
+        "session": {"type": "apiKey", "in": "cookie", "name": SESSION_COOKIE_NAME},
+        "apiKey": {"type": "http", "scheme": "bearer", "description": "Personal API key (pm_…)"},
+    }
+    for path, operations in schema["paths"].items():
+        for method, operation in operations.items():
+            scope = TOKEN_ROUTES.get((method.upper(), path))
+            if scope is None:
+                continue
+            operation["security"] = [{"session": []}, {"apiKey": [scope]}]
+            note = f"API key: scope `{scope}`."
+            operation["description"] = f"{operation.get('description', '').strip()}\n\n{note}".strip()
+    app.openapi_schema = schema
+    return schema
+
+
+app.openapi = build_openapi
+
+
+@app.get("/openapi.json", include_in_schema=False)
+def openapi_schema() -> dict:
+    """The OpenAPI description, for Postman, Bruno, Insomnia or code generators."""
+    if not api_docs_enabled():
+        raise StarletteHTTPException(404, "Not Found")
+    return app.openapi()

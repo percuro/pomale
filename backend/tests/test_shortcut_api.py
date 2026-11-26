@@ -3,7 +3,7 @@ import unittest
 from datetime import date
 from unittest import mock
 
-from app.services.shortcut_service import shortcut_rate_limiter
+from app.services.token_service import token_rate_limiter
 from tests.support import ApiTestEnvironment
 
 
@@ -12,7 +12,7 @@ class ShortcutApiTest(unittest.TestCase):
         self.env = ApiTestEnvironment(today=date(2026, 11, 24))
         self.env.create_user()
         self.client = self.env.client()
-        shortcut_rate_limiter.reset()
+        token_rate_limiter.reset()
         self.habit = self.client.post("/v1/habits", json={"name": "Lesen"}).json()
         self.other = self.client.post("/v1/habits", json={"name": "Laufen"}).json()
         created = self.client.post(f"/v1/habits/{self.habit['id']}/shortcut-tokens", json={"label": "iPhone"})
@@ -35,14 +35,15 @@ class ShortcutApiTest(unittest.TestCase):
         )
 
     def test_token_is_shown_once_and_stored_hashed(self):
-        self.assertTrue(self.token.startswith("ht_"))
+        self.assertTrue(self.token.startswith("pm_"))
         listed = self.client.get(f"/v1/habits/{self.habit['id']}/shortcut-tokens").json()
         self.assertEqual(len(listed), 1)
         self.assertNotIn("token", listed[0])
-        from app.models.shortcut_token import ShortcutToken
+        from app.models.api_token import ApiToken
 
         db = self.env.SessionLocal()
-        stored = db.query(ShortcutToken).one()
+        stored = db.query(ApiToken).one()
+        self.assertEqual((stored.scopes, stored.habit_ids), ("checkin", [self.habit["id"]]))
         self.assertNotEqual(stored.token_hash, self.token)
         self.assertNotIn(self.token, stored.token_hash)
         db.close()
@@ -138,9 +139,15 @@ class ShortcutApiTest(unittest.TestCase):
     def test_only_done_true(self):
         self.assertEqual(self.tap(json={"done": False}).status_code, 422)
 
-    def test_session_cookie_does_not_work_for_shortcut_endpoint(self):
+    def test_with_a_session_the_endpoint_works_like_any_other(self):
+        # The web app does not use it, but a logged-in browser may: CSRF rules apply as usual
         response = self.client.put(f"/v1/habits/{self.habit['id']}/days/today", json={"done": True})
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual((response.status_code, response.json()["date"]), (200, "2026-11-24"))
+        stranger = self.env.client(username=None)
+        stranger.cookies.update(self.client.cookies)
+        stranger.headers.pop("X-Habit-CSRF")
+        forged = stranger.put(f"/v1/habits/{self.habit['id']}/days/today", json={"done": True})
+        self.assertEqual(forged.status_code, 403)
 
     def test_rate_limit_for_wrong_tokens(self):
         for _ in range(20):

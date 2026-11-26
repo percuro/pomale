@@ -9,7 +9,7 @@ from app.models.audit_event import AuditEvent
 from app.models.habit import Habit
 from app.models.user import User
 from app.services.audit_service import details_of
-from app.services.shortcut_service import shortcut_rate_limiter
+from app.services.token_service import token_rate_limiter
 from tests.support import PASSWORD, ApiTestEnvironment
 
 ADMIN_USER_FIELDS = {
@@ -32,7 +32,7 @@ class AdminApiTest(unittest.TestCase):
         self.sam_user = self.env.create_user("sam", display_name="Sam")
         self.admin = self.env.client("admin")
         self.sam = self.env.client("sam")
-        shortcut_rate_limiter.reset()
+        token_rate_limiter.reset()
 
     def tearDown(self):
         self.env.close()

@@ -1,9 +1,11 @@
-"""Load an SQL dump from stdin into a new SQLite database.
+"""Load an SQL dump into a new SQLite database: from a file (.sql or .sql.gz, e.g. a built-in
+backup) or from stdin.
 
 Never overwrites: if the target file exists, the command stops.
 """
 
 import argparse
+import gzip
 import os
 import sqlite3
 import sys
@@ -12,14 +14,22 @@ from app.cli.dump_sql import database_path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Load an SQL dump from stdin into a new database")
+    parser = argparse.ArgumentParser(description="Load an SQL dump into a new database")
     parser.add_argument("--target", help="target file (default: path from DATABASE_URL)")
+    parser.add_argument(
+        "--from", dest="source", help="dump file, .sql or .sql.gz, e.g. /data/backups/pomale-….sql.gz (default: stdin)"
+    )
     args = parser.parse_args()
     target = args.target or database_path()
     if os.path.exists(target):
         raise SystemExit(f"{target} already exists; move it away first, nothing is overwritten")
 
-    script = sys.stdin.read()
+    if args.source:
+        opener = gzip.open if args.source.endswith(".gz") else open
+        with opener(args.source, "rt", encoding="utf-8") as source:
+            script = source.read()
+    else:
+        script = sys.stdin.read()
     if "CREATE TABLE" not in script:
         raise SystemExit("Input does not look like an SQL dump")
 

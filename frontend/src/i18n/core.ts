@@ -98,6 +98,8 @@ export interface Formatters {
   monthYear(iso: string): string;
   /** 0.83 → "83%" / "83 %" */
   percent(ratio: number): string;
+  /** A file size: "820 kB", "1.4 MB" */
+  bytes(size: number): string;
 }
 
 export function createFormatters(locale: Locale, t: Translate): Formatters {
@@ -109,6 +111,9 @@ export function createFormatters(locale: Locale, t: Translate): Formatters {
   const stamp = new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' });
   const month = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 });
+  const unit = (name: string) =>
+    new Intl.NumberFormat(locale, { style: 'unit', unit: name, unitDisplay: 'short', maximumFractionDigits: 1 });
+  const sizes = { byte: unit('byte'), kilobyte: unit('kilobyte'), megabyte: unit('megabyte') };
   const weekdayShort = (index: number) => dayShort.format(new Date(MONDAY + index * 86_400_000)).replace(/\.$/, '');
   return {
     longDate: (iso) => long.format(parseIso(iso)),
@@ -129,5 +134,11 @@ export function createFormatters(locale: Locale, t: Translate): Formatters {
     },
     monthYear: (iso) => month.format(parseIso(iso)),
     percent: (ratio) => percent.format(ratio),
+    bytes: (size) =>
+      size < 1000
+        ? sizes.byte.format(size)
+        : size < 1_000_000
+          ? sizes.kilobyte.format(size / 1000)
+          : sizes.megabyte.format(size / 1_000_000),
   };
 }
