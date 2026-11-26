@@ -40,6 +40,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.weekly": "{done} of {target} this week",
         "reminder.several": "{count} habits open",
         "reminder.done_action": "Done",
+        "today.open": "Still open: {items}",
+        "today.all_done": "All done for today.",
+        "today.nothing_due": "Nothing planned for today.",
     },
     "de": {
         "csv.date": "datum",
@@ -70,6 +73,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "reminder.weekly": "{done} von {target} diese Woche",
         "reminder.several": "{count} Gewohnheiten offen",
         "reminder.done_action": "Erledigt",
+        "today.open": "Noch offen: {items}",
+        "today.all_done": "Heute ist alles erledigt.",
+        "today.nothing_due": "Heute ist nichts geplant.",
     },
 }
 
@@ -103,3 +109,20 @@ def resolve_locale(user: User | None, request: Request | None) -> str:
 
 def text(locale: str, key: str) -> str:
     return TEXTS.get(locale, TEXTS[DEFAULT_LOCALE])[key]
+
+
+def progress_text(
+    locale: str,
+    goal_type: str,
+    value: int | None,
+    target: int | None,
+    unit: str | None,
+    week: tuple[int, int] | None = None,
+) -> str | None:
+    """ "3 of 8 glasses" for amounts, "1 of 3 this week" for weekly goals, else None."""
+    if goal_type == "quantity":
+        values = {"value": value or 0, "target": target, "unit": unit}
+        return text(locale, "reminder.quantity_unit" if unit else "reminder.quantity").format(**values)
+    if goal_type == "weekly_count" and week is not None:
+        return text(locale, "reminder.weekly").format(done=week[0], target=week[1])
+    return None

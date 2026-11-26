@@ -349,3 +349,30 @@ class HistoryRead(BaseModel):
     start: date
     end: date
     habits: list[HistoryHabitRead]
+
+
+class TodayHabitRead(BaseModel):
+    id: int
+    name: str
+    cue: str | None
+    goal_type: GoalTypeLiteral
+    state: DayStateLiteral
+    # quantity goals: today's amount and target; weekly goals: this week's target
+    value: int | None
+    target: int | None
+    unit: str | None
+    week: WeekRead | None
+    # "3 of 8 glasses", "1 of 3 this week"; null for goals on chosen days
+    progress: str | None
+
+
+class TodayRead(BaseModel):
+    """What is still open today, for shortcuts, widgets and home automation."""
+
+    date: date
+    # habits due today, and how many of them are done
+    due: int
+    done: int
+    open: list[TodayHabitRead]
+    # One sentence in the account's language, e.g. "Still open: Read, Water (3 of 8 glasses)"
+    message: str

@@ -25,7 +25,7 @@ from app.models.user import User
 from app.repositories.habit_repository import HabitRepository
 from app.services.checkin_service import CheckinService
 from app.services.day_service import DayInfo, WeekProgress, today_in
-from app.services.i18n import resolve_locale, text
+from app.services.i18n import progress_text, resolve_locale, text
 from app.services.push_service import record_result
 from app.services.timezones import user_zone
 from app.services.webpush.sender import PushSender
@@ -82,12 +82,9 @@ class OpenHabit:
 
 def _detail(locale: str, item: OpenHabit) -> str:
     day, habit = item.day, item.habit
-    if day.goal_type == "quantity":
-        values = {"value": day.value or 0, "target": day.target, "unit": habit.unit}
-        return text(locale, "reminder.quantity_unit" if habit.unit else "reminder.quantity").format(**values)
-    if day.goal_type == "weekly_count" and item.week is not None:
-        return text(locale, "reminder.weekly").format(done=item.week.done, target=item.week.target)
-    return habit.cue or text(locale, "reminder.open")
+    week = (item.week.done, item.week.target) if item.week is not None else None
+    progress = progress_text(locale, day.goal_type, day.value, day.target, habit.unit, week)
+    return progress or habit.cue or text(locale, "reminder.open")
 
 
 def build_payload(locale: str, items: list[OpenHabit], today: date, user_id: int) -> dict:
