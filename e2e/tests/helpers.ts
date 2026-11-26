@@ -1,4 +1,18 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, type APIRequestContext, type Browser, type BrowserContext, type Page } from '@playwright/test';
+
+export const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+
+/** WCAG 2.2 AA violations on the page as it is now, one line each ("label: rule (count) selector"). */
+export async function axeViolations(page: Page, label: string): Promise<string[]> {
+  const result = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+  return result.violations.map((v) => `${label}: ${v.id} (${v.nodes.length}) ${v.nodes[0].target.join(' ')}`);
+}
+
+/** How far the page scrolls sideways (0 or less: it fits). */
+export function sidewaysOverflow(page: Page): Promise<number> {
+  return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+}
 
 export interface Habit {
   id: number;

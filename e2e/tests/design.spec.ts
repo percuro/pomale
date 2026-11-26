@@ -1,6 +1,5 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { createHabit, freshContext, setDay, today, uniqueName } from './helpers';
+import { axeViolations, createHabit, freshContext, setDay, sidewaysOverflow, today, uniqueName } from './helpers';
 
 const PAGES = ['/today', '/week', '/history', '/habits', '/account', '/admin'];
 
@@ -28,8 +27,7 @@ for (const scheme of ['light', 'dark'] as const) {
     const found: string[] = [];
     const scan = async (target: Page, path: string) => {
       await open(target, path);
-      const result = await new AxeBuilder({ page: target }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
-      found.push(...result.violations.map((v) => `${path}: ${v.id} (${v.nodes.length}) ${v.nodes[0].target.join(' ')}`));
+      found.push(...(await axeViolations(target, path)));
     };
     for (const path of PAGES) await scan(page, path);
 
@@ -47,8 +45,7 @@ test('every page fits a window 320 px wide without scrolling sideways', async ({
   await page.setViewportSize({ width: 320, height: 640 });
   for (const path of PAGES) {
     await open(page, path);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(overflow, path).toBeLessThanOrEqual(0);
+    expect(await sidewaysOverflow(page), path).toBeLessThanOrEqual(0);
   }
 });
 

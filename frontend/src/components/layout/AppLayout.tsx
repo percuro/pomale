@@ -1,6 +1,6 @@
 import { APP_NAME } from '../../app/brand';
-import { lazy, Suspense, useEffect, type ReactNode } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from 'react';
+import { NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Me } from '../../lib/types';
 import { ME_KEY, useMe } from '../../hooks/useMe';
@@ -64,7 +64,7 @@ function SignedIn({ me }: { me: Me }) {
   const { today, beforeDayEnd } = useToday(me.timezone, me.day_end_hour ?? 0, me.today);
   const { t, setAccountLocale } = useI18n();
   useEffect(() => setAccountLocale(me.locale), [me.locale, setAccountLocale]);
-  useDocumentTitle();
+  usePageChange();
 
   return (
     <SessionContext.Provider value={{ me, today, beforeDayEnd }}>
@@ -85,7 +85,9 @@ function SignedIn({ me }: { me: Me }) {
       </header>
       <SyncBridge owner={me} />
       <WorkerBridge />
-      <main id="content" className="content wide">
+      {/* Screen readers hear the name of the page after a change of page */}
+      <p id={ANNOUNCER_ID} className="sr-only" role="status" />
+      <main id="content" className="content wide" tabIndex={-1}>
         <TimezoneHint me={me} />
         <SyncStatus />
         <Outlet />
@@ -107,8 +109,37 @@ function NavItem({ to, icon, children }: { to: string; icon: ReactNode; children
 /**
  * The window title follows the heading of the page ("Week · pomale"): an installed
  * app shows it in its window and in the task switcher, a browser in its tab.
+ *
+ * After a change of page (not on the first load, not after a redirect) the focus moves to the
+ * start of the content, as after a page load, and the new heading is announced once it shows.
  */
-function useDocumentTitle() {
+const ANNOUNCER_ID = 'page-announcer';
+
+function announce(text: string) {
+  const region = document.getElementById(ANNOUNCER_ID);
+  if (region) region.textContent = text;
+}
+
+function usePageChange() {
+  const { pathname } = useLocation();
+  const navigationType = useNavigationType();
+  const firstPath = useRef(true);
+  const announcePending = useRef(false);
+
+  useEffect(() => {
+    if (firstPath.current) {
+      firstPath.current = false;
+      return;
+    }
+    if (navigationType === 'REPLACE') return;
+    const main = document.getElementById('content');
+    main?.focus({ preventScroll: true });
+    // A page from the main chunk is already there; one that still loads its data gets its heading later
+    const heading = main?.querySelector('h1')?.textContent?.trim();
+    announcePending.current = !heading;
+    announce(heading ?? '');
+  }, [pathname, navigationType]);
+
   useEffect(() => {
     const main = document.getElementById('content');
     if (!main) return;
@@ -116,6 +147,10 @@ function useDocumentTitle() {
       const heading = main.querySelector('h1')?.textContent?.trim();
       const title = heading ? `${heading} · ${APP_NAME}` : APP_NAME;
       if (document.title !== title) document.title = title;
+      if (heading && announcePending.current) {
+        announcePending.current = false;
+        announce(heading);
+      }
     };
     update();
     const observer = new MutationObserver(update);

@@ -79,7 +79,7 @@ frontend/src/app/icon.svg, badge.svg app icon and notification badge; `node scri
 
 The files marked *shared* are identical in pomale and fahrma. A change to one of them belongs in both projects; say so in the pull request and the maintainer carries it over.
 
-Checks: `npm test` (contrast of the theme), and in `e2e/tests/design.spec.ts` an automatic WCAG 2.2 AA scan of the main pages in both colour schemes, no sideways scrolling at 320 px, the window title, the position of the navigation and the way from the account page to logging out.
+Checks: `npm test` (contrast of the theme), and in `e2e/tests/design.spec.ts` an automatic WCAG 2.2 AA scan of the main pages in both colour schemes, no sideways scrolling at 320 px, the window title, the position of the navigation and the way from the account page to logging out. `e2e/tests/accessibility.spec.ts` scans dialogs and states after a click, the pages without an account and the English interface; see [Accessibility](accessibility.md).
 
 ## Sources
 
