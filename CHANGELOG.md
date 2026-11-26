@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
-## 0.10.0-rc.1 – keys, export, backups (release candidate)
+## 0.10.0 – keys, export, backups
 
 ### Features
 
@@ -20,6 +20,7 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ### Upgrade notes
 
+- 0.10.0 also brings everything from 0.9.0-rc.1 below (a day end after midnight, migration 0007); 0.9 was not released on its own.
 - **Migration 0008** runs automatically. Shortcut keys become API keys that may check off their one habit; **shortcuts set up on phones keep working** with their `ht_…` keys. New keys start with `pm_`. Going back to 0.9 keeps the shortcut keys but drops other API keys.
 - **Backups are on by default** and write to `/data/backups`, next to the database on the same volume (usually a few MB). Set `BACKUP_ENABLED=false` if you back up another way. New settings: `BACKUP_ENABLED`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `BACKUP_DIR`, `API_DOCS`.
 - Daily backups run inside the app process, like reminders: still exactly one instance with one worker.
@@ -28,7 +29,7 @@ All notable changes to this project are documented here. Versions follow [Semant
 - Audit log: keys are logged as `token.created` and `token.revoked`; older entries keep `shortcut.key_*`. New: `account.imported`, `backup.created`.
 - New endpoints: `GET/POST/DELETE /v1/account/tokens`, `GET /v1/today`, `GET /v1/export.json`, `POST /v1/import`, `GET/POST /v1/admin/backups`; `/v1/meta` has `api_docs`.
 
-## 0.9.0-rc.1 – night owls (release candidate)
+## 0.9.0-rc.1 – night owls (release candidate, released with 0.10.0)
 
 ### Features
 
