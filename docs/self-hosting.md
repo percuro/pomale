@@ -79,7 +79,7 @@ Forward everything to port 8000 and pass `Host`, `X-Forwarded-For` and `X-Forwar
 ## Updates
 
 ```bash
-docker compose exec -T app python -m app.cli.dump_sql > backup-$(date +%F).sql   # backup first
+docker compose exec app python -m app.cli.backup   # backup first (into /data/backups)
 docker compose pull
 docker compose up -d
 docker compose logs --tail=50 app
@@ -89,30 +89,58 @@ Database migrations run automatically when the container starts. The image tag `
 
 ## Backup and restore
 
-All data is one SQLite file on the `data` volume. Create a consistent plain-SQL dump while the app is running:
+All data is one SQLite file on the `data` volume.
+
+### Built-in backups
+
+pomale backs itself up **every day at 03:00** (in `DEFAULT_TIMEZONE`): a compressed SQL dump of a consistent snapshot in `/data/backups`, named `pomale-YYYYMMDD-HHMM.sql.gz` (UTC). Backups older than 14 days are deleted, the newest one always stays. A new instance, or one that was down at backup time, backs up a minute after it starts. Admins see the state under "Administration" → **Backups** and can back up now; there is no download, because admins do not see other accounts' data. Settings: `BACKUP_ENABLED`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `BACKUP_DIR` ([configuration](configuration.md)).
+
+**These backups lie on the same volume as the database.** They help after a mistake or a broken database file, not when the disk or server is lost. Copy them somewhere else as well, e.g. with restic, borg or rsync from the volume's directory, or use the dump below.
+
+Back up now from the command line:
+
+```bash
+docker compose exec app python -m app.cli.backup
+```
+
+### A dump for your own backup tool
+
+A consistent plain-SQL dump to stdout while the app is running:
 
 ```bash
 docker compose exec -T app python -m app.cli.dump_sql > habits.sql
 ```
 
-The dump is uncompressed on purpose so that deduplicating backup tools such as restic or borg store only the changes. Example nightly cron job with restic:
+It is uncompressed on purpose so that deduplicating backup tools such as restic or borg store only the changes. Example nightly cron job with restic:
 
 ```cron
 30 3 * * * cd /srv/habits && restic backup --stdin-filename habits.sql --stdin-from-command -- docker compose exec -T app python -m app.cli.dump_sql
 ```
 
-Restore into an empty data volume (the command refuses to overwrite an existing database):
+If you back up this way, you can turn the built-in backups off with `BACKUP_ENABLED=false`, or keep both.
+
+### Restore
+
+Restore into an empty data volume (the command refuses to overwrite an existing database). From a built-in backup:
 
 ```bash
 docker compose stop app
 docker compose run --rm --no-deps app sh -c 'mv /data/habits.db /data/habits.db.before-restore 2>/dev/null; rm -f /data/habits.db-wal /data/habits.db-shm'
-docker compose run --rm --no-deps -T app python -m app.cli.restore_sql < habits.sql
+docker compose run --rm --no-deps app python -m app.cli.restore_sql --from /data/backups/pomale-20261124-0200.sql.gz
 docker compose up -d
+```
+
+From a dump file on the host, replace the third line with:
+
+```bash
+docker compose run --rm --no-deps -T app python -m app.cli.restore_sql < habits.sql
 ```
 
 Test a restore now and then; a backup you never restored is a hope, not a backup.
 
-The dump also contains the key pair pomale uses for reminders (Web Push). Restoring it keeps every device's reminders working; starting with an empty database or another instance's backup means devices have to turn reminders on again.
+Backups also contain the key pair pomale uses for reminders (Web Push). Restoring one keeps every device's reminders working; starting with an empty database or another instance's backup means devices have to turn reminders on again.
+
+To move **one account** rather than the whole instance, use the JSON export and import ([API](api.md#export-and-import)).
 
 ## Users and invitations
 
