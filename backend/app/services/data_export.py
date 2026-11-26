@@ -4,6 +4,7 @@ The import only goes into an account without habits, groups and pauses, and it i
 nothing: one transaction. It is meant for moving to another instance or account, not for merging.
 """
 
+from collections import defaultdict
 from datetime import datetime
 
 from sqlalchemy import func, select
@@ -41,6 +42,12 @@ def export_account(db: Session, user: User, now: datetime | None = None) -> Acco
     pauses = db.scalars(
         select(HabitPause).where(HabitPause.user_id == user.id).order_by(HabitPause.start_on, HabitPause.id)
     ).all()
+    # One query for all check-ins instead of one per habit
+    checkins: dict[int, list[Checkin]] = defaultdict(list)
+    for checkin in db.scalars(
+        select(Checkin).join(Habit).where(Habit.user_id == user.id).order_by(Checkin.habit_id, Checkin.local_date)
+    ):
+        checkins[checkin.habit_id].append(checkin)
     return AccountExport(
         app_version=__version__,
         exported_at=(now or utcnow()).replace(microsecond=0),
@@ -64,7 +71,7 @@ def export_account(db: Session, user: User, now: datetime | None = None) -> Acco
                 reminders=[r.time for r in sorted(habit.reminders, key=lambda r: r.time)],
                 checkins=[
                     ExportCheckin(date=c.local_date, done=c.done, value=c.value, note=c.note)
-                    for c in sorted(habit.checkins, key=lambda c: c.local_date)
+                    for c in checkins[habit.id]
                 ],
             )
             for habit in habits

@@ -1,5 +1,5 @@
 import { APP_NAME } from '../../app/brand';
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Me } from '../../lib/types';
@@ -7,8 +7,6 @@ import { ME_KEY, useMe } from '../../hooks/useMe';
 import { SessionContext } from '../../hooks/useSession';
 import { useToday } from '../../hooks/useToday';
 import { useI18n } from '../../i18n/context';
-import { LoginPage } from '../../pages/LoginPage';
-import { SetupPage } from '../../pages/SetupPage';
 import { useMeta } from '../../hooks/useMeta';
 import { SyncBridge } from '../sync/SyncBridge';
 import { WorkerBridge } from '../sync/WorkerBridge';
@@ -16,6 +14,12 @@ import { SyncStatus } from '../sync/SyncStatus';
 import { BrandMark } from '../BrandMark';
 import { ChartIcon, CheckCircleIcon, ChecklistIcon, UserIcon, WeekIcon } from '../Icons';
 import { TimezoneHint } from './TimezoneHint';
+import { Loading } from './Loading';
+import { loadChunk } from '../../app/lazy';
+
+// Signed out is rare with long sessions: login and setup load when needed
+const LoginPage = lazy(() => loadChunk(() => import('../../pages/LoginPage')).then((m) => ({ default: m.LoginPage })));
+const SetupPage = lazy(() => loadChunk(() => import('../../pages/SetupPage')).then((m) => ({ default: m.SetupPage })));
 
 export function AppLayout() {
   const me = useMe();
@@ -29,7 +33,7 @@ export function AppLayout() {
   }, [queryClient]);
 
   if (me.isPending) {
-    return <main className="center"><p>{t('app.loading')}</p></main>;
+    return <Loading />;
   }
   if (me.isError) {
     return (
@@ -47,12 +51,12 @@ export function AppLayout() {
 
 function SignedOut() {
   const meta = useMeta();
-  const { t, setAccountLocale } = useI18n();
+  const { setAccountLocale } = useI18n();
   useEffect(() => setAccountLocale(null), [setAccountLocale]);
   if (meta.isPending) {
-    return <main className="center"><p>{t('app.loading')}</p></main>;
+    return <Loading />;
   }
-  return meta.data?.setup_needed ? <SetupPage /> : <LoginPage />;
+  return <Suspense fallback={<Loading />}>{meta.data?.setup_needed ? <SetupPage /> : <LoginPage />}</Suspense>;
 }
 
 function SignedIn({ me }: { me: Me }) {

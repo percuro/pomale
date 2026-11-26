@@ -5,6 +5,7 @@ export const de = {
   'app.loading': 'Lädt …',
   'app.serverUnreachable': 'Server nicht erreichbar.',
   'app.retry': 'Erneut versuchen',
+  'app.pageFailed': 'Diese Seite konnte nicht geladen werden.',
   'app.skipToContent': 'Zum Inhalt',
   'app.version': '{name} {version}',
 

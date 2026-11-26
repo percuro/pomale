@@ -10,6 +10,7 @@ export const en = {
   'app.loading': 'Loading …',
   'app.serverUnreachable': 'Server not reachable.',
   'app.retry': 'Try again',
+  'app.pageFailed': 'This page could not be loaded.',
   'app.skipToContent': 'Skip to content',
   'app.version': '{name} {version}',
 
