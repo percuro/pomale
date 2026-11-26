@@ -164,6 +164,11 @@ def get_oidc_redirect_uri() -> str:
     return f"{get_public_url()}/api/v1/auth/oidc/callback"
 
 
+def api_docs_enabled() -> bool:
+    """API_DOCS=false hides /api/openapi.json (the API itself is unaffected)."""
+    return env_bool("API_DOCS", True)
+
+
 def push_enabled() -> bool:
     """PUSH_ENABLED=false turns reminders off: no scheduler, no push endpoints, no UI."""
     return env_bool("PUSH_ENABLED", True)
