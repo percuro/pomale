@@ -4,16 +4,21 @@ from fastapi import Request
 
 from app.config import csrf_enabled, get_allowed_origins
 from app.errors import error_response
+from app.services.auth_service import SESSION_COOKIE_NAME
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 CSRF_HEADER = "X-Habit-CSRF"
 
 
 def _is_api_key_request(request: Request) -> bool:
-    """An API key (iOS shortcut, scripts) sends neither cookie nor Origin. A browser never adds a
-    bearer key on its own, so such a request cannot be forged by another site; what a key may do
-    is limited in token_service. With a cookie, the request is a session and checked as usual."""
-    return request.headers.get("Authorization", "").lower().startswith("bearer ") and "cookie" not in request.headers
+    """An API key (iOS shortcut, scripts) sends no session cookie and no Origin. A browser never adds
+    a bearer key on its own, so such a request cannot be forged by another site; what a key may do
+    is limited in token_service. With the session cookie, the request is a session (require_user
+    decides the same way) and checked as usual. Other cookies, e.g. of an auth proxy, change nothing."""
+    return (
+        request.headers.get("Authorization", "").lower().startswith("bearer ")
+        and SESSION_COOKIE_NAME not in request.cookies
+    )
 
 
 def _rejected():

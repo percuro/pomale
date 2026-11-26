@@ -179,6 +179,13 @@ class TokenTest(unittest.TestCase):
         forged = stranger.put(path, json={"done": False}, headers={"Authorization": f"Bearer {token}"})
         self.assertEqual((forged.status_code, forged.json()["code"]), (403, "csrf.invalid_origin"))
 
+    def test_other_cookies_do_not_turn_a_key_into_a_session(self):
+        # e.g. the cookie of an authentication proxy in front of pomale
+        token = self.make()
+        path = f"/v1/habits/{self.read['id']}/days/2026-11-24"
+        response = self.call(token, "PUT", path, json={"done": True}, headers={"Cookie": "authelia_session=abc"})
+        self.assertEqual(response.status_code, 200, response.text)
+
     def test_wrong_keys_are_limited_per_address(self):
         good = self.make()
         for _ in range(20):
