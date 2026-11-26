@@ -147,6 +147,39 @@ test('changing the time zone moves "today", and the device time zone is offered'
   await account.context.close();
 });
 
+test('a later day end keeps the night in the day before', async ({ request, browser, baseURL }) => {
+  const account = await newAccount(browser, request, baseURL!, { accountTimezone: 'UTC' });
+  const page = account.page;
+  await page.goto('/account');
+  await expect(page.getByLabel('Mein Tag endet um')).toHaveValue('0');
+  await page.getByLabel('Mein Tag endet um').selectOption('3');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByText('Gespeichert.')).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Mein Tag endet um')).toHaveValue('3');
+  const me = (await (await account.context.request.get('/api/v1/auth/me')).json()) as { day_end_hour: number };
+  expect(me.day_end_hour).toBe(3);
+
+  // 01:30 on the clock: "today" is still the day before, and the page says why. Only the browser
+  // clock is moved, so nothing is checked off here; the server side is covered by the unit tests.
+  const calendarDay = new Date().toISOString().slice(0, 10);
+  const longDate = (iso: string) =>
+    new Intl.DateTimeFormat('de-AT', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(
+      new Date(`${iso}T12:00:00Z`),
+    );
+  const dayBefore = new Date(Date.parse(`${calendarDay}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+  await page.clock.setFixedTime(new Date(`${calendarDay}T01:30:00Z`));
+  await page.goto('/today');
+  await expect(page.locator('.page-head')).toContainText(longDate(dayBefore));
+  await expect(page.getByText('Dein Tag läuft bis 03:00.')).toBeVisible();
+
+  await page.clock.setFixedTime(new Date(`${calendarDay}T03:00:00Z`));
+  await page.goto('/today');
+  await expect(page.locator('.page-head')).toContainText(longDate(calendarDay));
+  await expect(page.getByText('Dein Tag läuft bis 03:00.')).toBeHidden();
+  await account.context.close();
+});
+
 test('logging out in the header returns to the login page', async ({ request, browser, baseURL }) => {
   const account = await newAccount(browser, request, baseURL!);
   const page = account.page;
