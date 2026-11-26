@@ -4,13 +4,14 @@
 
 Habits grow at their own pace. pomale is a small, self-hosted habit tracker for your phone and your laptop. Check off a habit in a second on the iPhone, review and correct the week on a big screen. No points, no streaks that reset to zero, no notes you have to write.
 
-> Status: 0.8 – a new look, with a design language shared with fahrma. API tokens, JSON import/export and built-in backups are next on the [roadmap](#roadmap).
+> Status: 0.9 – your day can end after midnight, for night owls. API tokens, JSON import/export and built-in backups are next on the [roadmap](#roadmap).
 
 ## Features
 
 - **Today view:** one tap marks a habit done, "undo" sits right next to it, and the row never jumps away.
 - **Week view:** habits × days, fully keyboard-operable, with an honest quota like "4 of 5 due days" instead of a streak.
 - **Goals:** on chosen weekdays, "3× a week, any day", or an amount per day ("8 glasses") with − and +. Plan changes take effect from a date, so past weeks keep their numbers. Not planned, open and done are different states; extra check-ins never hurt the quota.
+- **Night owls welcome:** your day can end at 1, 2 … 6 a.m. instead of midnight, so a habit done at 00:30 still counts for the day you were living.
 - **Pauses** for holidays or illness, also entered afterwards: paused days are not due.
 - **History:** quota per period, a 12-week trend and a month calendar – no streaks to lose.
 - **Groups, colours and drag-to-sort** (with a keyboard alternative), and an optional note per habit and day.
@@ -53,9 +54,11 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - ~~**0.6** weekly targets ("3× a week"), quantities, pauses, history view~~ ✓
 - ~~**0.7** reminders via Web Push~~ ✓
 - ~~**0.8** new look, design language shared with fahrma~~ ✓
-- **0.9** personal API tokens, JSON export/import, built-in scheduled backups
-- **0.10** beta hardening (accessibility, performance, upgrade tests)
+- ~~**0.9** day end after midnight, per account~~ ✓
+- **0.10** personal API tokens, JSON export/import, built-in scheduled backups, a shortcut that lists what is still open today, API documentation at `/api/docs`
+- **0.11** beta hardening (accessibility, performance, upgrade tests)
 - **1.0** stable API and configuration
+- **Later:** outgoing webhooks on check-ins
 
 ## Sibling project
 

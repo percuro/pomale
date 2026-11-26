@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
 
+## 0.9.0-rc.1 – night owls (release candidate)
+
+### Features
+
+- **Your day can end after midnight:** "Account" → "My day ends at", from midnight (default, as before) up to 06:00 in full hours. Until then the night still belongs to the day before: at 00:30 with a day end of 01:00, "Today", the week, the history and the iOS shortcut all still use yesterday's date. Between midnight and the day end, "Today" says until when your day runs.
+- **Reminders** follow the day end: a reminder time before it belongs to the day that is ending, and its Done button checks off that day. The habit form marks such times with "counts for the day before".
+- Check-ins never move: like a change of time zone, changing the day end only changes which day is "today".
+
+### Fixes
+
+- A reminder due shortly before the end of the day (e.g. 23:55) that could not be sent because of a restart is now caught up just after the day end, for the day it was meant for, within the same 15 minutes as other missed reminders. Before, it was dropped.
+- After a change of time zone, the web app moved "today" only on its next check (up to 30 seconds); now at once.
+
+### Upgrade notes
+
+- Migration 0007 runs automatically and adds `users.day_end_hour` (0 for every account, so nothing changes until someone picks a later day end). No new settings.
+- API: `GET /v1/auth/me` has the new field `day_end_hour` (0–6), and `PATCH /v1/account` accepts it. `today` in `me` and `/v1/days` already takes it into account.
+
 ## 0.8.0 – a new look
 
 ### Features
