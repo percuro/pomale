@@ -23,6 +23,8 @@ export interface Me {
   default_timezone: string;
   /** null = the browser language decides */
   locale: Locale | null;
+  /** The day ends at this full hour (0 = midnight, up to 6); `today` already takes it into account */
+  day_end_hour: number;
   today: string;
   /** false: the account signs in through OIDC only */
   has_password: boolean;

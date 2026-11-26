@@ -4,6 +4,8 @@ import type { Me } from '../lib/types';
 export interface Session {
   me: Me;
   today: string;
+  /** Between midnight and a later day end: "today" is still the calendar day before */
+  beforeDayEnd: boolean;
 }
 
 export const SessionContext = createContext<Session | null>(null);

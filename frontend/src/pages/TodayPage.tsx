@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { NoteDialog } from '../components/days/NoteDialog';
-import { addDays, weekStart } from '../lib/dates';
+import { addDays, dayEndTime, weekStart } from '../lib/dates';
 import { byGroup, colorStyle } from '../lib/habit-style';
 import { StateIcon } from '../components/days/StateIcon';
 import { MinusIcon, PencilIcon, PlusIcon, UndoIcon } from '../components/Icons';
@@ -31,7 +31,7 @@ function sectionOf({ habit, day }: Row): Section {
 }
 
 export function TodayPage() {
-  const { today } = useSession();
+  const { me, today, beforeDayEnd } = useSession();
   const { t, format } = useI18n();
   const errorText = useErrorText();
   // Load the whole week: shares the offline cache with the week view, keeps working
@@ -73,6 +73,8 @@ export function TodayPage() {
             {format.longDate(today)}
             {main.length > 0 && <> · {t('today.progress', { done: doneCount, total: main.length })}</>}
           </p>
+          {/* After midnight it still says "yesterday's" date: say why */}
+          {beforeDayEnd && <p className="subtle">{t('today.dayRunsUntil', { time: dayEndTime(me.day_end_hour) })}</p>}
         </div>
         {/* The share that is done as a ring; the sentence next to it says the same */}
         {main.length > 0 && (

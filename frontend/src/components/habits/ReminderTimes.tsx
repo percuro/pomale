@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom';
 import { usePushConfig, usePushDevices } from '../../hooks/usePush';
+import { useSession } from '../../hooks/useSession';
 import { useT } from '../../i18n/context';
+import { belongsToDayBefore } from '../../lib/dates';
 import { REMINDERS_MAX, timesValid } from '../../lib/reminder-times';
 
 /** Up to three local times at which to remind if the habit is still open. */
 export function ReminderTimes({ value, onChange }: { value: string[]; onChange: (times: string[]) => void }) {
   const t = useT();
+  const { me } = useSession();
+  const dayEndHour = me.day_end_hour ?? 0;
   const config = usePushConfig();
   const enabled = config.data?.enabled === true;
   const devices = usePushDevices(enabled);
@@ -26,6 +30,7 @@ export function ReminderTimes({ value, onChange }: { value: string[]; onChange: 
             aria-label={t('reminders.timeLabel', { n: index + 1 })}
             onChange={(e) => set(index, e.target.value)}
           />
+          {belongsToDayBefore(time, dayEndHour) && <small className="subtle">{t('reminders.dayBefore')}</small>}
           <button
             type="button"
             className="button"

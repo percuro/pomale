@@ -56,13 +56,14 @@ function SignedOut() {
 }
 
 function SignedIn({ me }: { me: Me }) {
-  const today = useToday(me.timezone, me.today);
+  // Older cached "me" from before 0.9 has no day end: midnight
+  const { today, beforeDayEnd } = useToday(me.timezone, me.day_end_hour ?? 0, me.today);
   const { t, setAccountLocale } = useI18n();
   useEffect(() => setAccountLocale(me.locale), [me.locale, setAccountLocale]);
   useDocumentTitle();
 
   return (
-    <SessionContext.Provider value={{ me, today }}>
+    <SessionContext.Provider value={{ me, today, beforeDayEnd }}>
       <a className="skip-link" href="#content">{t('app.skipToContent')}</a>
       <header className="topbar">
         <NavLink to="/" className="brand"><BrandMark />{APP_NAME}</NavLink>

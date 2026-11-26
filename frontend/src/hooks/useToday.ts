@@ -1,19 +1,36 @@
 import { useEffect, useState } from 'react';
-import { todayIn } from '../lib/dates';
+import { isBeforeDayEnd, todayIn } from '../lib/dates';
 
-/** Today in the configured time zone; updates at midnight and when returning to the app. */
-export function useToday(timeZone: string, fallback: string): string {
-  const compute = () => {
+export interface TodayState {
+  today: string;
+  /** Between midnight and a later day end: "today" is still the calendar day before */
+  beforeDayEnd: boolean;
+}
+
+/**
+ * Today in the configured time zone and day end; updates at the day end (checked every 30 s)
+ * and when returning to the app.
+ */
+export function useToday(timeZone: string, dayEndHour: number, fallback: string): TodayState {
+  const compute = (): TodayState => {
     try {
-      return todayIn(timeZone);
+      const now = new Date();
+      return { today: todayIn(timeZone, now, dayEndHour), beforeDayEnd: isBeforeDayEnd(timeZone, dayEndHour, now) };
     } catch {
-      return fallback;
+      return { today: fallback, beforeDayEnd: false };
     }
   };
-  const [today, setToday] = useState(compute);
+  // Two plain values, so an unchanged tick does not render the app again
+  const [today, setToday] = useState(() => compute().today);
+  const [beforeDayEnd, setBeforeDayEnd] = useState(() => compute().beforeDayEnd);
 
   useEffect(() => {
-    const update = () => setToday(compute());
+    const update = () => {
+      const next = compute();
+      setToday(next.today);
+      setBeforeDayEnd(next.beforeDayEnd);
+    };
+    update();
     const timer = window.setInterval(update, 30_000);
     document.addEventListener('visibilitychange', update);
     window.addEventListener('focus', update);
@@ -22,9 +39,9 @@ export function useToday(timeZone: string, fallback: string): string {
       document.removeEventListener('visibilitychange', update);
       window.removeEventListener('focus', update);
     };
-    // compute only depends on timeZone/fallback
+    // compute only depends on timeZone/dayEndHour/fallback
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeZone, fallback]);
+  }, [timeZone, dayEndHour, fallback]);
 
-  return today;
+  return { today, beforeDayEnd };
 }
