@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
@@ -12,12 +12,14 @@ from app.services.checkin_service import CheckinService
 from app.services.day_service import week_start
 from app.services.habit_service import HabitService
 from app.services.timezones import effective_timezone_name
+from app.services.token_service import allowed_habit_ids
 
 router = APIRouter()
 
 
 @router.get("/days", response_model=DaysRead)
 def list_days(
+    request: Request,
     start: date | None = Query(default=None, alias="from"),
     end: date | None = Query(default=None, alias="to"),
     user=Depends(require_user),
@@ -26,7 +28,11 @@ def list_days(
 ):
     start = start or week_start(today)
     end = end or start + timedelta(days=6)
-    return CheckinService(HabitRepository(db)).days(user.id, start, end, today, effective_timezone_name(user))
+    result = CheckinService(HabitRepository(db)).days(user.id, start, end, today, effective_timezone_name(user))
+    allowed = allowed_habit_ids(request)
+    if allowed is not None:
+        result.habits = [habit for habit in result.habits if habit.id in allowed]
+    return result
 
 
 @router.get("/history", response_model=HistoryRead)

@@ -8,11 +8,11 @@ from app.errors import AppError
 class LoginRateLimiter:
     """In memory, per process: counts reset on restart and are not shared between instances."""
 
-    def __init__(self, window_seconds: int = 15 * 60, name: str = "login"):
+    def __init__(self, window_seconds: int = 15 * 60, name: str = "login", account_limit: int = 5, ip_limit: int = 20):
         self.window_seconds = window_seconds
         self.name = name
-        self.account_limit = 5
-        self.ip_limit = 20
+        self.account_limit = account_limit
+        self.ip_limit = ip_limit
         self._attempts: dict[str, deque[float]] = defaultdict(deque)
         self._lock = Lock()
 

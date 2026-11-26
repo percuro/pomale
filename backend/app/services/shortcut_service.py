@@ -1,96 +1,69 @@
-import hashlib
-import secrets
+"""The iOS shortcut: check off "today" with an API key for one habit.
+
+Since 0.10 a shortcut key is an API token with scope "checkin" for exactly that habit; who may
+call is decided in token_service before this runs. The per-habit key endpoints stay for the
+shortcut panel on the habits page.
+"""
+
 from datetime import datetime
 
 from fastapi import Request
+from sqlalchemy.orm import Session
 
 from app.errors import AppError
+from app.models.api_token import SCOPE_CHECKIN, ApiToken
 from app.models.habit import QUANTITY_TARGET_MAX
-from app.models.shortcut_token import ShortcutToken
 from app.models.user import User
 from app.repositories.habit_repository import HabitRepository
-from app.repositories.shortcut_repository import ShortcutRepository
 from app.schemas.shortcut import ShortcutCheckinRead
-from app.services import audit_service
-from app.services.auth_service import utcnow
 from app.services.checkin_service import CheckinService
 from app.services.day_service import plan_for
+from app.services.habit_service import HabitService
 from app.services.i18n import resolve_locale, text
-from app.services.login_rate_limiter import LoginRateLimiter
 from app.services.timezones import user_today
-
-TOKEN_PREFIX = "ht_"
-# Limit failed attempts with wrong keys per IP (same logic as the login limit)
-shortcut_rate_limiter = LoginRateLimiter(name="shortcut")
+from app.services.token_service import TokenService
 
 
-def _unauthorized() -> AppError:
-    return AppError(401, "shortcut.invalid_token", "Key is invalid or revoked", headers={"WWW-Authenticate": "Bearer"})
-
-
-def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-
-def bearer_token(request: Request) -> str | None:
-    value = request.headers.get("Authorization", "")
-    scheme, _, token = value.partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
-        return None
-    return token.strip()
+def is_shortcut_key(token: ApiToken, habit_id: int) -> bool:
+    """A key that does what a shortcut key does: check off this one habit, nothing else."""
+    return token.scope_set == {SCOPE_CHECKIN} and token.habit_ids == [habit_id]
 
 
 class ShortcutService:
-    def __init__(self, repository: ShortcutRepository, habits: HabitRepository):
-        self.repository = repository
-        self.habits = habits
+    def __init__(self, db: Session):
+        self.db = db
+        self.habits = HabitRepository(db)
+        self.tokens = TokenService(db)
 
-    def create(self, user: User, habit_id: int, label: str) -> tuple[ShortcutToken, str]:
-        raw = TOKEN_PREFIX + secrets.token_urlsafe(32)
-        label = label.strip() or "iPhone"
-        audit_service.record(
-            self.repository.db, "shortcut.key_created", actor=user, commit=False, habit_id=habit_id, label=label
-        )
-        token = self.repository.add(ShortcutToken(habit_id=habit_id, label=label, token_hash=hash_token(raw)))
-        return token, raw
+    def list_for(self, user: User, habit_id: int) -> list[ApiToken]:
+        return sorted((t for t in self.tokens.list_for(user) if is_shortcut_key(t, habit_id)), key=lambda t: t.id)
+
+    def create(self, user: User, habit_id: int, label: str) -> tuple[ApiToken, str]:
+        return self.tokens.create(user, label.strip() or "iPhone", [SCOPE_CHECKIN], [habit_id])
 
     def revoke(self, user: User, habit_id: int, token_id: int) -> None:
-        token = self.repository.get_for_habit(token_id, habit_id)
-        if token is None:
-            raise AppError(404, "shortcut.token_not_found", "Key not found")
-        audit_service.record(
-            self.repository.db, "shortcut.key_revoked", actor=user, commit=False, habit_id=habit_id, label=token.label
-        )
-        self.repository.revoke(token, utcnow())
+        token = self.tokens.get(user, token_id)
+        if not is_shortcut_key(token, habit_id):
+            raise AppError(404, "token.not_found", "Key not found")
+        self.tokens.revoke(user, token_id)
 
     def check_in_today(
-        self, request: Request, habit_id: int, done: bool, now: datetime, amount: int | None = None
+        self, request: Request, user: User, habit_id: int, done: bool, now: datetime, amount: int | None = None
     ) -> ShortcutCheckinRead:
-        ip_address = request.client.host if request.client else "unknown"
-        shortcut_rate_limiter.check("shortcut", ip_address)
-        raw = bearer_token(request)
-        token = self.repository.get_by_hash(hash_token(raw)) if raw else None
-        # A deactivated owner's keys stop working too (their data stays)
-        if token is None or token.revoked_at is not None or not token.habit.user.is_active:
-            audit_service.record_failure(self.repository.db, shortcut_rate_limiter, "shortcut", request)
-            raise _unauthorized()
-        if token.habit_id != habit_id:
-            raise AppError(403, "shortcut.wrong_habit", "This key belongs to another habit")
+        habit = HabitService(self.habits).get(habit_id, user.id)
         if not done:
             raise AppError(422, "shortcut.done_only", "The shortcut can only mark a habit as done")
-        habit = token.habit
         if habit.archived_on is not None:
             raise AppError(409, "habit.archived", "The habit is archived")
         # "Today" of the habit's owner, wherever the phone or the server is
-        today = user_today(habit.user, now)
+        today = user_today(user, now)
 
-        locale = resolve_locale(habit.user, request)
+        locale = resolve_locale(user, request)
         checkins = CheckinService(self.habits)
         plan = plan_for(habit.schedules, today)
         if plan.goal_type == "quantity":
             target = plan.target or 1
             self.habits.add_to_value(habit.id, today, amount or 1, target, QUANTITY_TARGET_MAX)
-            self.repository.touch(token, utcnow())
             result = checkins.read_day(habit, today, today)
             status_text = text(locale, "shortcut.counted").format(value=result.value, target=target)
             if habit.unit:
@@ -110,7 +83,6 @@ class ShortcutService:
         before = self.habits.get_checkin(habit.id, today)
         already = bool(before and before.done)
         result = checkins.set_state(habit, today, today, done=True)
-        self.repository.touch(token, utcnow())
         outcome = "already_done" if already else "done"
         status_text = text(locale, f"shortcut.{outcome}")
         return ShortcutCheckinRead(

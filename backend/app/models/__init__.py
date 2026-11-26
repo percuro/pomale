@@ -4,7 +4,6 @@ from app.models.habit import Checkin, Habit, HabitGroup, HabitPause, HabitRemind
 from app.models.invitation import Invitation
 from app.models.oidc_state import OidcLoginState
 from app.models.push import InstanceSecret, PushSubscription
-from app.models.shortcut_token import ShortcutToken
 from app.models.user import OidcIdentity, User, UserSession
 
 __all__ = [
@@ -21,7 +20,6 @@ __all__ = [
     "OidcIdentity",
     "OidcLoginState",
     "PushSubscription",
-    "ShortcutToken",
     "User",
     "UserSession",
 ]

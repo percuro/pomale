@@ -9,11 +9,11 @@ import unittest
 from datetime import date
 
 from app.main import app
+from app.models.api_token import ApiToken
 from app.models.habit import Checkin, Habit, HabitGroup, HabitPause
 from app.models.push import PushSubscription
-from app.models.shortcut_token import ShortcutToken
 from app.models.user import UserSession
-from app.services.shortcut_service import shortcut_rate_limiter
+from app.services.token_service import token_rate_limiter
 from tests.support import ApiTestEnvironment, push_subscription
 
 # (method, path) -> (expected status for account A using B's IDs, request body)
@@ -58,7 +58,7 @@ class IsolationTest(unittest.TestCase):
         self.bert_user = self.env.create_user("bert")
         self.anna = self.env.client("anna")
         self.bert = self.env.client("bert")
-        shortcut_rate_limiter.reset()
+        token_rate_limiter.reset()
 
         self.bert_habit = self.bert.post("/v1/habits", json={"name": "Bert's secret", "start_on": "2026-11-16"}).json()
         self.bert.put(f"/v1/habits/{self.bert_habit['id']}/days/2026-11-23", json={"done": True})
@@ -175,7 +175,7 @@ class IsolationTest(unittest.TestCase):
                 [(c.local_date.isoformat(), c.done) for c in db.query(Checkin).filter_by(habit_id=habit.id)],
                 [("2026-11-23", True)],
             )
-            tokens = db.query(ShortcutToken).filter_by(habit_id=habit.id).all()
+            tokens = [t for t in db.query(ApiToken).all() if habit.id in t.habit_ids]
             self.assertEqual([(t.label, t.revoked_at) for t in tokens], [("B", None)])
             self.assertIsNotNone(db.get(UserSession, self.bert_session_id))
             group = db.get(HabitGroup, self.bert_group["id"])

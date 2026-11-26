@@ -5,7 +5,7 @@ import unittest
 from datetime import UTC, datetime
 from unittest import mock
 
-from app.services.shortcut_service import shortcut_rate_limiter
+from app.services.token_service import token_rate_limiter
 from tests.support import PASSWORD, ApiTestEnvironment
 
 # 11:00 UTC: already Wednesday 01:00 in Kiritimati (UTC+14), still Tuesday 01:00 in Honolulu (UTC-10)
@@ -20,7 +20,7 @@ class PerAccountTimezoneTest(unittest.TestCase):
         self.env.create_user("hono", timezone="Pacific/Honolulu")
         self.kiri = self.env.client("kiri")
         self.hono = self.env.client("hono")
-        shortcut_rate_limiter.reset()
+        token_rate_limiter.reset()
 
     def tearDown(self):
         self.env.close()
@@ -143,7 +143,7 @@ class DayEndTest(unittest.TestCase):
         self.env.create_user("lark", timezone="Pacific/Honolulu")
         self.owl = self.env.client("owl")
         self.lark = self.env.client("lark")
-        shortcut_rate_limiter.reset()
+        token_rate_limiter.reset()
 
     def tearDown(self):
         self.env.close()
