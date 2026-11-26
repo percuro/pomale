@@ -18,7 +18,8 @@ from app.services.login_rate_limiter import LoginRateLimiter
 from app.services.oidc_service import OidcService
 
 router = APIRouter()
-setup_rate_limiter = LoginRateLimiter(name="setup")
+# Wrong setup tokens count per IP address only: a global count let anyone block the first setup for everyone
+setup_rate_limiter = LoginRateLimiter(name="setup", account_limit=5, ip_limit=5)
 
 
 class SetupStatus(BaseModel):
@@ -32,12 +33,12 @@ class SetupRequest(AccountSettings):
 
 
 def check_setup_token(token: str, request: Request, db: Session) -> None:
-    ip_address = request.client.host if request.client else "unknown"
-    setup_rate_limiter.check("setup", ip_address)
+    ip_address = audit_service.client_ip(request) or "unknown"
+    setup_rate_limiter.check(ip_address, ip_address)
     if not setup_service.needs_setup(db):
         raise AppError(409, "setup.done", "Setup is already complete")
     if not setup_service.token_matches(token.strip()):
-        audit_service.record_failure(db, setup_rate_limiter, "setup", request)
+        audit_service.record_failure(db, setup_rate_limiter, ip_address, request)
         raise AppError(403, "setup.invalid_token", "Wrong setup token")
 
 

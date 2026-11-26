@@ -10,6 +10,7 @@ export const en = {
   'app.loading': 'Loading …',
   'app.serverUnreachable': 'Server not reachable.',
   'app.retry': 'Try again',
+  'app.pageFailed': 'This page could not be loaded.',
   'app.skipToContent': 'Skip to content',
   'app.version': '{name} {version}',
 
@@ -564,6 +565,8 @@ export const en = {
   'error.token.limit_reached': 'At most 50 active keys per account. Revoke one first.',
   'error.import.not_empty': 'Importing only works into an account without habits, groups and pauses.',
   'error.import.too_large': 'The file is too large (at most 5 MB).',
+  'error.request.too_large': 'The request is too large (at most 1 MB).',
+  'error.request.length_required': 'The request needs a length (Content-Length).',
   'error.backup.failed': 'The backup failed; see the server log.',
   'error.setup.done': 'Setup is already complete.',
   'error.setup.invalid_token': 'Wrong setup token.',

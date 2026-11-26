@@ -17,6 +17,8 @@
 }
 
 /* ---------- Text and small helpers ---------- */
+/* The content gets the focus after a change of page (like after a page load): no ring around all of it */
+main#content:focus { outline: none; }
 .page-head p { margin: var(--space-1) 0 0; }
 .help { margin-top: var(--space-4); font-size: var(--text-sm); max-width: 40rem; }
 .warn { color: var(--danger-text); }

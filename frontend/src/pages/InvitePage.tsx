@@ -45,9 +45,12 @@ export function InvitePage() {
     content = <AcceptForm token={token} info={info.data} />;
   }
 
+  const form = token && info.isSuccess;
   return (
     <main className="center">
       <div className="card login">
+        {/* The form has its own heading; a missing or wrong link gets the app's name, like the login */}
+        {!form && <h1>{APP_NAME}</h1>}
         {content}
         <LanguageSwitcher />
       </div>

@@ -5,6 +5,7 @@ export const de = {
   'app.loading': 'Lädt …',
   'app.serverUnreachable': 'Server nicht erreichbar.',
   'app.retry': 'Erneut versuchen',
+  'app.pageFailed': 'Diese Seite konnte nicht geladen werden.',
   'app.skipToContent': 'Zum Inhalt',
   'app.version': '{name} {version}',
 
@@ -563,6 +564,8 @@ export const de = {
   'error.token.limit_reached': 'Höchstens 50 aktive Schlüssel pro Konto. Widerrufe zuerst einen.',
   'error.import.not_empty': 'Importieren geht nur in ein Konto ohne Gewohnheiten, Gruppen und Pausen.',
   'error.import.too_large': 'Die Datei ist zu groß (höchstens 5 MB).',
+  'error.request.too_large': 'Die Anfrage ist zu groß (höchstens 1 MB).',
+  'error.request.length_required': 'Die Anfrage braucht eine Längenangabe (Content-Length).',
   'error.backup.failed': 'Das Backup ist fehlgeschlagen; Details stehen im Server-Log.',
   'error.setup.done': 'Die Einrichtung ist bereits abgeschlossen.',
   'error.setup.invalid_token': 'Das Setup-Token ist falsch.',

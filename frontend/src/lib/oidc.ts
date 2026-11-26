@@ -18,14 +18,8 @@ export function parseHashParams(hash: string): Record<string, string> {
   return Object.fromEntries(params.entries());
 }
 
-/**
- * Read what the OIDC callback put in the fragment (#error=…, #oidc=linked, #reauth=ok) once,
- * then remove it from the address bar so a reload does not show it again.
- */
-export function takeHashParams(): Record<string, string> {
-  const hash = window.location.hash;
-  if (!hash) return {};
-  const params = parseHashParams(hash);
+/** Remove the fragment from the address bar (without a navigation), so a reload does not show it again. */
+export function clearHashParams(): void {
+  if (!window.location.hash) return;
   window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
-  return params;
 }

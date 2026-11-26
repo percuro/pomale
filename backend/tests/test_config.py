@@ -106,6 +106,42 @@ class ConfigTest(unittest.TestCase):
             self.assertTrue(config.cookie_secure())
             self.assertEqual(config.get_allowed_origins(), ["http://localhost:8000", "http://a.test", "http://b.test"])
 
+    def test_invalid_switches_and_numbers_stop_the_start(self):
+        valid = {"PUBLIC_URL": "https://habits.example.org"}
+        cases = {
+            "BACKUP_ENABLED": "nein",
+            "PUSH_ENABLED": "ture",
+            "PASSWORD_LOGIN": "disabled",
+            "CSRF_PROTECTION": "maybe",
+            "COOKIE_SECURE": "y",
+            "API_DOCS": "2",
+            "SESSION_IDLE_MINUTES": "abc",
+            "SESSION_ABSOLUTE_HOURS": "0",
+            "INVITE_EXPIRY_DAYS": "-3",
+            "AUDIT_RETENTION_DAYS": "1.5",
+            "COOKIE_SAMESITE": "relaxed",
+        }
+        for name, value in cases.items():
+            with self.subTest(name=name), self.env(**valid, **{name: value}):
+                with self.assertRaisesRegex(config.ConfigError, name):
+                    config.validate()
+
+    def test_switch_spellings_and_empty_values(self):
+        for value, expected in [
+            ("on", True),
+            ("YES", True),
+            (" 1 ", True),
+            ("off", False),
+            ("No", False),
+            ("0", False),
+        ]:
+            with self.subTest(value=value), self.env(API_DOCS=value):
+                self.assertIs(config.api_docs_enabled(), expected)
+        with self.env(PUBLIC_URL="https://habits.example.org", SESSION_IDLE_MINUTES="", COOKIE_SAMESITE=""):
+            self.assertEqual(config.get_session_idle_minutes(), 30 * 24 * 60)
+            self.assertEqual(config.get_cookie_samesite(), "lax")
+            config.validate()
+
     def test_timezone_default_alias_and_validation(self):
         with self.env():
             self.assertEqual(config.get_default_timezone_name(), "UTC")

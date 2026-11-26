@@ -1,9 +1,12 @@
 import unittest
 
+from fastapi.testclient import TestClient
+
 from app.api.routers.setup import setup_rate_limiter
+from app.main import app
 from app.services import setup_service
 from app.services.auth_service import SESSION_COOKIE_NAME
-from tests.support import PASSWORD, ApiTestEnvironment
+from tests.support import PASSWORD, TEST_ORIGIN, ApiTestEnvironment
 
 
 class SetupTest(unittest.TestCase):
@@ -74,6 +77,13 @@ class SetupTest(unittest.TestCase):
         for _ in range(5):
             self.post(token="falsch")
         self.assertEqual(self.post().status_code, 429)
+
+    def test_rate_limit_is_per_ip(self):
+        for _ in range(5):
+            self.post(token="falsch")
+        other = TestClient(app, headers={"X-Habit-CSRF": "1", "Origin": TEST_ORIGIN}, client=("192.0.2.7", 50000))
+        response = other.post("/v1/setup", json={"token": self.token, "username": "alex", "password": PASSWORD})
+        self.assertEqual(response.status_code, 200, response.text)
 
     def test_no_token_issued_means_no_setup(self):
         setup_service.clear_token()
