@@ -21,26 +21,34 @@ export function ReminderTimes({ value, onChange }: { value: string[]; onChange: 
     <fieldset className="weekday-picker">
       <legend>{t('reminders.label')}</legend>
       {value.length === 0 && <p className="subtle">{t('reminders.none')}</p>}
-      {value.map((time, index) => (
-        <div className="field-row" key={index}>
-          <input
-            type="time"
-            step={60}
-            value={time}
-            aria-label={t('reminders.timeLabel', { n: index + 1 })}
-            onChange={(e) => set(index, e.target.value)}
-          />
-          {belongsToDayBefore(time, dayEndHour) && <small className="subtle">{t('reminders.dayBefore')}</small>}
-          <button
-            type="button"
-            className="button"
-            aria-label={t('reminders.removeLabel', { n: index + 1 })}
-            onClick={() => onChange(value.filter((_, i) => i !== index))}
-          >
-            {t('reminders.remove')}
-          </button>
-        </div>
-      ))}
+      {value.map((time, index) => {
+        const dayBefore = belongsToDayBefore(time, dayEndHour);
+        const noteId = `reminder-day-before-${index}`;
+        return (
+          <div className="field-row" key={index}>
+            <div className="field-stack">
+              <input
+                type="time"
+                step={60}
+                value={time}
+                aria-label={t('reminders.timeLabel', { n: index + 1 })}
+                aria-describedby={dayBefore ? noteId : undefined}
+                onChange={(e) => set(index, e.target.value)}
+              />
+              {/* Before the day end the reminder is about the day that is ending */}
+              {dayBefore && <small id={noteId} className="subtle">{t('reminders.dayBefore')}</small>}
+            </div>
+            <button
+              type="button"
+              className="button"
+              aria-label={t('reminders.removeLabel', { n: index + 1 })}
+              onClick={() => onChange(value.filter((_, i) => i !== index))}
+            >
+              {t('reminders.remove')}
+            </button>
+          </div>
+        );
+      })}
       {!timesValid(value) && <p className="error" role="alert">{t('reminders.invalid')}</p>}
       {value.length < REMINDERS_MAX && (
         <div className="button-row">
