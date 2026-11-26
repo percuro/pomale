@@ -12,7 +12,8 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from app.models import PushSubscription
 from app.models.habit import HabitReminder
-from app.services.reminder_service import ReminderService, build_payload, is_due
+from app.models.user import User
+from app.services.reminder_service import ReminderService, build_payload, due_on, is_due
 from app.services.scheduler import ReminderScheduler, seconds_until_next_run
 from app.services.webpush.crypto import public_bytes
 from app.services.webpush.encoding import b64url_encode
@@ -62,6 +63,36 @@ class IsDueTest(unittest.TestCase):
         self.assertFalse(is_due(time(2, 30), date(2026, 10, 25), second, VIENNA))
         # 23:00 on that day is 25 hours after midnight; still on time
         self.assertTrue(is_due(time(23, 0), None, at(date(2026, 10, 25), 23, 0), VIENNA))
+
+
+class DayEndTest(unittest.TestCase):
+    """Reminders with a day end after midnight: times before it belong to the day that is ending."""
+
+    def test_time_before_the_day_end_belongs_to_the_day_before(self):
+        tuesday, wednesday = date(2026, 11, 24), date(2026, 11, 25)
+        self.assertEqual(due_on(time(0, 30), None, at(wednesday, 0, 30), VIENNA, 2), tuesday)
+        self.assertIsNone(due_on(time(0, 30), tuesday, at(wednesday, 0, 31), VIENNA, 2))
+        # Tuesday 00:30 is Monday's reminder, already sent: nothing on Tuesday morning
+        self.assertIsNone(due_on(time(0, 30), date(2026, 11, 23), at(tuesday, 0, 45, second=59), VIENNA, 2))
+        self.assertIsNone(due_on(time(0, 30), None, at(tuesday, 0, 29), VIENNA, 2))
+        # After the day end nothing changes
+        self.assertEqual(due_on(time(23, 0), None, at(tuesday, 23, 0), VIENNA, 2), tuesday)
+        self.assertEqual(due_on(time(7, 30), None, at(tuesday, 7, 30), VIENNA, 2), tuesday)
+
+    def test_caught_up_just_after_the_day_end(self):
+        tuesday, wednesday = date(2026, 11, 24), date(2026, 11, 25)
+        # A restart over midnight: 23:55 is sent at 00:05, still for Tuesday
+        self.assertEqual(due_on(time(23, 55), None, at(wednesday, 0, 5), VIENNA), tuesday)
+        self.assertIsNone(due_on(time(23, 55), tuesday, at(wednesday, 0, 5), VIENNA))
+        # The same over a day end of 01:00
+        self.assertEqual(due_on(time(0, 55), None, at(wednesday, 1, 5), VIENNA, 1), tuesday)
+        self.assertIsNone(due_on(time(0, 55), None, at(wednesday, 1, 11), VIENNA, 1))
+
+    def test_spring_forward_inside_the_night(self):
+        # 29 Mar 2026: 02:30 does not exist; with a day end of 03:00 it fires at 03:30 for Saturday
+        saturday, sunday = date(2026, 3, 28), date(2026, 3, 29)
+        self.assertEqual(due_on(time(2, 30), None, at(sunday, 3, 30), VIENNA, 3), saturday)
+        self.assertIsNone(due_on(time(2, 30), saturday, at(sunday, 3, 31), VIENNA, 3))
 
 
 class ServiceTest(unittest.TestCase):
@@ -209,6 +240,40 @@ class ServiceTest(unittest.TestCase):
             self.assertEqual(db.query(PushSubscription).one().last_error, "HTTP 500")
         finally:
             db.close()
+
+    def set_day_end(self, hour: int) -> None:
+        db = self.env.SessionLocal()
+        try:
+            db.query(User).filter(User.username == "alex").update({"day_end_hour": hour})
+            db.commit()
+        finally:
+            db.close()
+
+    def test_reminder_after_midnight_belongs_to_the_day_before(self):
+        self.set_day_end(2)
+        self.device(self.client, "phone")
+        habit = self.habit("Lesen", ["00:30", "23:00"])
+        self.assertEqual(self.run_at(23, 0), 1)
+        self.assertEqual(self.payloads()[0]["habit"]["date"], "2026-11-24")
+        # Wednesday 00:30 is still Tuesday: open, and the button checks off Tuesday
+        self.assertEqual(self.run_at(0, 30, day=date(2026, 11, 25)), 1)
+        self.assertEqual(self.payloads()[0]["habit"]["date"], "2026-11-24")
+        # Done for Tuesday: Wednesday 00:30 stays quiet the next time around (that is Wednesday's)
+        self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-24", json={"done": True})
+        self.assertEqual(self.run_at(0, 31, day=date(2026, 11, 25)), 0)
+        db = self.env.SessionLocal()
+        try:
+            sent = sorted((r.time.isoformat(), r.last_sent_on.isoformat()) for r in db.query(HabitReminder))
+        finally:
+            db.close()
+        self.assertEqual(sent, [("00:30:00", "2026-11-24"), ("23:00:00", "2026-11-24")])
+
+    def test_done_late_at_night_keeps_the_reminder_quiet(self):
+        self.set_day_end(2)
+        self.device(self.client, "phone")
+        habit = self.habit("Lesen", ["00:30"])
+        self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-24", json={"done": True})
+        self.assertEqual(self.run_at(0, 30, day=date(2026, 11, 25)), 0)
 
     def test_time_zone_and_language_per_account(self):
         self.device(self.client, "alex")

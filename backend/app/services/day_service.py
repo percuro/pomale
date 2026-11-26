@@ -107,11 +107,15 @@ class Evaluation:
     weeks: list[tuple[date, Quota]] = field(default_factory=list)
 
 
-def today_in(zone: ZoneInfo, now: datetime | None = None) -> date:
+def today_in(zone: ZoneInfo, now: datetime | None = None, day_end_hour: int = 0) -> date:
+    """The day `now` belongs to in `zone`. With a day end of e.g. 1, everything before 01:00 on the
+    local clock still counts for the day before. Only the clock hour is compared, never a duration,
+    so a clock change at night simply makes that night an hour shorter or longer."""
     moment = now if now is not None else datetime.now(zone)
     if moment.tzinfo is None:
         raise ValueError("now must be timezone-aware")
-    return moment.astimezone(zone).date()
+    local = moment.astimezone(zone)
+    return local.date() if local.hour >= day_end_hour else local.date() - timedelta(days=1)
 
 
 def week_start(day: date) -> date:

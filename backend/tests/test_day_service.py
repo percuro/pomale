@@ -58,6 +58,38 @@ class TodayTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             today_in(VIENNA, datetime(2026, 11, 24, 12, 0))
 
+    def test_day_end_after_midnight(self):
+        # Wednesday 25 Nov, local times in Vienna
+        def local(hour, minute, day=25):
+            return datetime(2026, 11, day, hour, minute, tzinfo=VIENNA)
+
+        self.assertEqual(today_in(VIENNA, local(0, 59), day_end_hour=1), date(2026, 11, 24))
+        self.assertEqual(today_in(VIENNA, local(1, 0), day_end_hour=1), date(2026, 11, 25))
+        self.assertEqual(today_in(VIENNA, local(0, 0), day_end_hour=0), date(2026, 11, 25))
+        self.assertEqual(today_in(VIENNA, local(5, 59), day_end_hour=6), date(2026, 11, 24))
+        self.assertEqual(today_in(VIENNA, local(23, 59, day=24), day_end_hour=6), date(2026, 11, 24))
+        # The moment may come in any zone
+        self.assertEqual(
+            today_in(VIENNA, datetime(2026, 11, 24, 23, 30, tzinfo=ZoneInfo("UTC")), 1), date(2026, 11, 24)
+        )
+
+    def test_day_end_keeps_monday_night_in_the_old_week(self):
+        monday_night = datetime(2026, 11, 30, 0, 30, tzinfo=VIENNA)
+        self.assertEqual(week_start(today_in(VIENNA, monday_night, day_end_hour=1)), date(2026, 11, 23))
+        self.assertEqual(week_start(today_in(VIENNA, monday_night)), date(2026, 11, 30))
+
+    def test_day_end_on_clock_change_nights(self):
+        new_york = ZoneInfo("America/New_York")
+        utc = ZoneInfo("UTC")
+        # Spring, 8 Mar 2026: 01:59 EST is followed by 03:00 EDT; with a day end of 02:00 the night
+        # is one hour shorter, nothing is skipped or counted twice
+        self.assertEqual(today_in(new_york, datetime(2026, 3, 8, 6, 59, tzinfo=utc), 2), date(2026, 3, 7))
+        self.assertEqual(today_in(new_york, datetime(2026, 3, 8, 7, 0, tzinfo=utc), 2), date(2026, 3, 8))
+        # Autumn, 1 Nov 2026: 01:30 happens twice, both still belong to Saturday; 02:00 EST is Sunday
+        self.assertEqual(today_in(new_york, datetime(2026, 11, 1, 5, 30, tzinfo=utc), 2), date(2026, 10, 31))
+        self.assertEqual(today_in(new_york, datetime(2026, 11, 1, 6, 30, tzinfo=utc), 2), date(2026, 10, 31))
+        self.assertEqual(today_in(new_york, datetime(2026, 11, 1, 7, 0, tzinfo=utc), 2), date(2026, 11, 1))
+
     def test_week_starts_monday(self):
         self.assertEqual(week_start(date(2026, 11, 29)), date(2026, 11, 23))
         self.assertEqual(week_start(date(2026, 11, 23)), date(2026, 11, 23))
