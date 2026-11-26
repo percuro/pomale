@@ -3,9 +3,9 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
-import { takeHashParams } from '../lib/oidc';
 import type { Me } from '../lib/types';
 import { useMeta } from '../hooks/useMeta';
+import { useCallbackParams } from '../hooks/useCallbackParams';
 import { signedIn } from '../hooks/useMe';
 import { useErrorText, useT } from '../i18n/context';
 import { codeMessage } from '../i18n/core';
@@ -20,7 +20,7 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   // An error from the OIDC callback (/login#error=…), read once
-  const [callbackError] = useState(() => takeHashParams().error ?? null);
+  const callbackError = useCallbackParams().error ?? null;
   const login = useMutation({
     mutationFn: () =>
       apiFetch<Me>('/v1/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),

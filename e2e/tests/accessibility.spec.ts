@@ -5,6 +5,7 @@ import { axeViolations, createHabit, createLink, freshContext, newAccount, sidew
 
 // The page scans in design.spec.ts see each page as it loads. These see what only appears after
 // a click (dialogs, forms, results), the pages without an account, and the English interface.
+// Without motion: a scan during a transition measures sizes and colours halfway.
 
 async function heading(page: Page) {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -23,7 +24,7 @@ for (const scheme of ['light', 'dark'] as const) {
     const link = new URL(await createLink(request));
     const context = await freshContext(browser, baseURL!);
     const page = await context.newPage();
-    await page.emulateMedia({ colorScheme: scheme });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     const found: string[] = [];
     const pages = {
       login: '/',
@@ -45,7 +46,7 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 
   test(`dialogs, forms and results have no violations (${scheme})`, async ({ page, context, request, browser, baseURL }) => {
-    await page.emulateMedia({ colorScheme: scheme });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     const plain = uniqueName('Lesen');
     const water = uniqueName('Wasser');
     const group = uniqueName('Abends');
@@ -67,6 +68,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await context.setOffline(true);
     await todayRow(page, plain).getByRole('button', { name: new RegExp(plain) }).first().click();
     await expect(page.getByRole('status').filter({ hasText: 'Offline' })).toBeVisible();
+    await expect(todayRow(page, plain)).toContainText('wartet auf Übertragung');
     await scan('offline and waiting');
     await context.setOffline(false);
     await expect(todayRow(page, plain)).not.toContainText('wartet auf Übertragung');
@@ -116,7 +118,7 @@ for (const scheme of ['light', 'dark'] as const) {
     // Importing is offered only to an account without habits: a new one, with this account's export
     const file = await (await request.get('/api/v1/export.json')).text();
     const account = await newAccount(browser, request, baseURL!);
-    await account.page.emulateMedia({ colorScheme: scheme });
+    await account.page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await account.page.goto('/account');
     await heading(account.page);
     const data = account.page.locator('section', { has: account.page.getByRole('heading', { name: 'Deine Daten' }) });

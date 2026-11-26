@@ -10,7 +10,8 @@ import { useOidcLabel } from '../hooks/useOidcLabel';
 import { useMeta } from '../hooks/useMeta';
 import { codeMessage } from '../i18n/core';
 import { ApiError } from '../lib/api';
-import { startOidc, takeHashParams } from '../lib/oidc';
+import { startOidc } from '../lib/oidc';
+import { useCallbackParams } from '../hooks/useCallbackParams';
 import { forgetLocalSubscription } from '../lib/push';
 import { TimezoneSelect } from '../components/account/TimezoneSelect';
 import { DayEndSelect } from '../components/account/DayEndSelect';
@@ -53,7 +54,7 @@ export function AccountPage() {
   const { t } = useI18n();
   const meta = useMeta();
   // What the OIDC callback reported (#oidc=linked, #reauth=ok, #error=…), read once
-  const [flash] = useState(() => takeHashParams());
+  const flash = useCallbackParams();
   const passwordLogin = meta.data?.password_login ?? true;
   return (
     <>
