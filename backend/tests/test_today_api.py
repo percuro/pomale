@@ -57,6 +57,13 @@ class TodayApiTest(unittest.TestCase):
         self.client.post("/v1/pauses", json={"habit_id": habit["id"], "start_on": "2026-11-24", "end_on": "2026-11-30"})
         self.assertEqual(self.client.get("/v1/today").json()["due"], 0)
 
+    def test_habits_archived_today_are_not_open(self):
+        self.habit("Lesen")
+        archived = self.habit("Alt")
+        self.assertEqual(self.client.post(f"/v1/habits/{archived['id']}/archive").status_code, 200)
+        today = self.client.get("/v1/today").json()
+        self.assertEqual(([h["name"] for h in today["open"]], today["due"]), (["Lesen"], 1))
+
     def test_language_follows_the_account_else_the_device(self):
         self.habit("Read")
         self.client.patch("/v1/account", json={"locale": None})

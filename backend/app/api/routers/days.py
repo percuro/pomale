@@ -65,7 +65,8 @@ def today_summary(
     due = done = 0
     still_open: list[TodayHabitRead] = []
     for habit in days.habits:
-        if allowed is not None and habit.id not in allowed:
+        # Habits archived today are still in `days` (for the week view), but nothing is due for them
+        if habit.archived or (allowed is not None and habit.id not in allowed):
             continue
         day = habit.days[0]
         if day.state not in DUE_STATES:

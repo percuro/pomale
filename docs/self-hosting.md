@@ -87,6 +87,8 @@ docker compose logs --tail=50 app
 
 Database migrations run automatically when the container starts. The image tag `:0` follows all 0.x releases; pin a specific version (e.g. `:0.4.0`) if you prefer to update deliberately. Read the [changelog](../CHANGELOG.md) before major updates.
 
+You can update from any release since 0.3.0 straight to the newest one, without the versions in between: every change is tested that way, from 0.3.0 and from the previous release, with real images and data. Going back to an older version is only possible by restoring a backup made before the update, so make one first (the first line above).
+
 ## Backup and restore
 
 All data is one SQLite file on the `data` volume.

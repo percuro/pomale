@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  # release.yml runs these checks before it builds and pushes an image
+  workflow_call:
 
 permissions:
   contents: read
@@ -153,6 +155,38 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report
           retention-days: 7
+
+  upgrade:
+    # A real update: an earlier release gets data, then this image starts on the same volume
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest public release and the newest one before this commit
+        from: ["0.3.0", latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: app:ci
+          cache-from: type=gha
+      - name: Upgrade from an earlier release
+        env:
+          FROM: ${{ matrix.from }}
+        run: |
+          if [ "$FROM" = latest ]; then
+            # Tags on this commit are the release being built, which has no image yet
+            FROM=$(git tag --list 'v[0-9]*' --no-contains HEAD | grep -v -e - | sed 's/^v//' | sort -V | tail -1)
+          fi
+          test -n "$FROM"
+          echo "Upgrading from $FROM"
+          e2e/upgrade/run.sh "ghcr.io/percuro/pomale:$FROM" app:ci
 
   private-terms:
     # Guards against personal data (domains, names, hosts) slipping into the repository.

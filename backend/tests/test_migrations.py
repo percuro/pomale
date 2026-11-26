@@ -87,5 +87,28 @@ class UpgradeFromV030Test(unittest.TestCase):
         connection.close()
 
 
+class RoundTripTest(unittest.TestCase):
+    """Every migration can be undone: head down to an empty database and up again."""
+
+    def tables(self, path: Path) -> set[str]:
+        connection = sqlite3.connect(path)
+        try:
+            rows = connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
+        finally:
+            connection.close()
+        return {name for (name,) in rows} - {"alembic_version", "sqlite_sequence"}
+
+    def test_downgrade_to_base_and_upgrade_again(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "habits.db"
+            alembic(path, "upgrade", "head")
+            at_head = self.tables(path)
+            self.assertIn("api_tokens", at_head)
+            alembic(path, "downgrade", "base")
+            self.assertEqual(self.tables(path), set())
+            alembic(path, "upgrade", "head")
+            self.assertEqual(self.tables(path), at_head)
+
+
 if __name__ == "__main__":
     unittest.main()
