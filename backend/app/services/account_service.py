@@ -29,6 +29,7 @@ def me_read(user: User, now: datetime) -> MeRead:
         timezone_setting=user.timezone,
         default_timezone=get_default_timezone_name(),
         locale=user.locale,
+        day_end_hour=user.day_end_hour or 0,
         today=user_today(user, now),
         has_password=user.has_password,
         oidc=(

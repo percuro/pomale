@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.user import DAY_END_HOUR_MAX
 from app.services.timezones import is_known_timezone
 
 LocaleLiteral = Literal["de", "en"]
@@ -42,6 +43,9 @@ class AccountSettings(BaseModel):
 class AccountUpdate(AccountSettings):
     """PATCH: only the fields sent are changed."""
 
+    # The full hour at which the day ends (0 = midnight); not part of sign-up, always has a value
+    day_end_hour: int = Field(default=0, ge=0, le=DAY_END_HOUR_MAX)
+
 
 class OidcLinkRead(BaseModel):
     """What the provider told us when the account last signed in; for display only."""
@@ -62,6 +66,8 @@ class MeRead(BaseModel):
     # The server's DEFAULT_TIMEZONE, used while timezone_setting is null
     default_timezone: str
     locale: LocaleLiteral | None
+    # The day ends at this full hour (0 = midnight); "today" already takes it into account
+    day_end_hour: int
     today: date
     # False: the account signs in through OIDC only
     has_password: bool
