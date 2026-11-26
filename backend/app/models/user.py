@@ -11,6 +11,8 @@ ROLES = (ROLE_ADMIN, ROLE_USER)
 LOCALES = ("de", "en")
 AUTH_PASSWORD = "password"
 AUTH_OIDC = "oidc"
+# The latest hour at which an account's day may end; later would make "today" confusing in the morning
+DAY_END_HOUR_MAX = 6
 
 
 class User(Base):
@@ -27,6 +29,8 @@ class User(Base):
     timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # None = the browser decides
     locale: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # The day ends at this full hour of the next calendar day (0 = midnight): until then it is still "today"
+    day_end_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 

@@ -23,8 +23,28 @@ DATA_TABLES = (
 NEW_TABLES = ("instance_secrets", "push_subscriptions", "habit_reminders")
 
 
+def _columns(connection: sqlite3.Connection, table: str) -> list[str]:
+    return [row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')]
+
+
+def _original_columns() -> dict[str, set[str]]:
+    connection = sqlite3.connect(":memory:")
+    connection.executescript(FIXTURE.read_text(encoding="utf-8"))
+    columns = {table: set(_columns(connection, table)) for table in DATA_TABLES}
+    connection.close()
+    return columns
+
+
+ORIGINAL_COLUMNS = _original_columns()
+
+
 def snapshot(connection: sqlite3.Connection) -> dict[str, list[tuple]]:
-    return {table: connection.execute(f'SELECT * FROM "{table}" ORDER BY 1, 2').fetchall() for table in DATA_TABLES}
+    """All 0.6.0 columns of the 0.6.0 tables, so columns added later do not affect the comparison."""
+    result = {}
+    for table in DATA_TABLES:
+        original = [c for c in _columns(connection, table) if c in ORIGINAL_COLUMNS[table]]
+        result[table] = connection.execute(f'SELECT {", ".join(original)} FROM "{table}" ORDER BY 1, 2').fetchall()
+    return result
 
 
 class UpgradeFromV060Test(unittest.TestCase):
@@ -55,7 +75,7 @@ class UpgradeFromV060Test(unittest.TestCase):
     def test_upgrade_keeps_data_and_adds_empty_tables(self):
         alembic(self.path, "upgrade", "head")
         connection = self.connect()
-        # Only new tables: every 0.6.0 row and column must be untouched
+        # Every 0.6.0 row and column must be untouched
         self.assertEqual(snapshot(connection), self.before)
         for table in NEW_TABLES:
             self.assertEqual(connection.execute(f"SELECT count(*) FROM {table}").fetchone(), (0,))
