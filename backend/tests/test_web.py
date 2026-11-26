@@ -98,6 +98,24 @@ class LifespanTest(unittest.TestCase):
         finally:
             db.close()
 
+    def test_daily_backups_start_and_stop(self):
+        import tempfile
+        from unittest import mock
+
+        from app.services.backup_scheduler import BackupScheduler
+
+        with tempfile.TemporaryDirectory() as directory:
+            env = {"BACKUP_ENABLED": "true", "BACKUP_DIR": directory, "PUSH_ENABLED": "false"}
+            with (
+                mock.patch.dict("os.environ", env),
+                mock.patch.object(BackupScheduler, "stop", autospec=True, side_effect=BackupScheduler.stop) as stop,
+                self.assertLogs("app.services.backup_scheduler", "INFO") as logs,
+                TestClient(create_application(None)),
+            ):
+                pass
+            stop.assert_called_once()
+            self.assertIn("Daily backups at 03:00", logs.output[0])
+
     def test_turned_off(self):
         from unittest import mock
 

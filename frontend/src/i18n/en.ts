@@ -458,6 +458,7 @@ export const en = {
   'audit.token.created': '{actor} created an API key',
   'audit.token.revoked': '{actor} revoked an API key',
   'audit.account.imported': '{actor} imported data from a file',
+  'audit.backup.created': '{actor} made a backup',
   'audit.push.device_added': '{actor} turned on reminders on a device',
   'audit.push.device_removed': '{actor} turned off reminders on a device',
 
@@ -511,6 +512,7 @@ export const en = {
   'error.token.limit_reached': 'At most 50 active keys per account. Revoke one first.',
   'error.import.not_empty': 'Importing only works into an account without habits, groups and pauses.',
   'error.import.too_large': 'The file is too large (at most 5 MB).',
+  'error.backup.failed': 'The backup failed; see the server log.',
   'error.setup.done': 'Setup is already complete.',
   'error.setup.invalid_token': 'Wrong setup token.',
   'error.setup.required': 'This instance has not been set up yet.',

@@ -26,6 +26,11 @@ TEST_ORIGIN = "http://localhost:5173"
 # values): CSRF on, allowed origin = the test clients' origin, default time zone.
 TEST_ENV = {
     "PUBLIC_URL": TEST_ORIGIN,
+    "BACKUP_ENABLED": "false",
+    "BACKUP_DIR": "",
+    "BACKUP_TIME": "",
+    "BACKUP_KEEP_DAYS": "",
+    "API_DOCS": "",
     "CSRF_PROTECTION": "true",
     "COOKIE_SECURE": "false",
     "CORS_ORIGINS": "",

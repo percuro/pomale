@@ -457,6 +457,7 @@ export const de = {
   'audit.token.created': '{actor} hat einen API-Schlüssel angelegt',
   'audit.token.revoked': '{actor} hat einen API-Schlüssel widerrufen',
   'audit.account.imported': '{actor} hat Daten aus einer Datei importiert',
+  'audit.backup.created': '{actor} hat ein Backup erstellt',
   'audit.push.device_added': '{actor} hat Erinnerungen auf einem Gerät eingeschaltet',
   'audit.push.device_removed': '{actor} hat Erinnerungen auf einem Gerät ausgeschaltet',
 
@@ -510,6 +511,7 @@ export const de = {
   'error.token.limit_reached': 'Höchstens 50 aktive Schlüssel pro Konto. Widerrufe zuerst einen.',
   'error.import.not_empty': 'Importieren geht nur in ein Konto ohne Gewohnheiten, Gruppen und Pausen.',
   'error.import.too_large': 'Die Datei ist zu groß (höchstens 5 MB).',
+  'error.backup.failed': 'Das Backup ist fehlgeschlagen; Details stehen im Server-Log.',
   'error.setup.done': 'Die Einrichtung ist bereits abgeschlossen.',
   'error.setup.invalid_token': 'Das Setup-Token ist falsch.',
   'error.setup.required': 'Diese Instanz ist noch nicht eingerichtet.',
