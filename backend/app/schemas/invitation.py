@@ -75,3 +75,5 @@ class MetaRead(BaseModel):
     password_login: bool
     # null = OIDC not configured
     oidc: OidcMeta | None
+    # /api/openapi.json is served (API_DOCS)
+    api_docs: bool = True
