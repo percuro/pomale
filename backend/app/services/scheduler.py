@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from app.config import get_push_contact
+from app.services.background import ThreadRuns
 from app.services.reminder_service import ReminderService
 from app.services.webpush.keys import ensure_vapid_keys
 from app.services.webpush.sender import PushSender
@@ -39,6 +40,7 @@ class ReminderScheduler:
         self.clock = clock
         self._sender = sender
         self._task: asyncio.Task | None = None
+        self._runs = ThreadRuns("reminder")
 
     def _make_sender(self) -> PushSender:
         db = self.session_factory()
@@ -59,6 +61,8 @@ class ReminderScheduler:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
             self._task = None
+        # The sender is still in use by a run that is busy sending
+        await self._runs.wait()
         if self._sender is not None:
             self._sender.close()
 
@@ -70,7 +74,7 @@ class ReminderScheduler:
         while True:
             await asyncio.sleep(seconds_until_next_run(self.clock()))
             try:
-                sent = await asyncio.to_thread(self.tick)
+                sent = await self._runs.run(self.tick)
                 if sent:
                     logger.info("Sent %d reminder notification(s)", sent)
             except Exception:

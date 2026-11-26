@@ -9,6 +9,7 @@ The backups lie on the same volume as the database: they help against mistakes a
 database file, not against a lost disk. Copy them somewhere else as well.
 """
 
+import contextlib
 import gzip
 import logging
 import os
@@ -109,12 +110,12 @@ def prune(directory: Path, now: datetime, keep_days: int) -> list[str]:
 
 def create_backup(directory: Path, now: datetime, keep_days: int, path: str | None = None) -> BackupFile:
     """Write a backup now, then prune old ones. Raises on failure (and records it in `state`)."""
+    name = f"pomale-{now.astimezone(UTC):%Y%m%d-%H%M}.sql.gz"
+    target = directory / name
+    partial = directory / f".{name}.partial"
     with _lock:
         try:
             directory.mkdir(parents=True, exist_ok=True)
-            name = f"pomale-{now.astimezone(UTC):%Y%m%d-%H%M}.sql.gz"
-            target = directory / name
-            partial = directory / f".{name}.partial"
             with gzip.open(partial, "wt", encoding="utf-8", compresslevel=6) as out:
                 write_dump(out, path)
             os.replace(partial, target)
@@ -123,6 +124,9 @@ def create_backup(directory: Path, now: datetime, keep_days: int, path: str | No
             state.last_error = f"{type(exc).__name__}: {exc}"[:300]
             state.last_error_at = now.astimezone(UTC)
             logger.exception("Backup failed")
+            # A half-written file would only use space (e.g. on a full disk) and is never a backup
+            with contextlib.suppress(OSError):
+                partial.unlink(missing_ok=True)
             raise
         state.last_error = None
         state.last_error_at = None

@@ -1,14 +1,19 @@
 import base64
 import hashlib
 import hmac
-import os
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import Request, Response
 
-from app.config import cookie_secure, env_positive_int, password_login_enabled
+from app.config import (
+    cookie_secure,
+    get_cookie_samesite,
+    get_session_absolute_hours,
+    get_session_idle_minutes,
+    password_login_enabled,
+)
 from app.errors import AppError
 from app.models.user import AUTH_PASSWORD, ROLE_USER, User, UserSession
 from app.repositories.auth_repository import AuthRepository
@@ -18,8 +23,6 @@ from app.services.account_settings import apply_settings
 SESSION_COOKIE_NAME = "habit_session"
 # Long sessions: the iPhone home-screen web app has its own cookie storage;
 # frequent logins would defeat checking off a habit within seconds.
-SESSION_IDLE_MINUTES = env_positive_int("SESSION_IDLE_MINUTES", 30 * 24 * 60)
-SESSION_ABSOLUTE_HOURS = env_positive_int("SESSION_ABSOLUTE_HOURS", 90 * 24)
 MIN_PASSWORD_LENGTH = 12
 # "Last active" is written at most this often instead of on every request
 LAST_SEEN_INTERVAL = timedelta(minutes=5)
@@ -34,13 +37,10 @@ def utcnow() -> datetime:
 
 
 def cookie_settings() -> dict:
-    same_site = os.getenv("COOKIE_SAMESITE", "lax").lower()
-    if same_site not in {"lax", "strict", "none"}:
-        same_site = "lax"
     return {
         "secure": cookie_secure(),
         "httponly": True,
-        "samesite": same_site,
+        "samesite": get_cookie_samesite(),
         "path": "/",
     }
 
@@ -97,7 +97,7 @@ class AuthService:
         session = self.repository.create_session(
             user,
             self.hash_token(raw_token),
-            now + timedelta(minutes=SESSION_IDLE_MINUTES),
+            now + timedelta(minutes=get_session_idle_minutes()),
             user_agent,
             now,
             auth_method,
@@ -106,7 +106,7 @@ class AuthService:
         response.set_cookie(
             SESSION_COOKIE_NAME,
             raw_token,
-            max_age=SESSION_ABSOLUTE_HOURS * 3600,
+            max_age=get_session_absolute_hours() * 3600,
             **cookie_settings(),
         )
         return session
@@ -125,14 +125,16 @@ class AuthService:
             raise AppError(401, "auth.not_authenticated", "Not logged in")
         session = self.repository.get_session(self.hash_token(raw_token))
         now = utcnow()
-        absolute_expiry = session.created_at + timedelta(hours=SESSION_ABSOLUTE_HOURS) if session is not None else None
+        absolute_expiry = (
+            session.created_at + timedelta(hours=get_session_absolute_hours()) if session is not None else None
+        )
         if session is None or session.expires_at <= now or (absolute_expiry is not None and absolute_expiry <= now):
             if session is not None:
                 self.repository.delete_session(session, forget_devices=False)
             raise AppError(401, "auth.session_expired", "Session expired")
         if not session.user.is_active:
             raise AppError(401, "auth.account_disabled", "This account is disabled")
-        refreshed_expiry = min(now + timedelta(minutes=SESSION_IDLE_MINUTES), absolute_expiry)
+        refreshed_expiry = min(now + timedelta(minutes=get_session_idle_minutes()), absolute_expiry)
         extend = refreshed_expiry > session.expires_at + timedelta(minutes=1)
         seen = session.last_seen_at is None or now - session.last_seen_at >= LAST_SEEN_INTERVAL
         if extend or seen:

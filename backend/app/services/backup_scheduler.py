@@ -12,7 +12,8 @@ from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from app.services.backup_service import create_backup, list_backups
+from app.services.background import ThreadRuns
+from app.services.backup_service import BackupFile, create_backup, list_backups
 from app.services.reminder_service import reminder_moment
 
 STARTUP_DELAY = timedelta(minutes=1)
@@ -48,6 +49,7 @@ class BackupScheduler:
         self.zone = zone
         self.clock = clock
         self._task: asyncio.Task | None = None
+        self._runs = ThreadRuns("backup")
 
     def start(self) -> None:
         self._task = asyncio.create_task(self._loop(), name="backups")
@@ -59,6 +61,7 @@ class BackupScheduler:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
             self._task = None
+        await self._runs.wait()
 
     def run_once(self) -> None:
         try:
@@ -70,9 +73,16 @@ class BackupScheduler:
         starting = True
         while True:
             now = self.clock()
-            backups = await asyncio.to_thread(list_backups, self.directory)
+            backups = await self._runs.run(self._list)
             when = next_backup_at(now, self.at, self.zone, backups[0].created_at if backups else None, starting)
             starting = False
             # One second late on purpose: never wake just before the time and back up twice
             await asyncio.sleep(max(0.0, (when - now).total_seconds()) + 1)
-            await asyncio.to_thread(self.run_once)
+            await self._runs.run(self.run_once)
+
+    def _list(self) -> list[BackupFile]:
+        try:
+            return list_backups(self.directory)
+        except Exception:  # noqa: BLE001 - e.g. an unreadable directory: plan as if there were none, never end the loop
+            logger.exception("Could not list the backups in %s", self.directory)
+            return []

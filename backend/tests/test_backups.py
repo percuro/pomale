@@ -6,10 +6,12 @@ import io
 import os
 import sqlite3
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stderr
 from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
+from time import sleep
 from unittest import mock
 from zoneinfo import ZoneInfo
 
@@ -75,6 +77,7 @@ class BackupFilesTest(unittest.TestCase):
         ):
             backup_service.create_backup(self.backups, NOW, 14, self.db_path)
         self.assertEqual(backup_service.list_backups(self.backups), [])
+        self.assertEqual(os.listdir(self.backups), [], "no half-written file stays behind")
         self.assertIn("disk full", backup_service.state.last_error)
         backup_service.create_backup(self.backups, NOW, 14, self.db_path)
         self.assertIsNone(backup_service.state.last_error)
@@ -117,6 +120,48 @@ class ScheduleTest(unittest.TestCase):
 
             asyncio.run(scenario())
             self.assertGreaterEqual(len(calls), 2)
+
+    def test_loop_survives_an_unreadable_directory(self):
+        scheduler = BackupScheduler(Path("/nonexistent"), 14, time(3, 0), VIENNA, clock=lambda: NOW)
+        calls = []
+
+        async def scenario():
+            with (
+                mock.patch("app.services.backup_scheduler.list_backups", side_effect=PermissionError("denied")),
+                mock.patch.object(scheduler, "run_once", side_effect=lambda: calls.append(1)),
+                mock.patch("app.services.backup_scheduler.asyncio.sleep", new=_no_sleep),
+                self.assertLogs("app.services.backup_scheduler", "ERROR"),
+            ):
+                scheduler.start()
+                while len(calls) < 2:
+                    await _real_sleep(0.01)
+                await scheduler.stop()
+
+        asyncio.run(scenario())
+        self.assertGreaterEqual(len(calls), 2)
+
+    def test_stop_waits_for_a_running_backup(self):
+        scheduler = BackupScheduler(Path("/nonexistent"), 14, time(3, 0), VIENNA, clock=lambda: NOW)
+        started, finished = threading.Event(), []
+
+        def slow_backup():
+            started.set()
+            sleep(0.3)
+            finished.append(1)
+
+        async def scenario():
+            with (
+                mock.patch("app.services.backup_scheduler.list_backups", return_value=[]),
+                mock.patch("app.services.backup_scheduler.next_backup_at", return_value=NOW),
+                mock.patch.object(scheduler, "run_once", side_effect=slow_backup),
+                mock.patch("app.services.backup_scheduler.asyncio.sleep", new=_no_sleep),
+            ):
+                scheduler.start()
+                await asyncio.to_thread(started.wait, 5)
+                await scheduler.stop()
+                self.assertEqual(finished, [1])
+
+        asyncio.run(scenario())
 
 
 _real_sleep = asyncio.sleep

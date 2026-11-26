@@ -121,6 +121,20 @@ class DataExportTest(unittest.TestCase):
             response = self.import_file(self.client, FIXTURE)
         self.assertEqual((response.status_code, response.json()["code"]), (413, "import.too_large"))
 
+    def test_other_requests_are_limited_to_one_megabyte(self):
+        note = {"note": "x" * (1024 * 1024)}
+        habit = self.client.post("/v1/habits", json={"name": "Lesen"}).json()
+        response = self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-24/note", json=note)
+        self.assertEqual((response.status_code, response.json()["code"]), (413, "request.too_large"))
+        chunked = self.client.put(
+            f"/v1/habits/{habit['id']}/days/2026-11-24/note",
+            content=iter([b'{"note": "ok"}']),
+            headers={"Content-Type": "application/json"},
+        )
+        self.assertEqual((chunked.status_code, chunked.json()["code"]), (411, "request.length_required"))
+        # Requests without a body (e.g. curl -X POST) need no length
+        self.assertEqual(self.client.post("/v1/auth/logout").status_code, 204)
+
     def test_audit_and_keys(self):
         self.import_file(self.client, FIXTURE)
         db = self.env.SessionLocal()

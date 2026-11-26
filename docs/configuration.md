@@ -2,6 +2,8 @@
 
 All settings are environment variables (for Docker Compose: the `.env` file next to `compose.yaml`). Only `PUBLIC_URL` is required.
 
+An empty variable means its default. Switches accept `true`/`false`, `on`/`off`, `yes`/`no` and `1`/`0`; numbers must be whole and above 0. Any other value stops the start with a message naming the variable, so a typo never quietly falls back to the default.
+
 | Variable | Default | Description |
 |---|---|---|
 | `PUBLIC_URL` | – (required) | Address users open, e.g. `https://habits.example.org`. Must not contain a path. It is the only origin allowed to make changes (CSRF protection), it decides whether cookies are `Secure`, and it appears in the setup message. |
@@ -34,5 +36,6 @@ All settings are environment variables (for Docker Compose: the `.env` file next
 
 - Run exactly **one** instance with **one** worker process. State such as the first-run setup token and the rate limits lives in memory, reminders and daily backups run inside the process, and SQLite is not meant for several writers across containers.
 - **Reminders** need outgoing HTTPS (port 443) from the container to the push services above. Without it the test notification reports that the push service did not accept it.
-- **Rate limits** are kept per process in memory and reset by a restart. Within 15 minutes: 5 failed logins or password confirmations per account and 20 per IP address; 5 wrong invitation or recovery links per IP address; 5 wrong setup tokens in total; 20 wrong API keys per IP address; 5 test notifications per account in 10 minutes; 30 single-sign-on starts and failed callbacks per IP address. Registrations: 5 per IP address and hour. They rely on the real client address, see `FORWARDED_ALLOW_IPS`.
+- **Rate limits** are kept per process in memory and reset by a restart. Within 15 minutes: 5 failed logins or password confirmations per account and 20 per IP address; 5 wrong invitation or recovery links per IP address; 5 wrong setup tokens per IP address; 20 wrong API keys per IP address; 5 test notifications per account in 10 minutes; 30 single-sign-on starts and failed callbacks per IP address. Registrations: 5 per IP address and hour. They rely on the real client address, see `FORWARDED_ALLOW_IPS`.
+- **Request size:** a request body may be at most 1 MB, an import file 5 MB. A body must be sent with a `Content-Length` (every common client and reverse proxy does); a body in chunks without one is refused.
 - The app must be served at the root of its own (sub)domain; serving under a path like `/habits` is not supported.

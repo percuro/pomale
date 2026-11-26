@@ -22,19 +22,36 @@ class ConfigError(RuntimeError):
     """Raised when the configuration cannot work; the message is shown to the operator."""
 
 
+TRUE_VALUES = {"1", "true", "yes", "on"}
+FALSE_VALUES = {"0", "false", "no", "off"}
+COOKIE_SAMESITE_VALUES = {"lax", "strict", "none"}
+
+
 def env_bool(name: str, default: bool = False) -> bool:
+    """An unset or empty variable is the default; anything but on/off values stops the start."""
     value = os.getenv(name)
     if value is None or not value.strip():
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    value = value.strip().lower()
+    if value in TRUE_VALUES:
+        return True
+    if value in FALSE_VALUES:
+        return False
+    raise ConfigError(f"{name} must be true or false (also on/off, yes/no, 1/0), got {value!r}")
 
 
 def env_positive_int(name: str, default: int) -> int:
-    try:
-        value = int(os.getenv(name, str(default)))
-    except ValueError:
+    """An unset or empty variable is the default; anything but a whole number above 0 stops the start."""
+    value = os.getenv(name, "").strip()
+    if not value:
         return default
-    return value if value > 0 else default
+    try:
+        number = int(value)
+    except ValueError:
+        number = 0
+    if number <= 0:
+        raise ConfigError(f"{name} must be a whole number above 0, got {value!r}")
+    return number
 
 
 def get_database_url() -> str:
@@ -71,6 +88,21 @@ def cookie_secure() -> bool:
     if os.getenv("COOKIE_SECURE", "").strip():
         return env_bool("COOKIE_SECURE")
     return get_public_url().startswith("https://")
+
+
+def get_cookie_samesite() -> str:
+    value = os.getenv("COOKIE_SAMESITE", "").strip().lower() or "lax"
+    if value not in COOKIE_SAMESITE_VALUES:
+        raise ConfigError(f"COOKIE_SAMESITE must be lax, strict or none, got {value!r}")
+    return value
+
+
+def get_session_idle_minutes() -> int:
+    return env_positive_int("SESSION_IDLE_MINUTES", 30 * 24 * 60)
+
+
+def get_session_absolute_hours() -> int:
+    return env_positive_int("SESSION_ABSOLUTE_HOURS", 90 * 24)
 
 
 _legacy_warned = False
@@ -245,6 +277,18 @@ def validate() -> None:
     get_public_url()
     get_default_timezone()
     get_registration_mode()
+    # Typos in on/off and number settings stop the start instead of silently using the default
+    csrf_enabled()
+    cookie_secure()
+    get_cookie_samesite()
+    get_session_idle_minutes()
+    get_session_absolute_hours()
+    get_invite_expiry_days()
+    get_audit_retention_days()
+    password_login_enabled()
+    api_docs_enabled()
+    backup_enabled()
+    push_enabled()
     if push_enabled():
         get_push_contact()
     get_backup_time()

@@ -22,7 +22,7 @@ from app.api.routers.shortcuts import public_router as shortcut_public_router
 from app.api.routers.shortcuts import router as shortcut_router
 from app.config import APP_NAME, api_docs_enabled
 from app.errors import install_error_handlers
-from app.middleware.body_limit import limit_import_body
+from app.middleware.body_limit import limit_body
 from app.middleware.csrf import enforce_csrf
 from app.services.auth_service import SESSION_COOKIE_NAME
 from app.services.token_service import TOKEN_ROUTES
@@ -54,7 +54,7 @@ app = FastAPI(
     openapi_url=None,
 )
 app.middleware("http")(enforce_csrf)
-app.middleware("http")(limit_import_body)
+app.middleware("http")(limit_body)
 install_error_handlers(app)
 
 
