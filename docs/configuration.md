@@ -7,7 +7,7 @@ An empty variable means its default. Switches accept `true`/`false`, `on`/`off`,
 | Variable | Default | Description |
 |---|---|---|
 | `PUBLIC_URL` | – (required) | Address users open, e.g. `https://habits.example.org`. Must not contain a path. It is the only origin allowed to make changes (CSRF protection), it decides whether cookies are `Secure`, and it appears in the setup message. |
-| `DEFAULT_TIMEZONE` | `UTC` | IANA time zone that defines "today" for accounts without their own time zone, e.g. `Europe/Berlin` or `America/New_York`. Each account can choose its own on the account page. The server clock (usually UTC in containers) is never used for this. `TRACKER_TZ` is accepted as a deprecated alias. |
+| `DEFAULT_TIMEZONE` | `UTC` | IANA time zone that defines "today" for accounts without their own time zone, e.g. `Europe/Berlin` or `America/New_York`. Each account can choose its own on the account page. The server clock (usually UTC in containers) is never used for this. |
 | `REGISTRATION` | `invite` | `invite`: new accounts only through an admin's invitation link. `open`: anyone who can reach the instance may register (role user, at most 5 registrations per IP address and hour, never before the first-run setup). |
 | `INVITE_EXPIRY_DAYS` | `7` | How long an invitation link is valid. Recovery (password-reset) links are always valid for 24 hours. |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_SCOPES`, `OIDC_LABEL`, `OIDC_AUTO_CREATE` | – | Sign-in through your own identity provider (OpenID Connect). Off unless `OIDC_ISSUER` is set. See [Single sign-on](oidc.md). |

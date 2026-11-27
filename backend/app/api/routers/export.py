@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -12,14 +12,12 @@ from app.repositories.habit_repository import HabitRepository
 from app.schemas.export import AccountExport, ImportResult
 from app.services.data_export import export_account, import_account
 from app.services.export_service import export_csv
-from app.services.i18n import resolve_locale
 
 router = APIRouter()
 
 
 @router.get("/export.csv")
 def export(
-    request: Request,
     start: date | None = Query(default=None, alias="from"),
     end: date | None = Query(default=None, alias="to"),
     user=Depends(require_user),
@@ -29,11 +27,11 @@ def export(
     end = end or today
     if start and end < start:
         raise AppError(422, "range.end_before_start", "The end date is before the start date")
-    content = export_csv(HabitRepository(db), user.id, start, end, today, resolve_locale(user, request))
+    content = export_csv(HabitRepository(db), user.id, start, end, today)
     return Response(
         content=content.encode("utf-8"),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="habits-{today.isoformat()}.csv"'},
+        headers={"Content-Disposition": f'attachment; filename="pomale-{today.isoformat()}.csv"'},
     )
 
 

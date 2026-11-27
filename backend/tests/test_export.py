@@ -19,36 +19,31 @@ class ExportTest(unittest.TestCase):
         ).json()
         self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-16", json={"done": True})
         self.client.put(f"/v1/habits/{habit['id']}/days/2026-11-18", json={"done": True})
-        self.client.patch("/v1/account", json={"locale": "de"})
         response = self.client.get("/v1/export.csv")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("attachment", response.headers["content-disposition"])
+        self.assertIn('filename="pomale-2026-11-24.csv"', response.headers["content-disposition"])
         text = response.content.decode("utf-8")
-        self.assertTrue(text.startswith("﻿"))
-        lines = text.lstrip("﻿").strip().split("\r\n")
-        self.assertEqual(lines[0], "datum;gewohnheit;hinweis;geplant;zustand;wert;ziel;notiz")
+        self.assertTrue(text.startswith("\ufeff"))
+        lines = text.lstrip("\ufeff").strip().split("\r\n")
+        self.assertEqual(lines[0], "date;habit;cue;planned;state;value;target;note")
         self.assertEqual(
             lines[1:],
             [
-                "2026-11-16;'=Lesen;abends;ja;erledigt;;;",
-                "2026-11-18;'=Lesen;abends;nein;zusätzlich erledigt;;;",
-                "2026-11-23;'=Lesen;abends;ja;offen;;;",
+                "2026-11-16;'=Lesen;abends;yes;done;;;",
+                "2026-11-18;'=Lesen;abends;no;extra_done;;;",
+                "2026-11-23;'=Lesen;abends;yes;open;;;",
             ],
         )
 
-    def test_language_follows_account_then_browser(self):
+    def test_columns_and_values_are_the_same_in_every_language(self):
         self.client.post("/v1/habits", json={"name": "Lesen", "weekdays": 1, "start_on": "2026-11-16"})
-        english = self.client.get("/v1/export.csv").text.lstrip("\ufeff").split("\r\n")
+        english = self.client.get("/v1/export.csv").text
+        self.client.patch("/v1/account", json={"locale": "de"})
+        self.assertEqual(self.client.get("/v1/export.csv").text, english)
+        self.assertEqual(self.client.get("/v1/export.csv", headers={"Accept-Language": "de"}).text, english)
         self.assertEqual(
-            english[:2], ["date;habit;cue;planned;state;value;target;note", "2026-11-16;Lesen;;yes;open;;;"]
-        )
-        german = self.client.get("/v1/export.csv", headers={"Accept-Language": "de-AT,de;q=0.9,en;q=0.5"})
-        self.assertTrue(german.text.lstrip("\ufeff").startswith("datum;gewohnheit"))
-        self.client.patch("/v1/account", json={"locale": "en"})
-        self.assertTrue(
-            self.client.get("/v1/export.csv", headers={"Accept-Language": "de"})
-            .text.lstrip("\ufeff")
-            .startswith("date;")
+            english.lstrip("\ufeff").split("\r\n")[:2],
+            ["date;habit;cue;planned;state;value;target;note", "2026-11-16;Lesen;;yes;open;;;"],
         )
 
     def test_goal_types_pauses_and_notes(self):
@@ -66,7 +61,7 @@ class ExportTest(unittest.TestCase):
         self.assertEqual(
             lines[1:],
             [
-                "2026-11-23;Water;;yes;partly done;5;8;'-hot day",
+                "2026-11-23;Water;;yes;partial;5;8;'-hot day",
                 "2026-11-23;Run;;yes;done;;2;",
                 "2026-11-24;Water;;no;paused;0;8;",
                 "2026-11-24;Run;;yes;open;;2;",

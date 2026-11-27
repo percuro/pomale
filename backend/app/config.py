@@ -105,20 +105,20 @@ def get_session_absolute_hours() -> int:
     return env_positive_int("SESSION_ABSOLUTE_HOURS", 90 * 24)
 
 
-_legacy_warned = False
+# Removed settings: still set, they stop the start with a hint instead of being ignored silently
+REMOVED_SETTINGS = {
+    "TRACKER_TZ": "TRACKER_TZ was removed in 1.0, set DEFAULT_TIMEZONE instead",
+}
+
+
+def check_removed_settings() -> None:
+    for name, hint in REMOVED_SETTINGS.items():
+        if os.getenv(name, "").strip():
+            raise ConfigError(hint)
 
 
 def get_default_timezone_name() -> str:
-    global _legacy_warned
-    value = os.getenv("DEFAULT_TIMEZONE", "").strip()
-    if not value:
-        legacy = os.getenv("TRACKER_TZ", "").strip()
-        if legacy:
-            if not _legacy_warned:
-                logger.warning("TRACKER_TZ is deprecated, use DEFAULT_TIMEZONE instead")
-                _legacy_warned = True
-            value = legacy
-    return value or "UTC"
+    return os.getenv("DEFAULT_TIMEZONE", "").strip() or "UTC"
 
 
 @lru_cache
@@ -274,6 +274,7 @@ def _is_local(host: str) -> bool:
 
 def validate() -> None:
     """Fail fast at startup with a readable message instead of on the first request."""
+    check_removed_settings()
     get_public_url()
     get_default_timezone()
     get_registration_mode()

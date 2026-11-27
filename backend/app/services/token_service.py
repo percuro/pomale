@@ -28,7 +28,7 @@ from app.services.auth_service import utcnow
 from app.services.login_rate_limiter import LoginRateLimiter
 
 TOKEN_PREFIX = "pm_"
-# Shortcut keys of 0.3–0.9; they keep working (only the hash is compared)
+# Shortcut keys of 0.3–0.9; they keep working for all of 1.x (only the hash is compared)
 LEGACY_PREFIX = "ht_"
 TOKENS_PER_ACCOUNT = 50
 EXPIRY_DAYS = (30, 90, 365)
