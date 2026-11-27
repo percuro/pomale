@@ -81,7 +81,7 @@ def build_demo(today: date) -> AccountExport:
         ref=1,
         name="Read 20 pages",
         cue="after dinner",
-        sort_order=0,
+        sort_order=3,
         color="blue",
         group_ref=2,
         schedules=[
@@ -100,10 +100,12 @@ def build_demo(today: date) -> AccountExport:
         schedules=[ExportSchedule(valid_from=start, weekdays=EVERY_DAY)],
         checkins=[*on_days(lambda _day: EVERY_DAY, 0.85), ExportCheckin(date=today, done=True)],
     )
+    # The last days are fixed: the current week, the one people look at first, never looks random
+    recent = dict(zip(days[-6:], (9, 8, 6, 8, 10, 8), strict=True))
     water_checkins = []
     for day in days:
         if not paused(day):
-            value = rng.choice((3, 5, 6, 7, 8, 8, 8, 9, 10))
+            value = recent.get(day) or rng.choice((5, 6, 7, 8, 8, 8, 9, 9, 10))
             water_checkins.append(ExportCheckin(date=day, done=value >= 8, value=value))
     water = ExportHabit(
         ref=3,
@@ -136,7 +138,7 @@ def build_demo(today: date) -> AccountExport:
         ref=5,
         name="Journal",
         cue="before bed",
-        sort_order=1,
+        sort_order=4,
         color="purple",
         group_ref=2,
         schedules=[ExportSchedule(valid_from=start, weekdays=MON_WED_FRI)],
@@ -145,7 +147,7 @@ def build_demo(today: date) -> AccountExport:
     call = ExportHabit(
         ref=6,
         name="Call family",
-        sort_order=3,
+        sort_order=5,
         color="pink",
         schedules=[ExportSchedule(valid_from=start, weekdays=EVERY_DAY, goal_type="weekly_count", target=1)],
         checkins=[
