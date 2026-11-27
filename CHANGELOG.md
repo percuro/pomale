@@ -2,12 +2,7 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/). From 1.0 on, what the [stability promise](docs/api.md#stability) covers only changes incompatibly in a new major version; before 1.0 a minor version could contain breaking changes, which are listed under "Upgrade notes".
 
-## 1.0.0-rc.2 – stable (release candidate)
-
-- Fixed: the release could not start, because the signing step referred to a version of the cosign action that does not exist. 1.0.0-rc.1 was therefore never published.
-- Everything else as in 1.0.0-rc.1 below.
-
-## 1.0.0-rc.1 – stable (release candidate)
+## 1.0.0 – stable
 
 pomale 1.0 makes a promise: what works with 1.0 keeps working until 2.0.
 
