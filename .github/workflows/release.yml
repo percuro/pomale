@@ -82,7 +82,8 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      - uses: sigstore/cosign-installer@v4
+      # No major tag exists for this action: pinned to a release
+      - uses: sigstore/cosign-installer@v4.1.3
 
       - name: Sign the image (keyless, with this workflow's identity)
         env:
