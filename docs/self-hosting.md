@@ -85,9 +85,25 @@ docker compose up -d
 docker compose logs --tail=50 app
 ```
 
-Database migrations run automatically when the container starts. The image tag `:0` follows all 0.x releases; pin a specific version (e.g. `:0.4.0`) if you prefer to update deliberately. Read the [changelog](../CHANGELOG.md) before major updates.
+Database migrations run automatically when the container starts. The image tag `:1` follows all 1.x releases, which stay compatible ([stability](api.md#stability)); pin a specific version (e.g. `:1.0.0`) if you prefer to update deliberately. Read the [changelog](../CHANGELOG.md) before every update, and in any case before a new major version: it only comes with a tag of its own (`:2`), never by itself.
+
+**Coming from 0.x:** the tag `:0` stays at 0.11.0. Change `image:` in `compose.yaml` to `ghcr.io/percuro/pomale:1`, then update as above. Read the upgrade notes of 1.0.0 first.
 
 You can update from any release since 0.3.0 straight to the newest one, without the versions in between: every change is tested that way, from 0.3.0 and from the previous release, with real images and data. Going back to an older version is only possible by restoring a backup made before the update, so make one first (the first line above).
+
+### Verify the image
+
+Every release image is signed with [cosign](https://docs.sigstore.dev/) (keyless: the signature names the release workflow of this repository) and has a build provenance attestation. Either check proves that the image was built by that workflow from a tag of this repository:
+
+```bash
+cosign verify ghcr.io/percuro/pomale:1.0.0 \
+  --certificate-identity-regexp '^https://github\.com/percuro/pomale/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+gh attestation verify oci://ghcr.io/percuro/pomale:1.0.0 --repo percuro/pomale
+```
+
+Releases before 1.0 have the attestation, but no cosign signature.
 
 ## Backup and restore
 

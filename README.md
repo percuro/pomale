@@ -4,7 +4,16 @@
 
 Habits grow at their own pace. pomale is a small, self-hosted habit tracker for your phone and your laptop. Check off a habit in a second on the iPhone, review and correct the week on a big screen. No points, no streaks that reset to zero, no notes you have to write.
 
-> Status: 0.11 beta – tested updates from every release since 0.3, wider accessibility checks, a lighter app start. A stable API and configuration (1.0) are next on the [roadmap](#roadmap).
+> Status: **1.0 – stable.** The API you reach with a key, the settings and the export formats stay compatible until 2.0; see the [stability promise](docs/api.md#stability).
+
+**Try it:** [demo.pomale.percuro.at](https://demo.pomale.percuro.at) opens with one click, with sample data. Everything is reset at the full hour.
+
+<p>
+  <img src="docs/screenshots/week-desktop.png" alt="The week view: six habits in two groups, a check mark or an amount per day, and an honest quota such as 2 of 4 next to each habit" width="600">
+  <img src="docs/screenshots/today-phone.png" alt="Today on an iPhone: Stretch done, Water at 3 of 8 glasses with minus and plus buttons, Run open with 2 of 3 this week" width="190">
+</p>
+
+More pictures, also in dark mode: [docs/screenshots.md](docs/screenshots.md).
 
 ## Features
 
@@ -44,7 +53,7 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - [Single sign-on](docs/oidc.md): OpenID Connect with Authelia, Authentik, Pocket ID and others
 - [Reminders](docs/reminders.md): Web Push on iPhone, Android and desktop, privacy, troubleshooting
 - [iPhone](docs/iphone.md): home-screen app, offline use, reminders, shortcut widget, Siri
-- [API](docs/api.md): API keys, examples with curl and Home Assistant, JSON export and import
+- [API](docs/api.md): API keys, examples with curl and Home Assistant, the stability promise, error codes, JSON export and import
 - [Development](docs/development.md): running and testing from source
 - [Design notes](docs/design.md): why it works the way it does
 - [Design language](docs/design-language.md): the look, and the rules behind it
@@ -60,7 +69,7 @@ Then point a TLS reverse proxy at `127.0.0.1:8000` and open `https://habits.exam
 - ~~**0.9** day end after midnight, per account~~ ✓
 - ~~**0.10** personal API keys, JSON export/import, built-in daily backups, "what is still open today", `/api/openapi.json`~~ ✓
 - ~~**0.11** beta hardening: accessibility, performance, upgrade tests~~ ✓
-- **1.0** stable API and configuration
+- ~~**1.0** stable API and configuration, signed images, a public demo~~ ✓
 - **Later:** outgoing webhooks on check-ins
 
 ## Sibling project

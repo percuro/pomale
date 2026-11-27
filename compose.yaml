@@ -4,7 +4,7 @@
 # 3. docker compose logs app   → open PUBLIC_URL/setup and enter the setup token
 services:
   app:
-    image: ghcr.io/percuro/pomale:0
+    image: ghcr.io/percuro/pomale:1
     # build: .   # for development: build the image from this repository instead
     restart: unless-stopped
     env_file: .env

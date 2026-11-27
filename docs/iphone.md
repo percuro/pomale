@@ -76,11 +76,16 @@ The answer is in the account's language. Add the shortcut as a widget like the o
 
 ## Checklist
 
+Checked on a real iPhone before every major release (last: 1.0), and after changes to the parts concerned.
+
 - [ ] Ten check-ins from the today view: median at most three seconds from the visible list, one tap
 - [ ] VoiceOver reads name, cue and state
+- [ ] VoiceOver on Today, Week and Habits: every control can be reached by swiping, states ("done", "partly done", "3 of 8 glasses") are read out, after a change of page the new heading is read
 - [ ] Larger Text (Settings → Display & Brightness → Text Size): checking off works without horizontal scrolling
 - [ ] A correction on the laptop shows up the next time the iPhone app is opened
 - [ ] Flight mode: check off → marked → flight mode off, open the app → sent
 - [ ] Shortcut: two taps give one entry; after revoking, no success message
 - [ ] "What's open" via Siri reads the sentence; after checking everything off it says all is done
+- [ ] Day end after midnight (account → day ends at 01:00): at 00:30 the app still shows the previous day, checking off counts for it, and the shortcut and "What's open" answer for it too
+- [ ] Single sign-on in the home-screen app: sign in with the provider, the app opens signed in (not Safari), and stays signed in after closing it
 - [ ] Reminders in the home-screen app: turn on, test arrives; a reminder two minutes ahead arrives on the lock screen, a tap opens Today; none comes once the habit is done
