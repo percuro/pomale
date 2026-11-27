@@ -21,6 +21,10 @@ class ConfigTest(unittest.TestCase):
             "OIDC_LABEL": "",
             "OIDC_AUTO_CREATE": "",
             "PASSWORD_LOGIN": "",
+            "DEMO_MODE": "",
+            "PUSH_ENABLED": "",
+            "BACKUP_ENABLED": "",
+            "REGISTRATION": "",
         }
         base.update(values)
         return mock.patch.dict(os.environ, base)

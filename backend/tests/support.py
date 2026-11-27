@@ -47,6 +47,7 @@ TEST_ENV = {
     "PUSH_ENABLED": "",
     "PUSH_CONTACT": "",
     "PUSH_ALLOWED_HOSTS": "",
+    "DEMO_MODE": "",
 }
 
 

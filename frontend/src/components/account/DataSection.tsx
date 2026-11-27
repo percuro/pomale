@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ME_KEY } from '../../hooks/useMe';
+import { useDemo } from '../../hooks/useMeta';
 import { useGroups, usePauses } from '../../hooks/useGroups';
 import { useHabits } from '../../hooks/useHabits';
 import { useErrorText, useI18n } from '../../i18n/context';
@@ -20,6 +21,7 @@ export function DataSection() {
   const pauses = usePauses();
   const loaded = habits.isSuccess && groups.isSuccess && pauses.isSuccess;
   const empty = loaded && habits.data.length === 0 && groups.data.length === 0 && pauses.data.length === 0;
+  const demo = useDemo();
 
   return (
     <section aria-labelledby="data-heading">
@@ -33,13 +35,17 @@ export function DataSection() {
           {t('data.exportJson')}
         </a>
       </div>
-      <h3>{t('data.import')}</h3>
-      {imported ? (
-        <p role="status">{t('data.imported', { habits: imported.habits, checkins: imported.checkins })}</p>
-      ) : (
+      {!demo && (
         <>
-          {loaded && !empty && <p className="subtle">{t('data.importOnlyEmpty')}</p>}
-          {empty && <ImportForm onImported={setImported} />}
+          <h3>{t('data.import')}</h3>
+          {imported ? (
+            <p role="status">{t('data.imported', { habits: imported.habits, checkins: imported.checkins })}</p>
+          ) : (
+            <>
+              {loaded && !empty && <p className="subtle">{t('data.importOnlyEmpty')}</p>}
+              {empty && <ImportForm onImported={setImported} />}
+            </>
+          )}
         </>
       )}
     </section>

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_user_today
+from app.api.dependencies.demo import NOT_IN_DEMO
 from app.db.database import get_db
 from app.errors import AppError
 from app.repositories.habit_repository import HabitRepository
@@ -51,7 +52,7 @@ def export_json(
 
 
 # The size of the body is limited in middleware/body_limit.py (MAX_IMPORT_BYTES)
-@router.post("/import", response_model=ImportResult)
+@router.post("/import", response_model=ImportResult, dependencies=NOT_IN_DEMO)
 def import_json(data: AccountExport, user=Depends(require_user), db: Session = Depends(get_db)):
     """Import an export file into this account. Only into an account without habits, groups and
     pauses; all or nothing."""

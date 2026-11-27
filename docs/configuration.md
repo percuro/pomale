@@ -19,6 +19,7 @@ An empty variable means its default. Switches accept `true`/`false`, `on`/`off`,
 | `BACKUP_TIME` | `03:00` | Local time of the daily backup, in `DEFAULT_TIMEZONE`. |
 | `BACKUP_KEEP_DAYS` | `14` | Backups older than this (1–365 days) are deleted; the newest one is always kept. |
 | `BACKUP_DIR` | `backups` next to the database (`/data/backups`) | Where backups go. Only files named `pomale-….sql.gz` are ever deleted there. |
+| `DEMO_MODE` | `false` | `true` turns the instance into a public demo: one account `demo` (password `try-pomale-now`, shown on the login page) with sample data that is **deleted and created anew at the start and every full hour**. Changing the password, deleting the account, ending other sessions, API and shortcut keys and the import are locked; reminders and backups are off. Push, backup, registration and single-sign-on settings must stay unset. Only for a new, empty volume: on a database with any other account pomale refuses to start. |
 | `API_DOCS` | `true` | Serve the API description at `/api/openapi.json`. `false` hides it; the API itself is unaffected. See [API](api.md). |
 | `AUDIT_RETENTION_DAYS` | `180` | How long the audit log (admin page → Log) keeps its entries. |
 | `DATABASE_URL` | `sqlite:////data/habits.db` | SQLite database file. Keep it on the `/data` volume. Other databases are not supported. |

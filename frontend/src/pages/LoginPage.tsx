@@ -22,16 +22,17 @@ export function LoginPage() {
   // An error from the OIDC callback (/login#error=…), read once
   const callbackError = useCallbackParams().error ?? null;
   const login = useMutation({
-    mutationFn: () =>
-      apiFetch<Me>('/v1/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+    mutationFn: (credentials: { username: string; password: string }) =>
+      apiFetch<Me>('/v1/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
     onSuccess: (me) => signedIn(queryClient, me),
   });
+  const demo = meta.data?.demo ?? null;
   const passwordLogin = meta.data?.password_login ?? true;
   const oidc = meta.data?.oidc != null;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    login.mutate();
+    login.mutate({ username, password });
   };
 
   return (
@@ -42,6 +43,19 @@ export function LoginPage() {
           <p className="error" role="alert">
             {codeMessage(callbackError, t) ?? t('error.unknown')}
           </p>
+        )}
+        {demo && (
+          <div className="notice info demo-login">
+            <p>{t('demo.loginHint', { username: demo.username, password: demo.password })}</p>
+            <button
+              type="button"
+              className="button primary"
+              disabled={login.isPending}
+              onClick={() => login.mutate(demo)}
+            >
+              {t('demo.signIn')}
+            </button>
+          </div>
         )}
         {passwordLogin && (
           <>

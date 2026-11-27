@@ -208,6 +208,8 @@ export interface Meta {
   oidc: { label: string | null } | null;
   /** /api/openapi.json is served */
   api_docs: boolean;
+  /** DEMO_MODE: the shared demo account, reset every full hour (missing before 1.0) */
+  demo?: { username: string; password: string } | null;
 }
 
 export type TokenScope = 'read' | 'checkin';

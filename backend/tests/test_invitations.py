@@ -208,6 +208,7 @@ class RegistrationAndMetaTest(InvitationTestCase):
                 "password_login": True,
                 "oidc": None,
                 "api_docs": True,
+                "demo": None,
             },
         )
 

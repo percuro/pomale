@@ -19,7 +19,7 @@ from app import config
 from app.db.database import SessionLocal
 from app.main import app as api
 from app.middleware.security_headers import add_security_headers
-from app.services import setup_service
+from app.services import demo_service, setup_service
 from app.services.backup_scheduler import BackupScheduler
 from app.services.scheduler import ReminderScheduler
 from app.services.webpush.keys import ensure_vapid_keys
@@ -75,6 +75,7 @@ async def lifespan(_app: FastAPI):
     except config.ConfigError as exc:
         logger.error("Configuration error: %s", exc)
         raise
+    demo = start_demo()
     announce_setup_token()
     scheduler = start_reminders()
     backups = start_backups()
@@ -85,11 +86,32 @@ async def lifespan(_app: FastAPI):
             await scheduler.stop()
         if backups is not None:
             await backups.stop()
+        if demo is not None:
+            await demo.stop()
+
+
+def start_demo() -> demo_service.DemoResetScheduler | None:
+    """DEMO_MODE: fresh sample data now (before the setup check) and then every full hour."""
+    if not config.demo_mode():
+        return None
+    db = SessionLocal()
+    try:
+        demo_service.reset(db)
+    except config.ConfigError as exc:
+        logger.error("Configuration error: %s", exc)
+        raise
+    finally:
+        db.close()
+    scheduler = demo_service.DemoResetScheduler(SessionLocal)
+    scheduler.start()
+    return scheduler
 
 
 def start_backups() -> BackupScheduler | None:
     if not config.backup_enabled():
-        logger.info("Daily backups are turned off (BACKUP_ENABLED=false)")
+        logger.info(
+            "Daily backups are turned off (%s)", "DEMO_MODE=true" if config.demo_mode() else "BACKUP_ENABLED=false"
+        )
         return None
     scheduler = BackupScheduler(
         config.get_backup_dir(),
@@ -103,7 +125,7 @@ def start_backups() -> BackupScheduler | None:
 
 def start_reminders() -> ReminderScheduler | None:
     if not config.push_enabled():
-        logger.info("Reminders are turned off (PUSH_ENABLED=false)")
+        logger.info("Reminders are turned off (%s)", "DEMO_MODE=true" if config.demo_mode() else "PUSH_ENABLED=false")
         return None
     db = SessionLocal()
     try:

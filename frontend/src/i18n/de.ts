@@ -7,6 +7,9 @@ export const de = {
   'app.retry': 'Erneut versuchen',
   'app.pageFailed': 'Diese Seite konnte nicht geladen werden.',
   'app.skipToContent': 'Zum Inhalt',
+  'demo.banner': 'Demo: Probier alles aus – zur vollen Stunde wird alles zurückgesetzt.',
+  'demo.loginHint': 'Das ist eine Demo mit Beispieldaten. Melde dich als {username} mit dem Passwort {password} an.',
+  'demo.signIn': 'Demo öffnen',
   'app.version': '{name} {version}',
 
   'nav.label': 'Ansichten',
@@ -554,6 +557,7 @@ export const de = {
   'error.shortcut.wrong_habit': 'Der Schlüssel gilt für eine andere Gewohnheit.',
   'error.shortcut.done_only': 'Der Kurzbefehl kann nur auf erledigt setzen.',
   'error.token.invalid': 'Der Schlüssel ist ungültig, abgelaufen oder widerrufen.',
+  'error.demo.not_allowed': 'In der Demo nicht möglich.',
   'error.token.not_allowed': 'Dafür lassen sich API-Schlüssel nicht verwenden.',
   'error.token.missing_scope': 'Dieser Schlüssel darf das nicht.',
   'error.token.habit_not_allowed': 'Dieser Schlüssel gilt nicht für diese Gewohnheit.',

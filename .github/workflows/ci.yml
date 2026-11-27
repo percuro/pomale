@@ -84,14 +84,16 @@ jobs:
             sleep 1
           done
       - name: Start instances
-        # 8000: passwords and OIDC. 8001: OIDC only, accounts created at the first sign-in.
+        # 8000: passwords and OIDC. 8001: OIDC only, accounts created at the first sign-in. 8002: DEMO_MODE.
         run: |
           oidc="-e OIDC_ISSUER=http://localhost:5556/dex -e OIDC_CLIENT_ID=pomale -e OIDC_CLIENT_SECRET=pomale-e2e-secret -e OIDC_LABEL=Dex"
           docker run -d --name app --network host -e PUBLIC_URL=http://localhost:8000 -e PUSH_ALLOWED_HOSTS=push.invalid $oidc app:ci
           docker run -d --name app2 --network host -e PUBLIC_URL=http://localhost:8001 $oidc \
             -e PASSWORD_LOGIN=off -e OIDC_AUTO_CREATE=on app:ci \
             sh -c "alembic upgrade head && exec uvicorn app.web:application --host 0.0.0.0 --port 8001"
-          for port in 8000 8001; do
+          docker run -d --name app3 --network host -e PUBLIC_URL=http://localhost:8002 -e DEMO_MODE=true app:ci \
+            sh -c "alembic upgrade head && exec uvicorn app.web:application --host 0.0.0.0 --port 8002"
+          for port in 8000 8001 8002; do
             for i in $(seq 1 60); do
               curl -fsS "http://localhost:$port/api/health" && break
               sleep 1
@@ -118,6 +120,7 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:8000
           E2E_BASE_URL_2: http://localhost:8001
+          E2E_BASE_URL_3: http://localhost:8002
           E2E_OIDC: "1"
         run: npx playwright test
       - name: Back up and restore the instance the tests used
@@ -149,6 +152,8 @@ jobs:
           docker logs app
           echo "--- OIDC-only instance"
           docker logs app2
+          echo "--- Demo instance"
+          docker logs app3
           echo "--- Dex"
           docker logs dex
       - uses: actions/upload-artifact@v7
