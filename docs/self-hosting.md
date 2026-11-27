@@ -89,7 +89,7 @@ Database migrations run automatically when the container starts. The image tag `
 
 **Coming from 0.x:** the tag `:0` stays at 0.11.0. Change `image:` in `compose.yaml` to `ghcr.io/percuro/pomale:1`, then update as above. Read the upgrade notes of 1.0.0 first.
 
-You can update from any release since 0.3.0 straight to the newest one, without the versions in between: every change is tested that way, from 0.3.0 and from the previous release, with real images and data. Going back to an older version is only possible by restoring a backup made before the update, so make one first (the first line above).
+You can update from any release since 0.3.0 straight to the newest one, without the versions in between: every change is tested that way, from 0.3.0, from 1.0.0 and from the previous release, with real images and data. Going back to an older version is only possible by restoring a backup made before the update, so make one first (the first line above).
 
 ### Verify the image
 

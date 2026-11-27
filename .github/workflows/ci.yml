@@ -169,8 +169,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest public release and the newest one before this commit
-        from: ["0.3.0", latest]
+        # The oldest public release, the first stable one and the newest one before this commit
+        from: ["0.3.0", "1.0.0", latest]
     steps:
       - uses: actions/checkout@v7
         with:
