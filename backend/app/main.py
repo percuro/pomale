@@ -3,6 +3,7 @@ from fastapi.openapi.utils import get_openapi
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
+from app.api.contract import INTERNAL_NOTE, STABILITY_KEY, is_stable
 from app.api.dependencies.auth import require_admin, require_user
 from app.api.routers.account import router as account_router
 from app.api.routers.admin import router as admin_router
@@ -39,6 +40,11 @@ the operations marked "API key" below, with its scope:
 
 A key may be limited to some habits; it then sees only those, and history, exports, groups and
 pauses need a key for all habits. Requests with a key need no CSRF header.
+
+**Stability.** Operations marked `x-pomale-stability: stable` (everything an API key can reach,
+and `GET /health`) stay compatible until pomale 2.0: nothing is removed or renamed, no request
+field becomes required. New fields, operations, error codes and enum values may appear, so ignore
+what you do not know. Operations marked `internal` serve the web app and may change in any release.
 
 Guide with examples: https://github.com/percuro/pomale/blob/main/docs/api.md
 """
@@ -90,6 +96,10 @@ def build_openapi() -> dict:
     }
     for path, operations in schema["paths"].items():
         for method, operation in operations.items():
+            stable = is_stable(method, path)
+            operation[STABILITY_KEY] = "stable" if stable else "internal"
+            if not stable:
+                operation["description"] = f"{operation.get('description', '').strip()}\n\n{INTERNAL_NOTE}".strip()
             scope = TOKEN_ROUTES.get((method.upper(), path))
             if scope is None:
                 continue
