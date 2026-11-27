@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_now
+from app.api.dependencies.demo import NOT_IN_DEMO
 from app.config import password_login_enabled
 from app.db.database import get_db
 from app.errors import AppError
@@ -30,7 +31,7 @@ def update_account(
     return me_read(AccountService(db).update(user, data), now)
 
 
-@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT, dependencies=NOT_IN_DEMO)
 def delete_account(
     data: PasswordConfirmation,
     request: Request,
@@ -41,7 +42,7 @@ def delete_account(
     AccountService(db).delete(user, data.password, request, response, request.state.session_id)
 
 
-@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/password", status_code=status.HTTP_204_NO_CONTENT, dependencies=NOT_IN_DEMO)
 def change_password(
     data: PasswordChange,
     request: Request,
@@ -59,12 +60,12 @@ def list_sessions(request: Request, user: User = Depends(require_user), db: Sess
     return AccountService(db).sessions(user, utcnow(), request.state.session_id)
 
 
-@router.post("/sessions/revoke-others", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/sessions/revoke-others", status_code=status.HTTP_204_NO_CONTENT, dependencies=NOT_IN_DEMO)
 def revoke_other_sessions(request: Request, user: User = Depends(require_user), db: Session = Depends(get_db)):
     AccountService(db).revoke_other_sessions(user, request.state.session_id)
 
 
-@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=NOT_IN_DEMO)
 def revoke_session(
     session_id: int,
     request: Request,
@@ -77,7 +78,7 @@ def revoke_session(
         clear_session_cookie(response)
 
 
-@router.delete("/oidc", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/oidc", status_code=status.HTTP_204_NO_CONTENT, dependencies=NOT_IN_DEMO)
 def unlink_oidc(
     data: OidcUnlink,
     request: Request,
@@ -97,7 +98,7 @@ def list_tokens(user: User = Depends(require_user), db: Session = Depends(get_db
     return [token_read(token) for token in TokenService(db).list_for(user)]
 
 
-@router.post("/tokens", response_model=TokenCreated, status_code=status.HTTP_201_CREATED)
+@router.post("/tokens", response_model=TokenCreated, status_code=status.HTTP_201_CREATED, dependencies=NOT_IN_DEMO)
 def create_token(data: TokenCreate, user: User = Depends(require_user), db: Session = Depends(get_db)):
     token, raw = TokenService(db).create(user, data.label, list(data.scopes), data.habit_ids, data.expires_in_days)
     return TokenCreated(**token_read(token).model_dump(), token=raw)

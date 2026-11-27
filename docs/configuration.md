@@ -7,7 +7,7 @@ An empty variable means its default. Switches accept `true`/`false`, `on`/`off`,
 | Variable | Default | Description |
 |---|---|---|
 | `PUBLIC_URL` | – (required) | Address users open, e.g. `https://habits.example.org`. Must not contain a path. It is the only origin allowed to make changes (CSRF protection), it decides whether cookies are `Secure`, and it appears in the setup message. |
-| `DEFAULT_TIMEZONE` | `UTC` | IANA time zone that defines "today" for accounts without their own time zone, e.g. `Europe/Berlin` or `America/New_York`. Each account can choose its own on the account page. The server clock (usually UTC in containers) is never used for this. `TRACKER_TZ` is accepted as a deprecated alias. |
+| `DEFAULT_TIMEZONE` | `UTC` | IANA time zone that defines "today" for accounts without their own time zone, e.g. `Europe/Berlin` or `America/New_York`. Each account can choose its own on the account page. The server clock (usually UTC in containers) is never used for this. |
 | `REGISTRATION` | `invite` | `invite`: new accounts only through an admin's invitation link. `open`: anyone who can reach the instance may register (role user, at most 5 registrations per IP address and hour, never before the first-run setup). |
 | `INVITE_EXPIRY_DAYS` | `7` | How long an invitation link is valid. Recovery (password-reset) links are always valid for 24 hours. |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_SCOPES`, `OIDC_LABEL`, `OIDC_AUTO_CREATE` | – | Sign-in through your own identity provider (OpenID Connect). Off unless `OIDC_ISSUER` is set. See [Single sign-on](oidc.md). |
@@ -19,6 +19,7 @@ An empty variable means its default. Switches accept `true`/`false`, `on`/`off`,
 | `BACKUP_TIME` | `03:00` | Local time of the daily backup, in `DEFAULT_TIMEZONE`. |
 | `BACKUP_KEEP_DAYS` | `14` | Backups older than this (1–365 days) are deleted; the newest one is always kept. |
 | `BACKUP_DIR` | `backups` next to the database (`/data/backups`) | Where backups go. Only files named `pomale-….sql.gz` are ever deleted there. |
+| `DEMO_MODE` | `false` | `true` turns the instance into a public demo: one account `demo` (password `try-pomale-now`, shown on the login page) with sample data that is **deleted and created anew at the start and every full hour**. Changing the password, deleting the account, ending other sessions, API and shortcut keys and the import are locked; reminders and backups are off. Push, backup, registration and single-sign-on settings must stay unset. Only for a new, empty volume: on a database with any other account pomale refuses to start. |
 | `API_DOCS` | `true` | Serve the API description at `/api/openapi.json`. `false` hides it; the API itself is unaffected. See [API](api.md). |
 | `AUDIT_RETENTION_DAYS` | `180` | How long the audit log (admin page → Log) keeps its entries. |
 | `DATABASE_URL` | `sqlite:////data/habits.db` | SQLite database file. Keep it on the `/data` volume. Other databases are not supported. |

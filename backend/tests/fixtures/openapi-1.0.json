@@ -1,0 +1,2361 @@
+{
+ "openapi": "3.1.0",
+ "paths": {
+  "/health": {
+   "get": {
+    "summary": "Health",
+    "description": "Liveness and database check for container health checks and monitoring; needs no login.",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthRead"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable"
+   }
+  },
+  "/v1/days": {
+   "get": {
+    "tags": [
+     "days"
+    ],
+    "summary": "List Days",
+    "operationId": "list_days_v1_days_get",
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DaysRead"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ],
+    "description": "API key: scope `read`."
+   }
+  },
+  "/v1/export.csv": {
+   "get": {
+    "tags": [
+     "export"
+    ],
+    "summary": "Export",
+    "operationId": "export_v1_export_csv_get",
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ],
+    "description": "API key: scope `read`."
+   }
+  },
+  "/v1/export.json": {
+   "get": {
+    "tags": [
+     "export"
+    ],
+    "summary": "Export Json",
+    "description": "Everything of this account in one file: habits with their plans, reminders and check-ins,\ngroups, pauses and settings. It can be imported into an empty account (POST /v1/import).\n\nAPI key: scope `read`.",
+    "operationId": "export_json_v1_export_json_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountExport-Output"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ]
+   }
+  },
+  "/v1/groups": {
+   "get": {
+    "tags": [
+     "groups"
+    ],
+    "summary": "List Groups",
+    "operationId": "list_groups_v1_groups_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/GroupRead"
+         },
+         "type": "array",
+         "title": "Response List Groups V1 Groups Get"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ],
+    "description": "API key: scope `read`."
+   }
+  },
+  "/v1/habits": {
+   "get": {
+    "tags": [
+     "habits"
+    ],
+    "summary": "List Habits",
+    "operationId": "list_habits_v1_habits_get",
+    "parameters": [
+     {
+      "name": "include_archived",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Include Archived"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/HabitRead"
+         },
+         "title": "Response List Habits V1 Habits Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ],
+    "description": "API key: scope `read`."
+   }
+  },
+  "/v1/habits/{habit_id}/days/today": {
+   "put": {
+    "tags": [
+     "shortcut"
+    ],
+    "summary": "Shortcut Check In",
+    "description": "Check off today (the server decides the date). Meant for an API key with scope `checkin`.\n\nAPI key: scope `checkin`.",
+    "operationId": "shortcut_check_in_v1_habits__habit_id__days_today_put",
+    "parameters": [
+     {
+      "name": "habit_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Habit Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/ShortcutCheckinRequest"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Data"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ShortcutCheckinRead"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "checkin"
+      ]
+     }
+    ]
+   }
+  },
+  "/v1/habits/{habit_id}/days/{day}": {
+   "put": {
+    "tags": [
+     "days"
+    ],
+    "summary": "Set Day",
+    "operationId": "set_day_v1_habits__habit_id__days__day__put",
+    "parameters": [
+     {
+      "name": "habit_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Habit Id"
+      }
+     },
+     {
+      "name": "day",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "date",
+       "title": "Day"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CheckinUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CheckinRead"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "checkin"
+      ]
+     }
+    ],
+    "description": "API key: scope `checkin`."
+   }
+  },
+  "/v1/habits/{habit_id}/days/{day}/note": {
+   "put": {
+    "tags": [
+     "days"
+    ],
+    "summary": "Set Note",
+    "operationId": "set_note_v1_habits__habit_id__days__day__note_put",
+    "parameters": [
+     {
+      "name": "habit_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Habit Id"
+      }
+     },
+     {
+      "name": "day",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "date",
+       "title": "Day"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/NoteUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NoteRead"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "checkin"
+      ]
+     }
+    ],
+    "description": "API key: scope `checkin`."
+   }
+  },
+  "/v1/history": {
+   "get": {
+    "tags": [
+     "days"
+    ],
+    "summary": "History",
+    "operationId": "history_v1_history_get",
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "habit_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Habit Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HistoryRead"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ],
+    "description": "API key: scope `read`."
+   }
+  },
+  "/v1/pauses": {
+   "get": {
+    "tags": [
+     "pauses"
+    ],
+    "summary": "List Pauses",
+    "operationId": "list_pauses_v1_pauses_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PauseRead"
+         },
+         "type": "array",
+         "title": "Response List Pauses V1 Pauses Get"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ],
+    "description": "API key: scope `read`."
+   }
+  },
+  "/v1/today": {
+   "get": {
+    "tags": [
+     "days"
+    ],
+    "summary": "Today Summary",
+    "description": "What is still open today. Meant for an iOS shortcut or a home automation with a `read` key:\n`message` can be spoken or shown as is.\n\nAPI key: scope `read`.",
+    "operationId": "today_summary_v1_today_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TodayRead"
+        }
+       }
+      }
+     }
+    },
+    "x-pomale-stability": "stable",
+    "security": [
+     {
+      "session": []
+     },
+     {
+      "apiKey": [
+       "read"
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AccountExport-Output": {
+    "properties": {
+     "format": {
+      "type": "string",
+      "const": "pomale-export",
+      "title": "Format",
+      "default": "pomale-export"
+     },
+     "version": {
+      "type": "integer",
+      "const": 1,
+      "title": "Version",
+      "default": 1
+     },
+     "app_version": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 40
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "App Version"
+     },
+     "exported_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exported At"
+     },
+     "account": {
+      "$ref": "#/components/schemas/ExportAccount"
+     },
+     "groups": {
+      "items": {
+       "$ref": "#/components/schemas/ExportGroup"
+      },
+      "type": "array",
+      "maxItems": 200,
+      "title": "Groups"
+     },
+     "habits": {
+      "items": {
+       "$ref": "#/components/schemas/ExportHabit-Output"
+      },
+      "type": "array",
+      "maxItems": 1000,
+      "title": "Habits"
+     },
+     "pauses": {
+      "items": {
+       "$ref": "#/components/schemas/ExportPause"
+      },
+      "type": "array",
+      "maxItems": 2000,
+      "title": "Pauses"
+     }
+    },
+    "type": "object",
+    "title": "AccountExport"
+   },
+   "CheckinRead": {
+    "properties": {
+     "habit_id": {
+      "type": "integer",
+      "title": "Habit Id"
+     },
+     "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+     },
+     "done": {
+      "type": "boolean",
+      "title": "Done"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "not_planned",
+       "open",
+       "done",
+       "extra_done",
+       "future",
+       "paused",
+       "partial"
+      ],
+      "title": "State",
+      "description": "`open`: planned, not done yet; `done`; `partial`: quantity below its target; `extra_done`: done on a day that was not planned (never hurts the quota); `not_planned`; `paused`; `future`: after today"
+     },
+     "version": {
+      "type": "integer",
+      "title": "Version",
+      "description": "Grows with every change of this day; send it back as `base_version` to detect conflicts"
+     },
+     "value": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Value"
+     }
+    },
+    "type": "object",
+    "required": [
+     "habit_id",
+     "date",
+     "done",
+     "state",
+     "version",
+     "value"
+    ],
+    "title": "CheckinRead"
+   },
+   "CheckinUpdate": {
+    "properties": {
+     "done": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Done"
+     },
+     "value": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 9999.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Value"
+     },
+     "op_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Op Id",
+      "description": "Unique id of this change; a repeated id is applied only once"
+     },
+     "base_version": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Base Version",
+      "description": "The `version` the client saw; if the day changed since, the answer is 409 `checkin.conflict` with the current state in `server`"
+     }
+    },
+    "type": "object",
+    "title": "CheckinUpdate",
+    "description": "Set the state of a day: `done`, or `value` for quantity goals (never both).\n\n`done` on a quantity goal sets the value to the target (true) or 0 (false)."
+   },
+   "DayRead": {
+    "properties": {
+     "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "not_planned",
+       "open",
+       "done",
+       "extra_done",
+       "future",
+       "paused",
+       "partial"
+      ],
+      "title": "State",
+      "description": "`open`: planned, not done yet; `done`; `partial`: quantity below its target; `extra_done`: done on a day that was not planned (never hurts the quota); `not_planned`; `paused`; `future`: after today"
+     },
+     "planned": {
+      "type": "boolean",
+      "title": "Planned"
+     },
+     "done": {
+      "type": "boolean",
+      "title": "Done",
+      "description": "days and weekly goals: checked off; quantity goals: target reached"
+     },
+     "version": {
+      "type": "integer",
+      "title": "Version",
+      "description": "Grows with every change of this day; send it back as `base_version` to detect conflicts"
+     },
+     "goal_type": {
+      "type": "string",
+      "enum": [
+       "days",
+       "weekly_count",
+       "quantity"
+      ],
+      "title": "Goal Type"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target",
+      "description": "quantity: per day; weekly goal: this week's target, reduced for pauses"
+     },
+     "paused": {
+      "type": "boolean",
+      "title": "Paused"
+     },
+     "value": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Value",
+      "description": "Amount of a quantity goal; null for other goals"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "date",
+     "state",
+     "planned",
+     "done",
+     "version",
+     "goal_type",
+     "target",
+     "paused",
+     "value",
+     "note"
+    ],
+    "title": "DayRead",
+    "description": "One day of one habit. goal_type, target, planned, paused, done and value are the raw\ninput of the evaluation (day_service.evaluate), so clients can re-evaluate offline changes."
+   },
+   "DaysRead": {
+    "properties": {
+     "today": {
+      "type": "string",
+      "format": "date",
+      "title": "Today",
+      "description": "The account's today, with its time zone and day end"
+     },
+     "timezone": {
+      "type": "string",
+      "title": "Timezone",
+      "description": "IANA time zone of the account"
+     },
+     "start": {
+      "type": "string",
+      "format": "date",
+      "title": "Start"
+     },
+     "end": {
+      "type": "string",
+      "format": "date",
+      "title": "End"
+     },
+     "groups": {
+      "items": {
+       "$ref": "#/components/schemas/GroupRead"
+      },
+      "type": "array",
+      "title": "Groups"
+     },
+     "habits": {
+      "items": {
+       "$ref": "#/components/schemas/HabitDaysRead"
+      },
+      "type": "array",
+      "title": "Habits"
+     }
+    },
+    "type": "object",
+    "required": [
+     "today",
+     "timezone",
+     "start",
+     "end",
+     "groups",
+     "habits"
+    ],
+    "title": "DaysRead"
+   },
+   "ExportAccount": {
+    "properties": {
+     "timezone": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Timezone"
+     },
+     "locale": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "de",
+         "en"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Locale"
+     },
+     "day_end_hour": {
+      "type": "integer",
+      "maximum": 6.0,
+      "minimum": 0.0,
+      "title": "Day End Hour",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "title": "ExportAccount"
+   },
+   "ExportCheckin": {
+    "properties": {
+     "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+     },
+     "done": {
+      "type": "boolean",
+      "title": "Done"
+     },
+     "value": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 9999.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Value"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "date",
+     "done"
+    ],
+    "title": "ExportCheckin"
+   },
+   "ExportGroup": {
+    "properties": {
+     "ref": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Ref"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "sort_order": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Sort Order",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "ref",
+     "name"
+    ],
+    "title": "ExportGroup"
+   },
+   "ExportHabit-Output": {
+    "properties": {
+     "ref": {
+      "type": "integer",
+      "minimum": 1.0,
+      "title": "Ref"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "cue": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cue"
+     },
+     "sort_order": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Sort Order",
+      "default": 0
+     },
+     "archived_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Archived On"
+     },
+     "unit": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 20
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "group_ref": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Group Ref"
+     },
+     "created_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Created At"
+     },
+     "schedules": {
+      "items": {
+       "$ref": "#/components/schemas/ExportSchedule"
+      },
+      "type": "array",
+      "maxItems": 500,
+      "minItems": 1,
+      "title": "Schedules"
+     },
+     "reminders": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reminders"
+     },
+     "checkins": {
+      "items": {
+       "$ref": "#/components/schemas/ExportCheckin"
+      },
+      "type": "array",
+      "maxItems": 20000,
+      "title": "Checkins"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ref",
+     "name",
+     "schedules"
+    ],
+    "title": "ExportHabit"
+   },
+   "ExportPause": {
+    "properties": {
+     "habit_ref": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Habit Ref"
+     },
+     "start_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Start On"
+     },
+     "end_on": {
+      "type": "string",
+      "format": "date",
+      "title": "End On"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 80
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "start_on",
+     "end_on"
+    ],
+    "title": "ExportPause"
+   },
+   "ExportSchedule": {
+    "properties": {
+     "valid_from": {
+      "type": "string",
+      "format": "date",
+      "title": "Valid From"
+     },
+     "weekdays": {
+      "type": "integer",
+      "maximum": 127.0,
+      "minimum": 0.0,
+      "title": "Weekdays"
+     },
+     "goal_type": {
+      "type": "string",
+      "enum": [
+       "days",
+       "weekly_count",
+       "quantity"
+      ],
+      "title": "Goal Type",
+      "default": "days"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     }
+    },
+    "type": "object",
+    "required": [
+     "valid_from",
+     "weekdays"
+    ],
+    "title": "ExportSchedule"
+   },
+   "GroupRead": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "sort_order"
+    ],
+    "title": "GroupRead"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HabitDaysRead": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "cue": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cue"
+     },
+     "archived": {
+      "type": "boolean",
+      "title": "Archived"
+     },
+     "goal_type": {
+      "type": "string",
+      "enum": [
+       "days",
+       "weekly_count",
+       "quantity"
+      ],
+      "title": "Goal Type"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     },
+     "unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "group_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Group Id"
+     },
+     "days": {
+      "items": {
+       "$ref": "#/components/schemas/DayRead"
+      },
+      "type": "array",
+      "title": "Days"
+     },
+     "quota": {
+      "$ref": "#/components/schemas/QuotaRead"
+     },
+     "week": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/WeekRead"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Weekly goals: progress in the week that contains today"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "cue",
+     "archived",
+     "goal_type",
+     "target",
+     "unit",
+     "color",
+     "group_id",
+     "days",
+     "quota",
+     "week"
+    ],
+    "title": "HabitDaysRead"
+   },
+   "HabitRead": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "cue": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cue"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     },
+     "archived_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Archived On",
+      "description": "Day the habit was archived; null while it is active"
+     },
+     "weekdays": {
+      "type": "integer",
+      "title": "Weekdays",
+      "description": "Planned weekdays as a bit mask: Monday 1, Tuesday 2, Wednesday 4 … Sunday 64; 127 = every day. The plan in effect today"
+     },
+     "goal_type": {
+      "type": "string",
+      "enum": [
+       "days",
+       "weekly_count",
+       "quantity"
+      ],
+      "title": "Goal Type",
+      "description": "`days`: on the planned weekdays; `weekly_count`: `target` times a week, any day; `quantity`: an amount of `target` per planned day"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target",
+      "description": "`weekly_count`: times per week; `quantity`: amount per day; null for `days`"
+     },
+     "unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit",
+      "description": "Unit of a quantity goal, e.g. glasses"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "group_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Group Id"
+     },
+     "reminders": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reminders",
+      "description": "Local times \"HH:MM\" in the account's time zone, sorted"
+     },
+     "schedules": {
+      "items": {
+       "$ref": "#/components/schemas/ScheduleRead"
+      },
+      "type": "array",
+      "title": "Schedules",
+      "description": "All plans, oldest first; each applies from `valid_from` on"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "cue",
+     "sort_order",
+     "archived_on",
+     "weekdays",
+     "goal_type",
+     "target",
+     "unit",
+     "color",
+     "group_id",
+     "reminders",
+     "schedules"
+    ],
+    "title": "HabitRead"
+   },
+   "HealthRead": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "const": "ok",
+      "title": "Status"
+     },
+     "version": {
+      "type": "string",
+      "title": "Version",
+      "description": "The pomale version, e.g. 1.0.0"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "version"
+    ],
+    "title": "HealthRead"
+   },
+   "HistoryDayRead": {
+    "properties": {
+     "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "not_planned",
+       "open",
+       "done",
+       "extra_done",
+       "future",
+       "paused",
+       "partial"
+      ],
+      "title": "State"
+     },
+     "value": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Value"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "date",
+     "state",
+     "value",
+     "note"
+    ],
+    "title": "HistoryDayRead"
+   },
+   "HistoryHabitRead": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "archived": {
+      "type": "boolean",
+      "title": "Archived"
+     },
+     "goal_type": {
+      "type": "string",
+      "enum": [
+       "days",
+       "weekly_count",
+       "quantity"
+      ],
+      "title": "Goal Type"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
+     },
+     "unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit"
+     },
+     "color": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Color"
+     },
+     "group_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Group Id"
+     },
+     "quota": {
+      "$ref": "#/components/schemas/QuotaRead"
+     },
+     "weeks": {
+      "items": {
+       "$ref": "#/components/schemas/HistoryWeekRead"
+      },
+      "type": "array",
+      "title": "Weeks"
+     },
+     "days": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/HistoryDayRead"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Days",
+      "description": "Only when asking for one habit (`habit_id`)"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "archived",
+     "goal_type",
+     "target",
+     "unit",
+     "color",
+     "group_id",
+     "quota",
+     "weeks",
+     "days"
+    ],
+    "title": "HistoryHabitRead"
+   },
+   "HistoryRead": {
+    "properties": {
+     "today": {
+      "type": "string",
+      "format": "date",
+      "title": "Today"
+     },
+     "start": {
+      "type": "string",
+      "format": "date",
+      "title": "Start"
+     },
+     "end": {
+      "type": "string",
+      "format": "date",
+      "title": "End"
+     },
+     "habits": {
+      "items": {
+       "$ref": "#/components/schemas/HistoryHabitRead"
+      },
+      "type": "array",
+      "title": "Habits"
+     }
+    },
+    "type": "object",
+    "required": [
+     "today",
+     "start",
+     "end",
+     "habits"
+    ],
+    "title": "HistoryRead"
+   },
+   "HistoryWeekRead": {
+    "properties": {
+     "week_start": {
+      "type": "string",
+      "format": "date",
+      "title": "Week Start",
+      "description": "Monday of the week"
+     },
+     "done": {
+      "type": "integer",
+      "title": "Done"
+     },
+     "due": {
+      "type": "integer",
+      "title": "Due"
+     }
+    },
+    "type": "object",
+    "required": [
+     "week_start",
+     "done",
+     "due"
+    ],
+    "title": "HistoryWeekRead"
+   },
+   "NoteRead": {
+    "properties": {
+     "habit_id": {
+      "type": "integer",
+      "title": "Habit Id"
+     },
+     "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "habit_id",
+     "date",
+     "note"
+    ],
+    "title": "NoteRead"
+   },
+   "NoteUpdate": {
+    "properties": {
+     "note": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note",
+      "description": "Empty or null removes the note"
+     }
+    },
+    "type": "object",
+    "title": "NoteUpdate"
+   },
+   "PauseRead": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "habit_id": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Habit Id",
+      "description": "null: the pause applies to all habits of the account"
+     },
+     "start_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Start On",
+      "description": "First paused day"
+     },
+     "end_on": {
+      "type": "string",
+      "format": "date",
+      "title": "End On",
+      "description": "Last paused day (inclusive)"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "habit_id",
+     "start_on",
+     "end_on",
+     "reason"
+    ],
+    "title": "PauseRead"
+   },
+   "QuotaRead": {
+    "properties": {
+     "done": {
+      "type": "integer",
+      "title": "Done"
+     },
+     "due": {
+      "type": "integer",
+      "title": "Due"
+     }
+    },
+    "type": "object",
+    "required": [
+     "done",
+     "due"
+    ],
+    "title": "QuotaRead",
+    "description": "The honest quota: how many due days (or weekly targets) of the period were met."
+   },
+   "ScheduleRead": {
+    "properties": {
+     "valid_from": {
+      "type": "string",
+      "format": "date",
+      "title": "Valid From"
+     },
+     "weekdays": {
+      "type": "integer",
+      "title": "Weekdays",
+      "description": "Planned weekdays as a bit mask: Monday 1, Tuesday 2, Wednesday 4 … Sunday 64; 127 = every day"
+     },
+     "goal_type": {
+      "type": "string",
+      "enum": [
+       "days",
+       "weekly_count",
+       "quantity"
+      ],
+      "title": "Goal Type",
+      "description": "`days`: on the planned weekdays; `weekly_count`: `target` times a week, any day; `quantity`: an amount of `target` per planned day"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target",
+      "description": "`weekly_count`: times per week; `quantity`: amount per day; null for `days`"
+     }
+    },
+    "type": "object",
+    "required": [
+     "valid_from",
+     "weekdays",
+     "goal_type",
+     "target"
+    ],
+    "title": "ScheduleRead"
+   },
+   "ShortcutCheckinRead": {
+    "properties": {
+     "habit_id": {
+      "type": "integer",
+      "title": "Habit Id"
+     },
+     "habit_name": {
+      "type": "string",
+      "title": "Habit Name"
+     },
+     "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date",
+      "description": "The day that was checked off: the owner's today, with time zone and day end"
+     },
+     "done": {
+      "type": "boolean",
+      "title": "Done"
+     },
+     "result": {
+      "type": "string",
+      "enum": [
+       "done",
+       "already_done",
+       "counted"
+      ],
+      "title": "Result",
+      "description": "For automations, the same in every language: `done` (checked off now), `already_done`, or `counted` (quantity goals: amount added, see `value` and `target`)"
+     },
+     "value": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Value",
+      "description": "Quantity goals only"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target",
+      "description": "Quantity goals only"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "description": "Human-readable result in the owner's language (else the phone's, else English)"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message",
+      "description": "`<habit name>: <status>`, ready to show as a notification"
+     }
+    },
+    "type": "object",
+    "required": [
+     "habit_id",
+     "habit_name",
+     "date",
+     "done",
+     "result",
+     "status",
+     "message"
+    ],
+    "title": "ShortcutCheckinRead"
+   },
+   "ShortcutCheckinRequest": {
+    "properties": {
+     "done": {
+      "type": "boolean",
+      "title": "Done",
+      "description": "Only true: this endpoint does not undo (`shortcut.done_only`)",
+      "default": true
+     },
+     "amount": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 1000.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Amount",
+      "description": "Quantity goals: how much to add (default 1)"
+     }
+    },
+    "type": "object",
+    "title": "ShortcutCheckinRequest"
+   },
+   "TodayHabitRead": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "cue": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cue"
+     },
+     "goal_type": {
+      "type": "string",
+      "enum": [
+       "days",
+       "weekly_count",
+       "quantity"
+      ],
+      "title": "Goal Type"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "not_planned",
+       "open",
+       "done",
+       "extra_done",
+       "future",
+       "paused",
+       "partial"
+      ],
+      "title": "State",
+      "description": "`open` or `partial`"
+     },
+     "value": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Value",
+      "description": "Quantity goals: today's amount"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target",
+      "description": "Quantity goals: today's target; weekly goals: this week's target"
+     },
+     "unit": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit"
+     },
+     "week": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/WeekRead"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "progress": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Progress",
+      "description": "\"3 of 8 glasses\", \"1 of 3 this week\", in the account's language; null for goals on chosen days"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "cue",
+     "goal_type",
+     "state",
+     "value",
+     "target",
+     "unit",
+     "week",
+     "progress"
+    ],
+    "title": "TodayHabitRead"
+   },
+   "TodayRead": {
+    "properties": {
+     "date": {
+      "type": "string",
+      "format": "date",
+      "title": "Date",
+      "description": "The account's today, with its time zone and day end"
+     },
+     "due": {
+      "type": "integer",
+      "title": "Due",
+      "description": "Habits due today"
+     },
+     "done": {
+      "type": "integer",
+      "title": "Done",
+      "description": "How many of them are done"
+     },
+     "open": {
+      "items": {
+       "$ref": "#/components/schemas/TodayHabitRead"
+      },
+      "type": "array",
+      "title": "Open"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message",
+      "description": "One sentence in the account's language, e.g. \"Still open: Read, Water (3 of 8 glasses)\""
+     }
+    },
+    "type": "object",
+    "required": [
+     "date",
+     "due",
+     "done",
+     "open",
+     "message"
+    ],
+    "title": "TodayRead",
+    "description": "What is still open today, for shortcuts, widgets and home automation."
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "WeekRead": {
+    "properties": {
+     "done": {
+      "type": "integer",
+      "title": "Done"
+     },
+     "target": {
+      "type": "integer",
+      "title": "Target"
+     }
+    },
+    "type": "object",
+    "required": [
+     "done",
+     "target"
+    ],
+    "title": "WeekRead",
+    "description": "Progress of a weekly goal in one week."
+   }
+  }
+ }
+}

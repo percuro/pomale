@@ -21,6 +21,10 @@ class ConfigTest(unittest.TestCase):
             "OIDC_LABEL": "",
             "OIDC_AUTO_CREATE": "",
             "PASSWORD_LOGIN": "",
+            "DEMO_MODE": "",
+            "PUSH_ENABLED": "",
+            "BACKUP_ENABLED": "",
+            "REGISTRATION": "",
         }
         base.update(values)
         return mock.patch.dict(os.environ, base)
@@ -142,14 +146,19 @@ class ConfigTest(unittest.TestCase):
             self.assertEqual(config.get_cookie_samesite(), "lax")
             config.validate()
 
-    def test_timezone_default_alias_and_validation(self):
+    def test_timezone_default_and_validation(self):
         with self.env():
             self.assertEqual(config.get_default_timezone_name(), "UTC")
-        with self.env(TRACKER_TZ="Europe/Berlin"):
-            self.assertEqual(config.get_default_timezone_name(), "Europe/Berlin")
-        with self.env(DEFAULT_TIMEZONE="America/New_York", TRACKER_TZ="Europe/Berlin"):
+        with self.env(DEFAULT_TIMEZONE="America/New_York"):
             self.assertEqual(config.get_default_timezone_name(), "America/New_York")
         with self.env(PUBLIC_URL="https://x.org", DEFAULT_TIMEZONE="Mars/Base"), self.assertRaises(config.ConfigError):
+            config.validate()
+
+    def test_removed_tracker_tz_stops_the_start(self):
+        with self.env(PUBLIC_URL="https://x.org", TRACKER_TZ="Europe/Berlin"):
+            with self.assertRaisesRegex(config.ConfigError, "DEFAULT_TIMEZONE"):
+                config.validate()
+        with self.env(PUBLIC_URL="https://x.org", TRACKER_TZ=""):
             config.validate()
 
 

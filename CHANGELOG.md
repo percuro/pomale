@@ -1,6 +1,40 @@
 # Changelog
 
-All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/); until 1.0 a minor version may contain breaking changes, which are always listed under "Upgrade notes".
+All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/). From 1.0 on, what the [stability promise](docs/api.md#stability) covers only changes incompatibly in a new major version; before 1.0 a minor version could contain breaking changes, which are listed under "Upgrade notes".
+
+## 1.0.0 – stable
+
+pomale 1.0 makes a promise: what works with 1.0 keeps working until 2.0.
+
+### Stability
+
+- **Stable until 2.0:** everything an API key can reach, `GET /api/health`, the error format and the documented error codes, the settings, the JSON export (version 1), the columns and values of the CSV export, and the data volume. Within 1.x things are only added, never removed or renamed. See [Stability](docs/api.md#stability).
+- In `/api/openapi.json` every operation is marked `x-pomale-stability: stable` or `internal`. Internal operations serve the web app (signing in, account, administration, changing habits) and may change in any release.
+- Every build compares the stable API with the one of 1.0.0 and fails on a breaking change; other tests check that every setting is documented and every documented error code still exists.
+- The API description explains the fields of the stable operations: the weekday bit mask, the day states, `version`/`base_version` and conflicts. `GET /api/health` has a schema.
+- New table of the error codes in [API](docs/api.md#errors).
+
+### Demo
+
+- **`DEMO_MODE=true`** turns an instance into a public demo: one account with sample data (six habits of every kind over ten weeks, a pause, notes), opened with one click on the login page and reset at the full hour. Changing the password, deleting the account, keys and the import are locked; reminders and backups are off. Only for a new, empty volume. See [configuration](docs/configuration.md).
+- The demo of this project: [demo.pomale.percuro.at](https://demo.pomale.percuro.at).
+
+### Images
+
+- Release images are signed with cosign (keyless, by the release workflow), in addition to the build provenance attestation. See [Verify the image](docs/self-hosting.md#verify-the-image).
+- New image tag `:1`, which follows all 1.x releases. `:0` stays at 0.11.0.
+
+### Documentation
+
+- Screenshots in the README and in [docs/screenshots.md](docs/screenshots.md), taken from the demo data with `e2e/screenshots/`.
+- The iPhone checklist covers VoiceOver on all main pages, the day end after midnight and single sign-on in the home-screen app.
+
+### Upgrade notes
+
+- **Image tag:** change `image:` in `compose.yaml` from `ghcr.io/percuro/pomale:0` to `ghcr.io/percuro/pomale:1`; `:0` does not get 1.0.
+- **`TRACKER_TZ` was removed** (deprecated since 0.3). If it is still set, pomale does not start and the log says to use `DEFAULT_TIMEZONE`.
+- **CSV export:** columns and values are now the same in every language: `date;habit;cue;planned;state;value;target;note`, `yes`/`no`, and the day states of the API (`done`, `open`, `partial`, `extra_done`, `not_planned`, `paused`) instead of translated words. The file is called `pomale-<date>.csv`. Spreadsheets that read the German columns need adjusting.
+- No migration. One new setting, `DEMO_MODE` (off by default).
 
 ## 0.11.0 – beta
 

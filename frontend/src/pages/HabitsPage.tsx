@@ -32,6 +32,7 @@ import { ShortcutPanel } from '../components/habits/ShortcutPanel';
 import { useHabitAction, useHabits, type Goal } from '../hooks/useHabits';
 import { useGroups } from '../hooks/useGroups';
 import { useSession } from '../hooks/useSession';
+import { useDemo } from '../hooks/useMeta';
 import { ArrowDownIcon, ArrowUpIcon, GripIcon } from '../components/Icons';
 
 export function HabitsPage() {
@@ -288,6 +289,8 @@ function HabitItem({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id });
   const [editing, setEditing] = useState(false);
   const [shortcut, setShortcut] = useState(false);
+  // Shortcut keys cannot be created in the shared demo account
+  const demo = useDemo();
   const [name, setName] = useState(habit.name);
   const [cue, setCue] = useState(habit.cue ?? '');
   const current: Goal = { goal_type: habit.goal_type, target: habit.target, weekdays: habit.weekdays };
@@ -436,9 +439,11 @@ function HabitItem({
         <button type="button" className="button" onClick={startEdit}>
           {t('habits.edit')}
         </button>
-        <button type="button" className="button" aria-expanded={shortcut} onClick={() => setShortcut(!shortcut)}>
-          {t('habits.shortcut')}
-        </button>
+        {!demo && (
+          <button type="button" className="button" aria-expanded={shortcut} onClick={() => setShortcut(!shortcut)}>
+            {t('habits.shortcut')}
+          </button>
+        )}
         <button
           type="button"
           className="button"
@@ -448,7 +453,7 @@ function HabitItem({
           {t('habits.archive')}
         </button>
       </div>
-      {shortcut && <ShortcutPanel habit={habit} />}
+      {shortcut && !demo && <ShortcutPanel habit={habit} />}
     </li>
   );
 }

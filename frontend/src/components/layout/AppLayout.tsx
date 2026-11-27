@@ -7,7 +7,7 @@ import { ME_KEY, useMe } from '../../hooks/useMe';
 import { SessionContext } from '../../hooks/useSession';
 import { useToday } from '../../hooks/useToday';
 import { useI18n } from '../../i18n/context';
-import { useMeta } from '../../hooks/useMeta';
+import { useDemo, useMeta } from '../../hooks/useMeta';
 import { SyncBridge } from '../sync/SyncBridge';
 import { WorkerBridge } from '../sync/WorkerBridge';
 import { SyncStatus } from '../sync/SyncStatus';
@@ -63,12 +63,14 @@ function SignedIn({ me }: { me: Me }) {
   // Older cached "me" from before 0.9 has no day end: midnight
   const { today, beforeDayEnd } = useToday(me.timezone, me.day_end_hour ?? 0, me.today);
   const { t, setAccountLocale } = useI18n();
+  const demo = useDemo();
   useEffect(() => setAccountLocale(me.locale), [me.locale, setAccountLocale]);
   usePageChange();
 
   return (
     <SessionContext.Provider value={{ me, today, beforeDayEnd }}>
       <a className="skip-link" href="#content">{t('app.skipToContent')}</a>
+      {demo && <p className="banner demo-banner">{t('demo.banner')}</p>}
       <header className="topbar">
         <NavLink to="/" className="brand"><BrandMark />{APP_NAME}</NavLink>
         <nav className="appnav" aria-label={t('nav.label')}>

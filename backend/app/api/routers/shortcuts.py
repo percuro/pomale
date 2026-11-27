@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies.auth import require_user
 from app.api.dependencies.clock import get_now
+from app.api.dependencies.demo import NOT_IN_DEMO
 from app.db.database import get_db
 from app.repositories.habit_repository import HabitRepository
 from app.schemas.shortcut import (
@@ -48,6 +49,7 @@ def list_tokens(habit_id: int, user=Depends(require_user), db: Session = Depends
     "/habits/{habit_id}/shortcut-tokens",
     response_model=ShortcutTokenCreated,
     status_code=status.HTTP_201_CREATED,
+    dependencies=NOT_IN_DEMO,
 )
 def create_token(
     habit_id: int,

@@ -4,7 +4,10 @@ from datetime import date, timedelta
 
 from app.repositories.habit_repository import HabitRepository
 from app.services.day_service import Entry, evaluate_range, week_start
-from app.services.i18n import text
+
+# Stable from 1.0 on: fixed English column names and machine values (the states of the API) in every
+# language, so scripts keep working; new columns only go at the end
+COLUMNS = ("date", "habit", "cue", "planned", "state", "value", "target", "note")
 
 
 def _cell(value: str | None) -> str:
@@ -13,9 +16,7 @@ def _cell(value: str | None) -> str:
     return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
 
 
-def export_csv(
-    repository: HabitRepository, user_id: int, start: date | None, end: date, today: date, locale: str
-) -> str:
+def export_csv(repository: HabitRepository, user_id: int, start: date | None, end: date, today: date) -> str:
     habits = repository.list_for_user(user_id, include_archived=True)
     starts = [s.valid_from for h in habits for s in h.schedules]
     start = start or (min(starts) if starts else today)
@@ -33,9 +34,7 @@ def export_csv(
     buffer = io.StringIO()
     buffer.write("﻿")  # BOM: lets Excel detect UTF-8
     writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
-    # New columns go at the end, so existing evaluations of the file keep working
-    columns = ("date", "habit", "cue", "planned", "state", "value", "target", "note")
-    writer.writerow([text(locale, f"csv.{column}") for column in columns])
+    writer.writerow(COLUMNS)
     rows = []
     for habit in habits:
         habit_pauses = [p for p in pauses if p.habit_id is None or p.habit_id == habit.id]
@@ -51,8 +50,8 @@ def export_csv(
                     habit.sort_order,
                     _cell(habit.name),
                     _cell(habit.cue),
-                    text(locale, "csv.yes" if info.planned else "csv.no"),
-                    text(locale, f"state.{info.state}"),
+                    "yes" if info.planned else "no",
+                    info.state,
                     "" if info.value is None else str(info.value),
                     "" if info.target is None or info.goal_type == "days" else str(info.target),
                     _cell(note),

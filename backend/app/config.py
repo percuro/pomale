@@ -105,20 +105,20 @@ def get_session_absolute_hours() -> int:
     return env_positive_int("SESSION_ABSOLUTE_HOURS", 90 * 24)
 
 
-_legacy_warned = False
+# Removed settings: still set, they stop the start with a hint instead of being ignored silently
+REMOVED_SETTINGS = {
+    "TRACKER_TZ": "TRACKER_TZ was removed in 1.0, set DEFAULT_TIMEZONE instead",
+}
+
+
+def check_removed_settings() -> None:
+    for name, hint in REMOVED_SETTINGS.items():
+        if os.getenv(name, "").strip():
+            raise ConfigError(hint)
 
 
 def get_default_timezone_name() -> str:
-    global _legacy_warned
-    value = os.getenv("DEFAULT_TIMEZONE", "").strip()
-    if not value:
-        legacy = os.getenv("TRACKER_TZ", "").strip()
-        if legacy:
-            if not _legacy_warned:
-                logger.warning("TRACKER_TZ is deprecated, use DEFAULT_TIMEZONE instead")
-                _legacy_warned = True
-            value = legacy
-    return value or "UTC"
+    return os.getenv("DEFAULT_TIMEZONE", "").strip() or "UTC"
 
 
 @lru_cache
@@ -203,9 +203,14 @@ def api_docs_enabled() -> bool:
     return env_bool("API_DOCS", True)
 
 
+def demo_mode() -> bool:
+    """DEMO_MODE=true: a public demo that resets itself every hour (services/demo_service.py)."""
+    return env_bool("DEMO_MODE", False)
+
+
 def backup_enabled() -> bool:
     """BACKUP_ENABLED=false turns off the daily backup (a backup can still be made by hand)."""
-    return env_bool("BACKUP_ENABLED", True)
+    return env_bool("BACKUP_ENABLED", True) and not demo_mode()
 
 
 def get_backup_time() -> time:
@@ -239,7 +244,7 @@ def get_backup_dir() -> Path:
 
 def push_enabled() -> bool:
     """PUSH_ENABLED=false turns reminders off: no scheduler, no push endpoints, no UI."""
-    return env_bool("PUSH_ENABLED", True)
+    return env_bool("PUSH_ENABLED", True) and not demo_mode()
 
 
 def get_push_contact() -> str:
@@ -272,8 +277,29 @@ def _is_local(host: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".localhost")
 
 
+def _check_demo_mode() -> None:
+    """The demo turns off what makes no sense for a shared, hourly reset account; it refuses
+    settings that ask for it explicitly."""
+    conflicts = []
+    if env_bool("PUSH_ENABLED", False):
+        conflicts.append("PUSH_ENABLED")
+    if env_bool("BACKUP_ENABLED", False):
+        conflicts.append("BACKUP_ENABLED")
+    if get_registration_mode() != "invite":
+        conflicts.append("REGISTRATION")
+    if not password_login_enabled():
+        conflicts.append("PASSWORD_LOGIN")
+    if os.getenv("OIDC_ISSUER", "").strip():
+        conflicts.append("OIDC_ISSUER")
+    if conflicts:
+        raise ConfigError(f"DEMO_MODE=true does not work with {', '.join(conflicts)}; leave them unset")
+
+
 def validate() -> None:
     """Fail fast at startup with a readable message instead of on the first request."""
+    check_removed_settings()
+    if demo_mode():
+        _check_demo_mode()
     get_public_url()
     get_default_timezone()
     get_registration_mode()

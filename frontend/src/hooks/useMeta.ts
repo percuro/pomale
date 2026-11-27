@@ -11,3 +11,8 @@ export function useMeta() {
     staleTime: 5 * 60_000,
   });
 }
+
+/** A public demo (DEMO_MODE): actions that would spoil it for the next visitor are hidden. */
+export function useDemo(): boolean {
+  return useMeta().data?.demo != null;
+}

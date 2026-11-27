@@ -12,6 +12,9 @@ export const en = {
   'app.retry': 'Try again',
   'app.pageFailed': 'This page could not be loaded.',
   'app.skipToContent': 'Skip to content',
+  'demo.banner': 'Demo: try anything – everything is reset at the full hour.',
+  'demo.loginHint': 'This is a demo with sample data. Sign in as {username} with the password {password}.',
+  'demo.signIn': 'Open the demo',
   'app.version': '{name} {version}',
 
   'nav.label': 'Views',
@@ -555,6 +558,7 @@ export const en = {
   'error.shortcut.wrong_habit': 'This key belongs to another habit.',
   'error.shortcut.done_only': 'The shortcut can only mark a habit as done.',
   'error.token.invalid': 'The key is invalid, expired or revoked.',
+  'error.demo.not_allowed': 'Not available in the demo.',
   'error.token.not_allowed': 'API keys cannot be used for this.',
   'error.token.missing_scope': 'This key is not allowed to do this.',
   'error.token.habit_not_allowed': 'This key is not allowed for this habit.',

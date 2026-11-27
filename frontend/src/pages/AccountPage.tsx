@@ -7,7 +7,7 @@ import { OidcButton } from '../components/account/OidcButton';
 import { RemindersSection } from '../components/account/RemindersSection';
 import { LogoutSection } from '../components/account/LogoutSection';
 import { useOidcLabel } from '../hooks/useOidcLabel';
-import { useMeta } from '../hooks/useMeta';
+import { useDemo, useMeta } from '../hooks/useMeta';
 import { codeMessage } from '../i18n/core';
 import { ApiError } from '../lib/api';
 import { startOidc } from '../lib/oidc';
@@ -56,6 +56,8 @@ export function AccountPage() {
   // What the OIDC callback reported (#oidc=linked, #reauth=ok, #error=…), read once
   const flash = useCallbackParams();
   const passwordLogin = meta.data?.password_login ?? true;
+  // The demo account is shared: no password, sessions, keys or deleting
+  const demo = useDemo();
   return (
     <>
       <div className="page-head">
@@ -67,12 +69,12 @@ export function AccountPage() {
         {flash.reauth === 'ok' && <p role="status">{t('account.reauthDone')}</p>}
         <ProfileSection />
         {(meta.data?.oidc != null || me.oidc != null) && <SignInSection flash={flash} />}
-        {passwordLogin && <PasswordSection />}
+        {passwordLogin && !demo && <PasswordSection />}
         <RemindersSection />
-        <SessionsSection />
-        <TokensSection />
+        {!demo && <SessionsSection />}
+        {!demo && <TokensSection />}
         <DataSection />
-        <DeleteSection />
+        {!demo && <DeleteSection />}
       </OnlineOnly>
     </>
   );

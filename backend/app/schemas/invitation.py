@@ -67,6 +67,11 @@ class OidcMeta(BaseModel):
     label: str | None
 
 
+class DemoMeta(BaseModel):
+    username: str
+    password: str
+
+
 class MetaRead(BaseModel):
     version: str
     registration: Literal["invite", "open"]
@@ -77,3 +82,5 @@ class MetaRead(BaseModel):
     oidc: OidcMeta | None
     # /api/openapi.json is served (API_DOCS)
     api_docs: bool = True
+    # DEMO_MODE: the login page shows the demo account; null otherwise
+    demo: "DemoMeta | None" = None
