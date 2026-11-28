@@ -103,7 +103,7 @@ cosign verify ghcr.io/percuro/pomale:1.0.0 \
 gh attestation verify oci://ghcr.io/percuro/pomale:1.0.0 --repo percuro/pomale
 ```
 
-Releases before 1.0 have the attestation, but no cosign signature.
+The signature is stored in the newer Sigstore bundle format, so `cosign verify` needs cosign 3 or later; cosign 2 reports "no signatures found". Releases before 1.0 have the attestation, but no cosign signature.
 
 ## Backup and restore
 
